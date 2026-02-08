@@ -17,9 +17,12 @@
 
 ### WITHOUT APL 😰
 ![alt text](./_resources/_without_apl/danger_1.png)
+![alt text](./_resources/_without_apl/danger_2.png)
 
 ### WITH APL 🛡️
 ![alt text](./_resources/_with_apl/safe_1.png)
+![alt text](./_resources/_with_apl/safe_2.png)
+![alt text](./_resources/_with_apl/safe_3.png)
 
 ## The Problem
 
