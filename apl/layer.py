@@ -35,6 +35,13 @@ from .types import (
     Verdict,
 )
 
+try:
+    import aiohttp
+
+    HAS_AIOHTTP = True
+except ImportError:
+    HAS_AIOHTTP = False
+
 logger = logging.getLogger("apl")
 
 
@@ -62,6 +69,9 @@ class PolicyClient:
         self.uri = uri
         self.manifest: Optional[PolicyManifest] = None
         self._process: Optional[subprocess.Popen] = None
+        self._http_session: Optional[
+            aiohttp.ClientSession
+        ] = None
         self._connected = False
 
     async def connect(self):
@@ -115,12 +125,33 @@ class PolicyClient:
 
         self._connected = True
 
+    # REPLACE the entire _connect_http method:
     async def _connect_http(self):
         """Connect via HTTP transport."""
-        # TODO: Implement HTTP transport
-        raise NotImplementedError(
-            "HTTP transport coming soon"
-        )
+        if not HAS_AIOHTTP:
+            raise ImportError(
+                "aiohttp is required for HTTP transport. "
+                "Install it with: pip install aiohttp"
+            )
+
+        self._http_session = aiohttp.ClientSession()
+
+        # Fetch manifest from /manifest endpoint
+        manifest_url = f"{self.uri.rstrip('/')}/manifest"
+        async with self._http_session.get(
+            manifest_url
+        ) as resp:
+            if resp.status != 200:
+                raise ConnectionError(
+                    f"Failed to connect to {self.uri}: HTTP {resp.status}"
+                )
+            data = await resp.json()
+            self.manifest = self._parse_manifest(data)
+            logger.info(
+                f"Connected to '{self.manifest.server_name}' via HTTP with {len(self.manifest.policies)} policies"
+            )
+
+        self._connected = True
 
     async def evaluate(
         self, event: PolicyEvent
@@ -178,19 +209,45 @@ class PolicyClient:
                 )
             ]
 
+    # REPLACE the entire _evaluate_http method:
     async def _evaluate_http(
         self, event: PolicyEvent
     ) -> list[Verdict]:
         """Evaluate via HTTP transport."""
-        raise NotImplementedError(
-            "HTTP transport coming soon"
-        )
+        evaluate_url = f"{self.uri.rstrip('/')}/evaluate"
+
+        payload = self._serialize_event(event)
+
+        async with self._http_session.post(
+            evaluate_url, json=payload
+        ) as resp:
+            if resp.status != 200:
+                logger.error(
+                    f"Policy evaluation failed: HTTP {resp.status}"
+                )
+                return [
+                    Verdict.allow(
+                        reasoning=f"HTTP error: {resp.status}"
+                    )
+                ]
+
+            data = await resp.json()
+
+            # The /evaluate endpoint returns {"verdicts": [...], "composed_verdict": {...}}
+            # We return the raw verdicts and let PolicyLayer compose them
+            return [
+                self._parse_verdict(v)
+                for v in data.get("verdicts", [])
+            ]
 
     async def close(self):
         """Close the connection."""
         if self._process:
             self._process.terminate()
             await self._process.wait()
+        if self._http_session:
+            await self._http_session.close()
+            self._http_session = None
         self._connected = False
 
     def _serialize_event(self, event: PolicyEvent) -> dict:

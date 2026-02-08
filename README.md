@@ -15,6 +15,12 @@
 
 ---
 
+### WITHOUT APL 😰
+![alt text](./_resources/_without_apl/danger_1.png)
+
+### WITH APL 🛡️
+![alt text](./_resources/_with_apl/safe_1.png)
+
 ## The Problem
 
 You've built an HR agent for your enterprise. It works great in happy paths - updates employee records, applies for time-offs - great! But then:

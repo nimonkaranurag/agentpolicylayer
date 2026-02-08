@@ -79,29 +79,36 @@ F = TypeVar("F", bound=Callable[..., Any])
 # ASYNC HELPER - robust event-loop handling for sync wrappers
 # =============================================================================
 
+# Persistent event loop for APL operations (preserves subprocess streams)
+_apl_loop: Optional[asyncio.AbstractEventLoop] = None
+_apl_lock = threading.Lock()
+
+
+def _get_apl_loop() -> asyncio.AbstractEventLoop:
+    """Get or create the persistent APL event loop running in a background thread."""
+    global _apl_loop
+    with _apl_lock:
+        if _apl_loop is None or not _apl_loop.is_running():
+            _apl_loop = asyncio.new_event_loop()
+            thread = threading.Thread(
+                target=_apl_loop.run_forever, daemon=True
+            )
+            thread.start()
+    return _apl_loop
+
 
 def _run_async(coro):
     """
-    Run an async coroutine from synchronous code, handling the case
-    where an event loop is already running (e.g. Jupyter, nested calls).
+    Run an async coroutine from synchronous code.
 
-    Falls back to a background thread with its own event loop when
-    ``asyncio.run()`` cannot be used.
+    Uses a persistent background event loop so that subprocess streams
+    (stdio transport) remain attached to the same loop across calls.
     """
-    try:
-        loop = asyncio.get_running_loop()
-    except RuntimeError:
-        loop = None
-
-    if loop is not None and loop.is_running():
-        # We're inside a running event loop (Jupyter, async framework, etc.).
-        # Spawn a fresh loop on a worker thread to avoid deadlock.
-        with concurrent.futures.ThreadPoolExecutor(
-            max_workers=1
-        ) as pool:
-            return pool.submit(asyncio.run, coro).result()
-    else:
-        return asyncio.run(coro)
+    loop = _get_apl_loop()
+    future = asyncio.run_coroutine_threadsafe(coro, loop)
+    return future.result(
+        timeout=30
+    )  # 30s timeout to avoid hanging forever
 
 
 # =============================================================================
