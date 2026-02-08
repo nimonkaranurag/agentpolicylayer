@@ -72,11 +72,11 @@ asyncio_mode = "auto"
 testpaths = ["tests"]
 
 [tool.black]
-line-length = 65
+line-length = 60
 target-version = ["py310"]
 
 [tool.ruff]
-line-length = 65
+line-length = 60
 select = ["E", "F", "I", "N", "W"]
 
 [tool.mypy]
