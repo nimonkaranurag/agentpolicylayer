@@ -1,0 +1,86 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "apl"
+version = "0.1.0"
+description = "Agent Policy Layer - Portable, composable policies for AI agents"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.10"
+authors = [
+    { name = "Anurag Ravi Nimonkar" }
+]
+keywords = [
+    "ai",
+    "agents",
+    "policies",
+    "guardrails",
+    "llm",
+    "safety",
+    "mcp",
+    "langgraph",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Security",
+    "Typing :: Typed",
+]
+
+dependencies = [
+    "rich>=13.0",
+    "click>=8.0",
+    "pyyaml>=6.0",
+    "aiohttp>=3.8",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-asyncio>=0.21",
+    "black>=23.0",
+    "ruff>=0.1",
+    "mypy>=1.0",
+    "types-PyYAML",
+]
+langgraph = [
+    "langgraph>=0.0.1",
+]
+all = [
+    "apl[dev,langgraph]",
+]
+
+[project.urls]
+Homepage = "https://github.com/nimonkaranurag/agent_policy_layer"
+
+[project.scripts]
+apl = "apl.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["apl"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[tool.black]
+line-length = 65
+target-version = ["py310"]
+
+[tool.ruff]
+line-length = 65
+select = ["E", "F", "I", "N", "W"]
+
+[tool.mypy]
+python_version = "3.10"
+strict = false
+warn_return_any = true
+warn_unused_ignores = true

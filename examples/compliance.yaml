@@ -1,0 +1,139 @@
+# Example Declarative Policy
+#
+# This demonstrates APL's YAML-based policies - no Python required!
+#
+# Run with: apl serve compliance.yaml --http 8080
+
+name: corporate-compliance
+version: 1.0.0
+description: Corporate compliance policies for AI agents
+
+policies:
+  # ==========================================================================
+  # PII DETECTION
+  # ==========================================================================
+  - name: detect-ssn
+    description: Block outputs containing Social Security Numbers
+    events:
+      - output.pre_send
+    rules:
+      - when:
+          payload.output_text:
+            matches: ".*\\d{3}-\\d{2}-\\d{4}.*"
+        then:
+          decision: deny
+          reasoning: "Output contains what appears to be a Social Security Number"
+          confidence: 0.95
+
+  - name: detect-credit-card
+    description: Block outputs containing credit card numbers
+    events:
+      - output.pre_send
+    rules:
+      - when:
+          payload.output_text:
+            matches: ".*\\d{4}[- ]?\\d{4}[- ]?\\d{4}[- ]?\\d{4}.*"
+        then:
+          decision: deny
+          reasoning: "Output contains what appears to be a credit card number"
+          confidence: 0.9
+
+  # ==========================================================================
+  # DESTRUCTIVE OPERATIONS
+  # ==========================================================================
+  - name: confirm-delete
+    description: Require confirmation for delete operations
+    events:
+      - tool.pre_invoke
+    rules:
+      - when:
+          payload.tool_name:
+            matches: ".*delete.*"
+        then:
+          decision: escalate
+          escalation:
+            type: human_confirm
+            prompt: "⚠️ Destructive operation requested: {{payload.tool_name}}\n\nTarget: {{payload.tool_args}}\n\nProceed?"
+            options:
+              - Proceed
+              - Cancel
+          reasoning: "Delete operation requires human confirmation"
+
+      - when:
+          payload.tool_name:
+            matches: ".*drop.*"
+        then:
+          decision: escalate
+          escalation:
+            type: human_confirm
+            prompt: "⚠️ Drop operation requested: {{payload.tool_name}}\n\nThis cannot be undone. Proceed?"
+            options:
+              - Proceed
+              - Cancel
+          reasoning: "Drop operation requires human confirmation"
+
+  # ==========================================================================
+  # BUDGET ENFORCEMENT
+  # ==========================================================================
+  - name: token-limit
+    description: Enforce token budget
+    events:
+      - llm.pre_request
+    rules:
+      - when:
+          metadata.token_count:
+            gte: 100000
+        then:
+          decision: deny
+          reasoning: "Token budget exceeded ({{metadata.token_count}} tokens used)"
+          
+      - when:
+          metadata.token_count:
+            gte: 80000
+        then:
+          decision: observe
+          reasoning: "Token usage at 80%+ of budget"
+
+  # ==========================================================================
+  # TOPIC GUARDRAILS
+  # ==========================================================================
+  - name: block-competitor-info
+    description: Prevent sharing competitor-sensitive information
+    events:
+      - output.pre_send
+    rules:
+      - when:
+          payload.output_text:
+            any:
+              - contains: "our competitor's revenue"
+              - contains: "competitor financials"
+              - contains: "their market share"
+        then:
+          decision: deny
+          reasoning: "Response may contain competitor-sensitive business information"
+
+  # ==========================================================================
+  # REGIONAL COMPLIANCE
+  # ==========================================================================
+  - name: gdpr-data-handling
+    description: Stricter handling for EU users
+    events:
+      - tool.pre_invoke
+    rules:
+      - when:
+          metadata.user_region:
+            in:
+              - EU
+              - EEA
+              - UK
+          payload.tool_name:
+            contains: "export"
+        then:
+          decision: escalate
+          escalation:
+            type: human_confirm
+            prompt: "🇪🇺 GDPR Notice: Data export requested for EU user.\n\nEnsure compliance with data protection requirements.\n\nProceed?"
+            options:
+              - Proceed with compliance
+              - Cancel
+          reasoning: "Data export for EU user requires GDPR compliance check"
