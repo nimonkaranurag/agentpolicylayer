@@ -92,7 +92,7 @@ APL is a **protocol** for agent policies — like MCP, but for constraints inste
 ## 📦 Installation
 
 ```bash
-pip install apl
+pip install agent-policy-layer
 ```
 
 That's it. No Docker, no external services.
