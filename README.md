@@ -17,12 +17,11 @@
 
 ### WITHOUT APL 😰
 ![alt text](./_resources/_without_apl/danger_1.png)
-![alt text](./_resources/_without_apl/danger_2.png)
+*more examples [here](./_resources/_without_apl/)*
 
 ### WITH APL 🛡️
 ![alt text](./_resources/_with_apl/safe_1.png)
-![alt text](./_resources/_with_apl/safe_2.png)
-![alt text](./_resources/_with_apl/safe_3.png)
+*more examples [here](./_resources/_with_apl/)*
 
 ## The Problem
 
