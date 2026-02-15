@@ -22,6 +22,9 @@ from datetime import datetime
 from functools import wraps
 from typing import Any, Callable, Optional
 
+from apl.serialization import EventSerializer, VerdictSerializer
+from apl.composition import VerdictComposer
+
 from .types import (
     CompositionConfig,
     CompositionMode,
@@ -252,21 +255,7 @@ class PolicyClient:
 
     def _serialize_event(self, event: PolicyEvent) -> dict:
         """Serialize PolicyEvent to dict for transmission."""
-        return {
-            "id": event.id,
-            "type": event.type.value,
-            "timestamp": event.timestamp.isoformat(),
-            "messages": [
-                self._serialize_message(m)
-                for m in event.messages
-            ],
-            "payload": self._serialize_payload(
-                event.payload
-            ),
-            "metadata": self._serialize_metadata(
-                event.metadata
-            ),
-        }
+        return self._event_serializer.serialize(event)
 
     def _serialize_message(self, msg: Message) -> dict:
         result = {"role": msg.role}
@@ -432,6 +421,9 @@ class PolicyLayer:
         )
         self._clients: list[PolicyClient] = []
         self._connected = False
+        self._event_serializer = EventSerializer()
+        self._verdict_serializer = VerdictSerializer()
+        self._composer = VerdictComposer(self.composition)
 
     def add_server(self, uri: str) -> PolicyLayer:
         """
@@ -544,102 +536,7 @@ class PolicyLayer:
         """
         Compose multiple verdicts into a single verdict.
         """
-        if not verdicts:
-            return Verdict.allow(
-                reasoning="No policies evaluated"
-            )
-
-        mode = self.composition.mode
-
-        if mode == CompositionMode.DENY_OVERRIDES:
-            # Any deny wins
-            denies = [
-                v
-                for v in verdicts
-                if v.decision == Decision.DENY
-            ]
-            if denies:
-                # Return first deny (or could aggregate reasons)
-                return denies[0]
-
-            # Check for escalations
-            escalations = [
-                v
-                for v in verdicts
-                if v.decision == Decision.ESCALATE
-            ]
-            if escalations:
-                return escalations[0]
-
-            # Check for modifications (apply first one)
-            modifications = [
-                v
-                for v in verdicts
-                if v.decision == Decision.MODIFY
-            ]
-            if modifications:
-                return modifications[0]
-
-            # All allowed
-            return Verdict.allow(
-                reasoning="All policies allowed"
-            )
-
-        elif mode == CompositionMode.UNANIMOUS:
-            # All must allow
-            for v in verdicts:
-                if v.decision == Decision.DENY:
-                    return v
-                if v.decision == Decision.ESCALATE:
-                    return v
-
-            return Verdict.allow(
-                reasoning="All policies agreed"
-            )
-
-        elif mode == CompositionMode.FIRST_APPLICABLE:
-            # First non-observe verdict wins
-            for v in verdicts:
-                if v.decision != Decision.OBSERVE:
-                    return v
-
-            return Verdict.allow(
-                reasoning="No applicable policy"
-            )
-
-        elif mode == CompositionMode.WEIGHTED:
-            # Confidence-weighted voting (for soft constraints)
-            allow_score = sum(
-                v.confidence
-                for v in verdicts
-                if v.decision == Decision.ALLOW
-            )
-            deny_score = sum(
-                v.confidence
-                for v in verdicts
-                if v.decision == Decision.DENY
-            )
-
-            if deny_score > allow_score:
-                denies = [
-                    v
-                    for v in verdicts
-                    if v.decision == Decision.DENY
-                ]
-                return (
-                    denies[0]
-                    if denies
-                    else Verdict.deny("Weighted deny")
-                )
-
-            return Verdict.allow(
-                reasoning=f"Weighted allow ({allow_score:.2f} vs {deny_score:.2f})"
-            )
-
-        else:
-            return Verdict.allow(
-                reasoning="Unknown composition mode"
-            )
+        return self._composer.compose(verdicts)
 
     # =========================================================================
     # DECORATOR API

@@ -74,6 +74,8 @@ from .layer import (
     PolicyEscalation,
     PolicyLayer,
 )
+from .composition import VerdictComposer
+from .serialization import EventSerializer, VerdictSerializer
 from .logging import APLLogger, get_logger, setup_logging
 from .server import PolicyServer
 from .types import (  # Events; Context (chat/completions compatible); Verdicts; Definitions; Composition
@@ -147,6 +149,7 @@ __all__ = [
     # Composition
     "CompositionMode",
     "CompositionConfig",
+    "VerdictComposer",
     # Exceptions
     "PolicyDenied",
     "PolicyEscalation",
@@ -160,4 +163,6 @@ __all__ = [
     # Auto-instrumentation
     "auto_instrument",
     "uninstrument",
+    "EventSerializer",
+    "VerdictSerializer",
 ]

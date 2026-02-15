@@ -1,12 +1,33 @@
-"""
-APL Transports
+from typing import TYPE_CHECKING, Dict, Type
 
-Transport implementations for APL policy servers:
-- stdio: Spawn process and communicate via stdin/stdout (default)
-- http: HTTP/REST API with Server-Sent Events
-- websocket: WebSocket for low-latency bidirectional communication (coming soon)
-"""
+from .base_transport import BaseTransport
+from .http import HTTPTransport
+from .stdio import StdioTransport
 
-from .http import create_app, run_http_server
+if TYPE_CHECKING:
+    from apl.server import PolicyServer
 
-__all__ = ["run_http_server", "create_app"]
+TRANSPORT_REGISTRY: Dict[str, Type[BaseTransport]] = {
+    "stdio": StdioTransport,
+    "http": HTTPTransport,
+}
+
+
+def create_transport(
+    transport_type: str,
+    server: "PolicyServer",
+    **kwargs,
+) -> BaseTransport:
+    transport_class = TRANSPORT_REGISTRY.get(transport_type)
+    if transport_class is None:
+        raise ValueError(f"Unknown transport: {transport_type}")
+    return transport_class(server, **kwargs)
+
+
+__all__ = [
+    "BaseTransport",
+    "StdioTransport",
+    "HTTPTransport",
+    "TRANSPORT_REGISTRY",
+    "create_transport",
+]
