@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "agent-policy-layer"
-version = "0.1.0"
+version = "0.2.0"
 description = "Agent Policy Layer - Portable, composable policies for AI agents"
 readme = "README.md"
 license = "MIT"
@@ -30,6 +30,7 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
     "Topic :: Security",
     "Typing :: Typed",
@@ -47,18 +48,20 @@ dev = [
     "pytest>=7.0",
     "pytest-asyncio>=0.21",
     "black>=23.0",
-    "isort>=7.0.0",
+    "isort>=5.12",
     "types-PyYAML",
 ]
 langgraph = [
-    "langgraph>=0.0.1",
+    "langgraph>=0.2",
 ]
 all = [
-    "apl[dev,langgraph]",
+    "agent-policy-layer[dev,langgraph]",
 ]
 
 [project.urls]
 Homepage = "https://github.com/nimonkaranurag/agentpolicylayer"
+Repository = "https://github.com/nimonkaranurag/agentpolicylayer"
+Issues = "https://github.com/nimonkaranurag/agentpolicylayer/issues"
 
 [project.scripts]
 apl = "apl.cli:main"
