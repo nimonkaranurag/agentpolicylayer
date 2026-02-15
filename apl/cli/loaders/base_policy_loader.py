@@ -9,11 +9,9 @@ from ...server import PolicyServer
 
 class BasePolicyLoader(ABC):
     @abstractmethod
-    def can_load(self, path: Path) -> bool:
-        ...
+    def can_load(self, path: Path) -> bool: ...
 
     @abstractmethod
     def load(
         self, path: Path, logger
-    ) -> Optional[PolicyServer]:
-        ...
+    ) -> Optional[PolicyServer]: ...

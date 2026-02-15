@@ -24,7 +24,5 @@ class YamlPolicyLoader(BasePolicyLoader):
         try:
             return load_yaml_policy(path)
         except Exception as e:
-            logger.error(
-                f"Failed to load YAML policy: {e}"
-            )
+            logger.error(f"Failed to load YAML policy: {e}")
             return None

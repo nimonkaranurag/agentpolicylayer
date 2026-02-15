@@ -11,8 +11,6 @@ SAMPLE_PAYLOADS_BY_EVENT_TYPE = {
         tool_name="delete_file",
         tool_args={"path": "/important/data"},
     ),
-    "llm.pre_request": EventPayload(
-        llm_model="gpt-4"
-    ),
+    "llm.pre_request": EventPayload(llm_model="gpt-4"),
     "input.received": EventPayload(),
 }

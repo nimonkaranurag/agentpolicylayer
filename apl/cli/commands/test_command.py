@@ -26,16 +26,18 @@ _verdict_renderer = VerdictTableRenderer(console)
 @cli.command(cls=RichCommand)
 @click.argument("path", type=click.Path(exists=True))
 @click.option(
-    "-e", "--event", default="output.pre_send",
+    "-e",
+    "--event",
+    default="output.pre_send",
     help="Event type to test",
 )
 @click.option(
-    "-p", "--payload", default=None,
+    "-p",
+    "--payload",
+    default=None,
     help="JSON payload",
 )
-def test(
-    path: str, event: str, payload: Optional[str]
-):
+def test(path: str, event: str, payload: Optional[str]):
     """
     Test a policy with sample events.
 
@@ -56,9 +58,7 @@ def test(
 
     server = _loader_registry.load(path_obj, logger)
     if not server:
-        _status.print(
-            "Failed to load policy", "error"
-        )
+        _status.print("Failed to load policy", "error")
         sys.exit(1)
 
     test_event = _event_factory.build(event, payload)
@@ -68,7 +68,5 @@ def test(
         f"Event type: [cyan]{event}[/cyan]", "info"
     )
 
-    verdicts = asyncio.run(
-        server.evaluate(test_event)
-    )
+    verdicts = asyncio.run(server.evaluate(test_event))
     _verdict_renderer.render(verdicts)
