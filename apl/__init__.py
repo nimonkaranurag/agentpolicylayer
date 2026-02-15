@@ -67,7 +67,7 @@ from .declarative import (
     load_yaml_policy,
     validate_yaml_policy,
 )
-from .instrument import auto_instrument, uninstrument
+from .instrumentation import auto_instrument, uninstrument
 from .layer import (
     PolicyClient,
     PolicyDenied,
