@@ -6,7 +6,7 @@ from .base_adapter import BaseMessageAdapter
 
 
 class LangChainMessageAdapter(BaseMessageAdapter):
-    
+
     LANGCHAIN_TYPE_TO_ROLE = {
         "human": "user",
         "ai": "assistant",

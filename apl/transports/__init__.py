@@ -20,7 +20,9 @@ def create_transport(
 ) -> BaseTransport:
     transport_class = TRANSPORT_REGISTRY.get(transport_type)
     if transport_class is None:
-        raise ValueError(f"Unknown transport: {transport_type}")
+        raise ValueError(
+            f"Unknown transport: {transport_type}"
+        )
     return transport_class(server, **kwargs)
 
 

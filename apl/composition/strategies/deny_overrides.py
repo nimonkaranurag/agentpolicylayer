@@ -4,7 +4,9 @@ from apl.types import Decision, Verdict
 class DenyOverridesStrategy:
     def compose(self, verdicts: list[Verdict]) -> Verdict:
         if not verdicts:
-            return Verdict.allow(reasoning="No policies evaluated")
+            return Verdict.allow(
+                reasoning="No policies evaluated"
+            )
 
         for verdict in verdicts:
             if verdict.decision == Decision.DENY:
@@ -18,4 +20,6 @@ class DenyOverridesStrategy:
             if verdict.decision == Decision.MODIFY:
                 return verdict
 
-        return Verdict.allow(reasoning="All policies allowed")
+        return Verdict.allow(
+            reasoning="All policies allowed"
+        )

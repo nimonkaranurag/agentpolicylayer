@@ -9,7 +9,9 @@ from .node_wrapper import NodeWrapper
 from .state_extractor import LangGraphStateExtractor
 
 
-def create_apl_graph(graph: Any, policy_servers: list[str]) -> Any:
+def create_apl_graph(
+    graph: Any, policy_servers: list[str]
+) -> Any:
     wrapper = APLGraphWrapper()
     for uri in policy_servers:
         wrapper.add_server(uri)

@@ -5,12 +5,18 @@ from datetime import datetime, timezone
 @dataclass
 class ServerMetrics:
     requests_total: int = 0
-    requests_by_event_type: dict[str, int] = field(default_factory=dict)
-    verdicts_by_decision: dict[str, int] = field(default_factory=dict)
+    requests_by_event_type: dict[str, int] = field(
+        default_factory=dict
+    )
+    verdicts_by_decision: dict[str, int] = field(
+        default_factory=dict
+    )
     latency_sum_ms: float = 0.0
     latency_count: int = 0
     errors_total: int = 0
-    start_time: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    start_time: datetime = field(
+        default_factory=lambda: datetime.now(timezone.utc)
+    )
 
     def record_request(
         self,
@@ -20,7 +26,8 @@ class ServerMetrics:
     ) -> None:
         self.requests_total += 1
         self.requests_by_event_type[event_type] = (
-            self.requests_by_event_type.get(event_type, 0) + 1
+            self.requests_by_event_type.get(event_type, 0)
+            + 1
         )
         self.verdicts_by_decision[decision] = (
             self.verdicts_by_decision.get(decision, 0) + 1
@@ -39,4 +46,6 @@ class ServerMetrics:
 
     @property
     def uptime_seconds(self) -> float:
-        return (datetime.now(timezone.utc) - self.start_time).total_seconds()
+        return (
+            datetime.now(timezone.utc) - self.start_time
+        ).total_seconds()

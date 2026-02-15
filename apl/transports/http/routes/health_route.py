@@ -1,7 +1,9 @@
 from aiohttp import web
 
 
-async def handle_health(request: web.Request) -> web.Response:
+async def handle_health(
+    request: web.Request,
+) -> web.Response:
     server = request.app["server"]
     metrics = request.app.get("metrics")
 
@@ -9,7 +11,9 @@ async def handle_health(request: web.Request) -> web.Response:
         "status": "healthy",
         "server": server.name,
         "version": server.version,
-        "policies_loaded": len(server.registry.all_policies()),
+        "policies_loaded": len(
+            server.registry.all_policies()
+        ),
     }
 
     if metrics:

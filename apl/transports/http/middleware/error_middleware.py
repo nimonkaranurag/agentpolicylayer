@@ -19,8 +19,13 @@ async def error_middleware(request: web.Request, handler):
         if "metrics" in request.app:
             request.app["metrics"].record_error()
         if "logger" in request.app:
-            request.app["logger"].error(f"Unhandled error: {e}", exc_info=True)
+            request.app["logger"].error(
+                f"Unhandled error: {e}", exc_info=True
+            )
         return web.json_response(
-            {"error": "Internal server error", "detail": str(e)},
+            {
+                "error": "Internal server error",
+                "detail": str(e),
+            },
             status=500,
         )

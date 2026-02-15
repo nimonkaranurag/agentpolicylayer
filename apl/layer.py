@@ -22,8 +22,11 @@ from datetime import datetime
 from functools import wraps
 from typing import Any, Callable, Optional
 
-from apl.serialization import EventSerializer, VerdictSerializer
 from apl.composition import VerdictComposer
+from apl.serialization import (
+    EventSerializer,
+    VerdictSerializer,
+)
 
 from .types import (
     CompositionConfig,

@@ -7,7 +7,9 @@ class PayloadSerializer:
     def __init__(self, message_serializer=None):
         self._message_serializer = message_serializer
 
-    def serialize(self, payload: EventPayload) -> dict[str, Any]:
+    def serialize(
+        self, payload: EventPayload
+    ) -> dict[str, Any]:
         result = {}
 
         if payload.tool_name is not None:
@@ -21,17 +23,26 @@ class PayloadSerializer:
 
         if payload.llm_model is not None:
             result["llm_model"] = payload.llm_model
-        if payload.llm_response is not None and self._message_serializer:
-            result["llm_response"] = self._message_serializer.serialize(
-                payload.llm_response
+        if (
+            payload.llm_response is not None
+            and self._message_serializer
+        ):
+            result["llm_response"] = (
+                self._message_serializer.serialize(
+                    payload.llm_response
+                )
             )
         if payload.llm_tokens_used is not None:
-            result["llm_tokens_used"] = payload.llm_tokens_used
+            result["llm_tokens_used"] = (
+                payload.llm_tokens_used
+            )
 
         if payload.output_text is not None:
             result["output_text"] = payload.output_text
         if payload.output_structured is not None:
-            result["output_structured"] = payload.output_structured
+            result["output_structured"] = (
+                payload.output_structured
+            )
 
         if payload.plan is not None:
             result["plan"] = payload.plan
@@ -41,11 +52,15 @@ class PayloadSerializer:
         if payload.source_agent is not None:
             result["source_agent"] = payload.source_agent
         if payload.handoff_payload is not None:
-            result["handoff_payload"] = payload.handoff_payload
+            result["handoff_payload"] = (
+                payload.handoff_payload
+            )
 
         return result
 
-    def deserialize(self, data: dict[str, Any]) -> EventPayload:
+    def deserialize(
+        self, data: dict[str, Any]
+    ) -> EventPayload:
         return EventPayload(
             tool_name=data.get("tool_name"),
             tool_args=data.get("tool_args"),

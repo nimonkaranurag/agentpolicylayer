@@ -6,7 +6,7 @@ if TYPE_CHECKING:
 
 
 class BaseFrameworkAdapter(ABC):
-    
+
     def __init__(self, policy_layer: "PolicyLayer"):
         self._policy_layer = policy_layer
 

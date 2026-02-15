@@ -63,6 +63,7 @@ __version__ = "0.1.0"
 # CORE TYPES
 # =============================================================================
 
+from .composition import VerdictComposer
 from .declarative import (
     load_yaml_policy,
     validate_yaml_policy,
@@ -74,9 +75,11 @@ from .layer import (
     PolicyEscalation,
     PolicyLayer,
 )
-from .composition import VerdictComposer
-from .serialization import EventSerializer, VerdictSerializer
 from .logging import APLLogger, get_logger, setup_logging
+from .serialization import (
+    EventSerializer,
+    VerdictSerializer,
+)
 from .server import PolicyServer
 from .types import (  # Events; Context (chat/completions compatible); Verdicts; Definitions; Composition
     CompositionConfig,

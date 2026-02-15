@@ -6,7 +6,10 @@ import sys
 
 def kill_process_on_port(port: int) -> bool:
     try:
-        if sys.platform == "darwin" or sys.platform.startswith("linux"):
+        if (
+            sys.platform == "darwin"
+            or sys.platform.startswith("linux")
+        ):
             return _kill_port_unix(port)
         elif sys.platform == "win32":
             return _kill_port_windows(port)
@@ -57,7 +60,12 @@ def _kill_port_windows(port: int) -> bool:
                 try:
                     pid = int(parts[-1])
                     subprocess.run(
-                        ["taskkill", "/F", "/PID", str(pid)],
+                        [
+                            "taskkill",
+                            "/F",
+                            "/PID",
+                            str(pid),
+                        ],
                         capture_output=True,
                     )
                     killed = True

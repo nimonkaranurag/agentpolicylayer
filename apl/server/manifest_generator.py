@@ -6,7 +6,9 @@ if TYPE_CHECKING:
     from .policy_server import PolicyServer
 
 
-def generate_manifest_from_server(server: "PolicyServer") -> PolicyManifest:
+def generate_manifest_from_server(
+    server: "PolicyServer",
+) -> PolicyManifest:
     policy_definitions = [
         PolicyDefinition(
             name=policy.name,

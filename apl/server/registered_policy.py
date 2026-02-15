@@ -1,9 +1,16 @@
 from dataclasses import dataclass
 from typing import Awaitable, Callable, Union
 
-from apl.types import ContextRequirement, EventType, PolicyEvent, Verdict
+from apl.types import (
+    ContextRequirement,
+    EventType,
+    PolicyEvent,
+    Verdict,
+)
 
-PolicyHandler = Callable[[PolicyEvent], Union[Verdict, Awaitable[Verdict]]]
+PolicyHandler = Callable[
+    [PolicyEvent], Union[Verdict, Awaitable[Verdict]]
+]
 
 
 @dataclass

@@ -1,6 +1,9 @@
 from aiohttp import web
 
-from .evaluate_route import EvaluateRouteHandler, handle_evaluate
+from .evaluate_route import (
+    EvaluateRouteHandler,
+    handle_evaluate,
+)
 from .health_route import handle_health
 from .manifest_route import handle_manifest
 from .metrics_route import handle_metrics
@@ -13,7 +16,9 @@ def register_all_routes(app: web.Application) -> None:
     app.router.add_get("/health", handle_health)
     app.router.add_get("/metrics", handle_metrics)
     app.router.add_get("/events", handle_server_sent_events)
-    app.router.add_get("/", lambda r: web.HTTPFound("/health"))
+    app.router.add_get(
+        "/", lambda r: web.HTTPFound("/health")
+    )
 
 
 __all__ = [

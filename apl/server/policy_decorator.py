@@ -1,9 +1,17 @@
 from functools import wraps
 from typing import TYPE_CHECKING
 
-from apl.types import ContextRequirement, EventType, PolicyEvent, Verdict
+from apl.types import (
+    ContextRequirement,
+    EventType,
+    PolicyEvent,
+    Verdict,
+)
 
-from .registered_policy import PolicyHandler, RegisteredPolicy
+from .registered_policy import (
+    PolicyHandler,
+    RegisteredPolicy,
+)
 
 if TYPE_CHECKING:
     from .policy_registry import PolicyRegistry
@@ -20,7 +28,9 @@ def create_policy_decorator(
     description: str | None = None,
 ):
     event_types = _parse_event_types(events)
-    context_requirements = _parse_context_requirements(context)
+    context_requirements = _parse_context_requirements(
+        context
+    )
 
     def decorator(handler: PolicyHandler) -> PolicyHandler:
         registered = RegisteredPolicy(
@@ -38,15 +48,22 @@ def create_policy_decorator(
 
         @wraps(handler)
         async def wrapper(event: PolicyEvent) -> Verdict:
-            from .handler_invoker import invoke_policy_handler
-            return await invoke_policy_handler(registered, event)
+            from .handler_invoker import (
+                invoke_policy_handler,
+            )
+
+            return await invoke_policy_handler(
+                registered, event
+            )
 
         return wrapper
 
     return decorator
 
 
-def _parse_event_types(events: list[str | EventType]) -> list[EventType]:
+def _parse_event_types(
+    events: list[str | EventType],
+) -> list[EventType]:
     result = []
     for event in events:
         if isinstance(event, EventType):
@@ -55,7 +72,9 @@ def _parse_event_types(events: list[str | EventType]) -> list[EventType]:
             try:
                 result.append(EventType(event))
             except ValueError:
-                raise ValueError(f"Unknown event type: {event}")
+                raise ValueError(
+                    f"Unknown event type: {event}"
+                )
     return result
 
 

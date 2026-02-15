@@ -3,7 +3,9 @@ import asyncio
 from aiohttp import web
 
 
-async def handle_server_sent_events(request: web.Request) -> web.StreamResponse:
+async def handle_server_sent_events(
+    request: web.Request,
+) -> web.StreamResponse:
     response = web.StreamResponse()
     response.headers["Content-Type"] = "text/event-stream"
     response.headers["Cache-Control"] = "no-cache"

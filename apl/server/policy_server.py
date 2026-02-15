@@ -1,6 +1,8 @@
 from apl.types import PolicyEvent, PolicyManifest, Verdict
 
-from .manifest_generator import generate_manifest_from_server
+from .manifest_generator import (
+    generate_manifest_from_server,
+)
 from .policy_decorator import create_policy_decorator
 from .policy_registry import PolicyRegistry
 
@@ -42,14 +44,20 @@ class PolicyServer:
             description=description,
         )
 
-    async def evaluate(self, event: PolicyEvent) -> list[Verdict]:
+    async def evaluate(
+        self, event: PolicyEvent
+    ) -> list[Verdict]:
         return await self._registry.evaluate_event(event)
 
     def get_manifest(self) -> PolicyManifest:
         return generate_manifest_from_server(self)
 
-    def run(self, transport: str = "stdio", **kwargs) -> None:
+    def run(
+        self, transport: str = "stdio", **kwargs
+    ) -> None:
         from apl.transports import create_transport
 
-        transport_instance = create_transport(transport, self, **kwargs)
+        transport_instance = create_transport(
+            transport, self, **kwargs
+        )
         transport_instance.run()

@@ -3,7 +3,9 @@ from aiohttp import web
 from apl.metrics import export_metrics_to_prometheus
 
 
-async def handle_metrics(request: web.Request) -> web.Response:
+async def handle_metrics(
+    request: web.Request,
+) -> web.Response:
     metrics = request.app.get("metrics")
 
     if metrics is None:

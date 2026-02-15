@@ -37,12 +37,16 @@ class HTTPTransport(BaseTransport):
         if self._logger is None:
             self._logger = setup_logging()
 
-        app = create_http_application(self.server, self._logger)
+        app = create_http_application(
+            self.server, self._logger
+        )
 
         self._runner = web.AppRunner(app)
         await self._runner.setup()
 
-        self._site = web.TCPSite(self._runner, self._host, self._port)
+        self._site = web.TCPSite(
+            self._runner, self._host, self._port
+        )
 
         try:
             await self._site.start()
@@ -52,7 +56,9 @@ class HTTPTransport(BaseTransport):
             else:
                 raise
 
-        self._logger.server_started("http", f"{self._host}:{self._port}")
+        self._logger.server_started(
+            "http", f"{self._host}:{self._port}"
+        )
 
     async def stop(self) -> None:
         if self._runner:
@@ -71,7 +77,9 @@ class HTTPTransport(BaseTransport):
             await self.stop()
 
     async def _handle_port_in_use(self) -> None:
-        logger.warning(f"Port {self._port} in use, attempting to free it...")
+        logger.warning(
+            f"Port {self._port} in use, attempting to free it..."
+        )
 
         if kill_process_on_port(self._port):
             await asyncio.sleep(0.5)
@@ -84,4 +92,6 @@ class HTTPTransport(BaseTransport):
                 )
                 raise
         else:
-            raise OSError(f"Could not free port {self._port}")
+            raise OSError(
+                f"Could not free port {self._port}"
+            )

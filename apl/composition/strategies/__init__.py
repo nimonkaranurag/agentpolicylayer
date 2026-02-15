@@ -9,7 +9,9 @@ from .first_applicable import FirstApplicableStrategy
 from .unanimous import UnanimousStrategy
 from .weighted import WeightedStrategy
 
-STRATEGY_REGISTRY: Dict[CompositionMode, Type[CompositionStrategy]] = {
+STRATEGY_REGISTRY: Dict[
+    CompositionMode, Type[CompositionStrategy]
+] = {
     CompositionMode.DENY_OVERRIDES: DenyOverridesStrategy,
     CompositionMode.ALLOW_OVERRIDES: AllowOverridesStrategy,
     CompositionMode.UNANIMOUS: UnanimousStrategy,
@@ -18,10 +20,14 @@ STRATEGY_REGISTRY: Dict[CompositionMode, Type[CompositionStrategy]] = {
 }
 
 
-def get_strategy(mode: CompositionMode) -> CompositionStrategy:
+def get_strategy(
+    mode: CompositionMode,
+) -> CompositionStrategy:
     strategy_class = STRATEGY_REGISTRY.get(mode)
     if strategy_class is None:
-        raise ValueError(f"Unknown composition mode: {mode}")
+        raise ValueError(
+            f"Unknown composition mode: {mode}"
+        )
     return strategy_class()
 
 

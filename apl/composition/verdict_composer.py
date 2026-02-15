@@ -4,7 +4,9 @@ from .strategies import CompositionStrategy, get_strategy
 
 
 class VerdictComposer:
-    def __init__(self, config: CompositionConfig | None = None):
+    def __init__(
+        self, config: CompositionConfig | None = None
+    ):
         self._config = config or CompositionConfig()
         self._strategy = get_strategy(self._config.mode)
 

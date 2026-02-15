@@ -4,4 +4,6 @@ from apl.types import Verdict
 
 
 class CompositionStrategy(Protocol):
-    def compose(self, verdicts: list[Verdict]) -> Verdict: ...
+    def compose(
+        self, verdicts: list[Verdict]
+    ) -> Verdict: ...

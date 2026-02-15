@@ -2,7 +2,11 @@ import sys
 from typing import TYPE_CHECKING
 
 from apl.logging import get_logger
-from apl.serialization import EventSerializer, ManifestSerializer, VerdictSerializer
+from apl.serialization import (
+    EventSerializer,
+    ManifestSerializer,
+    VerdictSerializer,
+)
 
 from .message_writer import write_json_line
 
@@ -29,17 +33,26 @@ class StdioProtocolHandler:
         elif message_type == "shutdown":
             self._handle_shutdown()
         else:
-            logger.warning(f"Unknown message type: {message_type}")
+            logger.warning(
+                f"Unknown message type: {message_type}"
+            )
 
     async def _handle_evaluate(self, message: dict) -> None:
-        event = self._event_serializer.deserialize(message.get("event", {}))
+        event = self._event_serializer.deserialize(
+            message.get("event", {})
+        )
         verdicts = await self._server.evaluate(event)
 
-        write_json_line({
-            "type": "verdicts",
-            "event_id": event.id,
-            "verdicts": [self._verdict_serializer.serialize(v) for v in verdicts],
-        })
+        write_json_line(
+            {
+                "type": "verdicts",
+                "event_id": event.id,
+                "verdicts": [
+                    self._verdict_serializer.serialize(v)
+                    for v in verdicts
+                ],
+            }
+        )
 
     def _handle_ping(self) -> None:
         write_json_line({"type": "pong"})
@@ -50,7 +63,11 @@ class StdioProtocolHandler:
 
     def send_manifest(self) -> None:
         manifest = self._server.get_manifest()
-        write_json_line({
-            "type": "manifest",
-            "manifest": self._manifest_serializer.serialize(manifest),
-        })
+        write_json_line(
+            {
+                "type": "manifest",
+                "manifest": self._manifest_serializer.serialize(
+                    manifest
+                ),
+            }
+        )
