@@ -58,7 +58,7 @@ all = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/nimonkaranurag/agent_policy_layer"
+Homepage = "https://github.com/nimonkaranurag/agentpolicylayer"
 
 [project.scripts]
 apl = "apl.cli:main"
