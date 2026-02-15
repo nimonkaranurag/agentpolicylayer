@@ -56,7 +56,7 @@ class LangChainMessageAdapter(BaseMessageAdapter):
             )
         if hasattr(langchain_message, "role"):
             return langchain_message.role
-        
+
         return "user"
 
     def _extract_content(

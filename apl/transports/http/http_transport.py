@@ -83,6 +83,9 @@ class HTTPTransport(BaseTransport):
 
         if kill_process_on_port(self._port):
             await asyncio.sleep(0.5)
+            self._site = web.TCPSite(
+                self._runner, self._host, self._port
+            )
             try:
                 await self._site.start()
             except OSError:
