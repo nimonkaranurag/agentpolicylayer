@@ -19,14 +19,6 @@ class ChatCompletionsMessageAdapter(BaseMessageAdapter):
             if self._convert_single_message(msg) is not None
         ]
 
-    def from_apl_messages(
-        self, apl_messages: List[Message]
-    ) -> List[dict]:
-        return [
-            {"role": msg.role, "content": msg.content}
-            for msg in apl_messages
-        ]
-
     def _convert_single_message(
         self, raw_message: Any
     ) -> Message | None:

@@ -64,7 +64,7 @@ __version__ = "0.1.0"
 # =============================================================================
 
 from .composition import VerdictComposer
-from .declarative import (
+from .declarative_engine import (
     load_yaml_policy,
     validate_yaml_policy,
 )

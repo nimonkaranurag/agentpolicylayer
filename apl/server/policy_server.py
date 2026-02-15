@@ -1,3 +1,7 @@
+from __future__ import annotations
+
+from typing import Callable
+
 from apl.types import PolicyEvent, PolicyManifest, Verdict
 
 from .manifest_generator import (
@@ -5,19 +9,21 @@ from .manifest_generator import (
 )
 from .policy_decorator import create_policy_decorator
 from .policy_registry import PolicyRegistry
+from .registered_policy import PolicyHandler
 
 
 class PolicyServer:
+
     def __init__(
         self,
         name: str,
         version: str = "0.1.0",
         description: str | None = None,
-    ):
-        self.name = name
-        self.version = version
-        self.description = description
-        self._registry = PolicyRegistry()
+    ) -> None:
+        self.name: str = name
+        self.version: str = version
+        self.description: str | None = description
+        self._registry: PolicyRegistry = PolicyRegistry()
 
     @property
     def registry(self) -> PolicyRegistry:
@@ -32,7 +38,7 @@ class PolicyServer:
         blocking: bool = True,
         timeout_ms: int = 1000,
         description: str | None = None,
-    ):
+    ) -> Callable[[PolicyHandler], PolicyHandler]:
         return create_policy_decorator(
             registry=self._registry,
             policy_name=name,

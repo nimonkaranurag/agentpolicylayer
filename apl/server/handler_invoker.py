@@ -1,5 +1,8 @@
+from __future__ import annotations
+
 import asyncio
 import time
+from typing import Any, Coroutine
 
 from apl.logging import get_logger
 from apl.types import Decision, PolicyEvent, Verdict
@@ -13,18 +16,22 @@ async def invoke_policy_handler(
     policy: RegisteredPolicy,
     event: PolicyEvent,
 ) -> Verdict:
-    start_time = time.perf_counter()
+    start_time: float = time.perf_counter()
 
     try:
-        result = policy.handler(event)
+        result: Any = policy.handler(event)
 
         if asyncio.iscoroutine(result):
-            timeout_seconds = policy.timeout_ms / 1000
+            timeout_seconds: float = (
+                policy.timeout_ms / 1000
+            )
             result = await asyncio.wait_for(
                 result, timeout=timeout_seconds
             )
 
-        elapsed_ms = _calculate_elapsed_ms(start_time)
+        elapsed_ms: float = _calculate_elapsed_ms(
+            start_time
+        )
         return _enrich_verdict_with_policy_metadata(
             result, policy, elapsed_ms
         )
@@ -36,13 +43,13 @@ async def invoke_policy_handler(
         )
         return _create_timeout_verdict(policy, elapsed_ms)
 
-    except Exception as e:
+    except Exception as exc:
         elapsed_ms = _calculate_elapsed_ms(start_time)
         logger.error(
-            f"Policy {policy.name} raised exception: {e}"
+            f"Policy {policy.name} raised exception: {exc}"
         )
         return _create_error_verdict(
-            policy, elapsed_ms, str(e)
+            policy, elapsed_ms, str(exc)
         )
 
 

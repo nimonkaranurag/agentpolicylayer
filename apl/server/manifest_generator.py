@@ -1,15 +1,22 @@
+from __future__ import annotations
+
 from typing import TYPE_CHECKING
 
 from apl.types import PolicyDefinition, PolicyManifest
 
 if TYPE_CHECKING:
     from .policy_server import PolicyServer
+    from .registered_policy import RegisteredPolicy
 
 
 def generate_manifest_from_server(
-    server: "PolicyServer",
+    server: PolicyServer,
 ) -> PolicyManifest:
-    policy_definitions = [
+    registered_policies: list[RegisteredPolicy] = (
+        server.registry.all_policies()
+    )
+
+    policy_definitions: list[PolicyDefinition] = [
         PolicyDefinition(
             name=policy.name,
             version=policy.version,
@@ -19,7 +26,7 @@ def generate_manifest_from_server(
             blocking=policy.blocking,
             timeout_ms=policy.timeout_ms,
         )
-        for policy in server.registry.all_policies()
+        for policy in registered_policies
     ]
 
     return PolicyManifest(

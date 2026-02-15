@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 from typing import Awaitable, Callable, Union
 
@@ -22,4 +24,4 @@ class RegisteredPolicy:
     context_requirements: list[ContextRequirement]
     blocking: bool
     timeout_ms: int
-    description: str | None
+    description: str | None = None

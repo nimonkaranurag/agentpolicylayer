@@ -1,25 +1,40 @@
+from __future__ import annotations
+
 from apl.types import Decision, Verdict
 
+from .base_strategy import BaseCompositionStrategy
 
-class DenyOverridesStrategy:
+PRIORITY_ORDER: list[Decision] = [
+    Decision.DENY,
+    Decision.ESCALATE,
+    Decision.MODIFY,
+]
+
+
+class DenyOverridesStrategy(BaseCompositionStrategy):
+
+    def __init__(
+        self, allow_reasoning: str = "All policies allowed"
+    ) -> None:
+        self._allow_reasoning: str = allow_reasoning
+
     def compose(self, verdicts: list[Verdict]) -> Verdict:
-        if not verdicts:
-            return Verdict.allow(
-                reasoning="No policies evaluated"
+        guard: Verdict | None = self._guard_empty_verdicts(
+            verdicts
+        )
+        if guard is not None:
+            return guard
+
+        for decision in PRIORITY_ORDER:
+            match: Verdict | None = (
+                self._find_first_verdict_with_decision(
+                    verdicts,
+                    decision,
+                )
             )
-
-        for verdict in verdicts:
-            if verdict.decision == Decision.DENY:
-                return verdict
-
-        for verdict in verdicts:
-            if verdict.decision == Decision.ESCALATE:
-                return verdict
-
-        for verdict in verdicts:
-            if verdict.decision == Decision.MODIFY:
-                return verdict
+            if match is not None:
+                return match
 
         return Verdict.allow(
-            reasoning="All policies allowed"
+            reasoning=self._allow_reasoning
         )

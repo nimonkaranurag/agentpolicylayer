@@ -29,14 +29,6 @@ class LangChainMessageAdapter(BaseMessageAdapter):
 
         return []
 
-    def from_apl_messages(
-        self, apl_messages: List[Message]
-    ) -> List[dict]:
-        return [
-            {"role": msg.role, "content": msg.content}
-            for msg in apl_messages
-        ]
-
     def _convert_langchain_message(
         self, langchain_message: Any
     ) -> Message:

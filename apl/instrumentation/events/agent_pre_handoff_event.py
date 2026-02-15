@@ -1,4 +1,6 @@
-from typing import TYPE_CHECKING
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
 
 from apl.types import EventPayload, EventType
 
@@ -9,12 +11,13 @@ if TYPE_CHECKING:
 
 
 class AgentPreHandoffEvent(BaseEvent):
+
     @property
     def event_type(self) -> EventType:
         return EventType.AGENT_PRE_HANDOFF
 
     def build_payload(
-        self, context: "LifecycleContext"
+        self, context: LifecycleContext
     ) -> EventPayload:
         return EventPayload(
             target_agent=context.target_agent,
@@ -25,8 +28,8 @@ class AgentPreHandoffEvent(BaseEvent):
     def _apply_modification_for_target(
         self,
         target: str,
-        value: any,
-        context: "LifecycleContext",
+        value: Any,
+        context: LifecycleContext,
     ) -> None:
         if target == "handoff_payload":
             context.modify_handoff_payload(value)

@@ -1,6 +1,8 @@
-from typing import TYPE_CHECKING
+from __future__ import annotations
 
-from apl.types import EventPayload, EventType
+from typing import TYPE_CHECKING, Any
+
+from apl.types import EventType
 
 from .base_event import BaseEvent
 
@@ -9,20 +11,16 @@ if TYPE_CHECKING:
 
 
 class InputValidatedEvent(BaseEvent):
+
     @property
     def event_type(self) -> EventType:
         return EventType.INPUT_VALIDATED
 
-    def build_payload(
-        self, context: "LifecycleContext"
-    ) -> EventPayload:
-        return EventPayload()
-
     def _apply_modification_for_target(
         self,
         target: str,
-        value: any,
-        context: "LifecycleContext",
+        value: Any,
+        context: LifecycleContext,
     ) -> None:
         if target == "input":
             context.modify_request_messages(value)
