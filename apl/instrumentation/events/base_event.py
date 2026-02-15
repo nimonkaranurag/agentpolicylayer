@@ -1,5 +1,7 @@
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from apl.types import (
     Decision,
@@ -13,17 +15,18 @@ if TYPE_CHECKING:
 
 
 class BaseEvent(ABC):
+
     @property
     @abstractmethod
     def event_type(self) -> EventType: ...
 
-    @abstractmethod
     def build_payload(
-        self, context: "LifecycleContext"
-    ) -> EventPayload: ...
+        self, context: LifecycleContext
+    ) -> EventPayload:
+        return EventPayload()
 
     def apply_verdict_modifications(
-        self, verdict: Verdict, context: "LifecycleContext"
+        self, verdict: Verdict, context: LifecycleContext
     ) -> None:
         if verdict.decision != Decision.MODIFY:
             return
@@ -31,8 +34,10 @@ class BaseEvent(ABC):
         if verdict.modification is None:
             return
 
-        modification_target = verdict.modification.target
-        modification_value = verdict.modification.value
+        modification_target: str = (
+            verdict.modification.target
+        )
+        modification_value: Any = verdict.modification.value
 
         self._apply_modification_for_target(
             modification_target,
@@ -43,7 +48,7 @@ class BaseEvent(ABC):
     def _apply_modification_for_target(
         self,
         target: str,
-        value: any,
-        context: "LifecycleContext",
+        value: Any,
+        context: LifecycleContext,
     ) -> None:
         pass

@@ -1,10 +1,12 @@
-import functools
+from __future__ import annotations
+
 from typing import Any
 
 from .base_provider import BaseProvider
 
 
 class LiteLLMProvider(BaseProvider):
+
     @property
     def provider_name(self) -> str:
         return "litellm"
@@ -24,43 +26,19 @@ class LiteLLMProvider(BaseProvider):
         self.method_patcher.register_patch(
             litellm,
             "completion",
-            self._create_sync_wrapper(),
+            self._create_module_sync_wrapper(),
         )
         self.method_patcher.register_patch(
             litellm,
             "acompletion",
-            self._create_async_wrapper(),
+            self._create_module_async_wrapper(),
         )
         self.method_patcher.apply_all_patches()
 
-    def extract_messages_from_request(
-        self, *args, **kwargs
-    ) -> Any:
-        return kwargs.get("messages", [])
+    def _create_module_sync_wrapper(self) -> Any:
+        provider: LiteLLMProvider = self
 
-    def extract_model_from_request(
-        self, *args, **kwargs
-    ) -> str:
-        return kwargs.get("model", "unknown")
-
-    def extract_text_from_response(
-        self, response: Any
-    ) -> str:
-        try:
-            return response.choices[0].message.content or ""
-        except (AttributeError, IndexError):
-            return ""
-
-    def apply_text_to_response(
-        self, response: Any, new_text: str
-    ) -> Any:
-        response.choices[0].message.content = new_text
-        return response
-
-    def _create_sync_wrapper(self):
-        provider = self
-
-        def wrapper(*args, **kwargs):
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
             original = (
                 provider.method_patcher.patch_targets[
                     0
@@ -72,10 +50,10 @@ class LiteLLMProvider(BaseProvider):
 
         return wrapper
 
-    def _create_async_wrapper(self):
-        provider = self
+    def _create_module_async_wrapper(self) -> Any:
+        provider: LiteLLMProvider = self
 
-        async def wrapper(*args, **kwargs):
+        async def wrapper(*args: Any, **kwargs: Any) -> Any:
             original = (
                 provider.method_patcher.patch_targets[
                     1

@@ -1,25 +1,11 @@
-from apl.types import Decision, Verdict
+from __future__ import annotations
+
+from .deny_overrides import DenyOverridesStrategy
 
 
-class UnanimousStrategy:
-    def compose(self, verdicts: list[Verdict]) -> Verdict:
-        if not verdicts:
-            return Verdict.allow(
-                reasoning="No policies evaluated"
-            )
+class UnanimousStrategy(DenyOverridesStrategy):
 
-        for verdict in verdicts:
-            if verdict.decision == Decision.DENY:
-                return verdict
-
-        for verdict in verdicts:
-            if verdict.decision == Decision.ESCALATE:
-                return verdict
-
-        for verdict in verdicts:
-            if verdict.decision == Decision.MODIFY:
-                return verdict
-
-        return Verdict.allow(
-            reasoning="All policies agreed"
+    def __init__(self) -> None:
+        super().__init__(
+            allow_reasoning="All policies agreed"
         )

@@ -12,7 +12,8 @@ class ArgumentsTableRenderer:
 
     def render(self, params):
         args = [
-            p for p in params
+            p
+            for p in params
             if isinstance(p, click.Argument)
         ]
         if not args:

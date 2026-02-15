@@ -15,6 +15,8 @@ class YamlPolicyValidator(BasePolicyValidator):
         )
 
     def validate(self, path: Path) -> list[str]:
-        from ...declarative import validate_yaml_policy
+        from ...declarative_engine import (
+            validate_yaml_policy,
+        )
 
         return validate_yaml_policy(path)

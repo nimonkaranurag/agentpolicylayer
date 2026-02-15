@@ -40,17 +40,11 @@ def validate(path: str):
         if errors:
             _status.print("Validation failed", "error")
             for error in errors:
-                console.print(
-                    f"    [red]•[/red] {error}"
-                )
+                console.print(f"    [red]•[/red] {error}")
             sys.exit(1)
         else:
-            _status.print(
-                "Validation passed!", "success"
-            )
+            _status.print("Validation passed!", "success")
 
     except Exception as e:
-        _status.print(
-            f"Validation error: {e}", "error"
-        )
+        _status.print(f"Validation error: {e}", "error")
         sys.exit(1)

@@ -25,23 +25,33 @@ _loader_registry = PolicyLoaderRegistry()
 @cli.command(cls=RichCommand)
 @click.argument("path", type=click.Path(exists=True))
 @click.option(
-    "--http", "http_port", type=int, default=None,
+    "--http",
+    "http_port",
+    type=int,
+    default=None,
     help="Enable HTTP transport on this port",
 )
 @click.option(
-    "--host", default="0.0.0.0",
+    "--host",
+    default="0.0.0.0",
     help="HTTP host to bind to",
 )
 @click.option(
-    "--stdio", is_flag=True, default=False,
+    "--stdio",
+    is_flag=True,
+    default=False,
     help="Use stdio transport (default)",
 )
 @click.option(
-    "-v", "--verbose", is_flag=True,
+    "-v",
+    "--verbose",
+    is_flag=True,
     help="Enable verbose logging",
 )
 @click.option(
-    "-q", "--quiet", is_flag=True,
+    "-q",
+    "--quiet",
+    is_flag=True,
     help="Minimal output",
 )
 def serve(
@@ -105,9 +115,7 @@ def serve(
         _serve_over_stdio(server, quiet)
 
 
-def _serve_over_http(
-    server, host, port, logger, quiet
-):
+def _serve_over_http(server, host, port, logger, quiet):
     if not quiet:
         _status.print(
             f"Starting HTTP server on"
@@ -116,11 +124,12 @@ def _serve_over_http(
         )
         ServerPanelRenderer(console).render(host, port)
 
-    from ...transports.http import HTTPTransport
-
-    HTTPTransport(
-        server, host=host, port=port, apl_logger=logger
-    ).run()
+    server.run(
+        transport="http",
+        host=host,
+        port=port,
+        apl_logger=logger,
+    )
 
 
 def _serve_over_stdio(server, quiet):
@@ -132,8 +141,6 @@ def _serve_over_stdio(server, quiet):
         console.print(
             "  [dim]Waiting for events on stdin...[/dim]"
         )
-        console.print(
-            "  [dim]Press Ctrl+C to stop[/dim]"
-        )
+        console.print("  [dim]Press Ctrl+C to stop[/dim]")
         console.print()
     server.run(transport="stdio")

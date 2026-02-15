@@ -23,13 +23,13 @@ class RichCommand(click.Command):
             self._arguments_renderer = (
                 ArgumentsTableRenderer(console)
             )
-            self._options_renderer = (
-                OptionsTableRenderer(console)
+            self._options_renderer = OptionsTableRenderer(
+                console
             )
 
     def format_help(self, ctx, formatter):
-        from .. import console
         from ... import __version__
+        from .. import console
 
         self._ensure_initialized(console)
 

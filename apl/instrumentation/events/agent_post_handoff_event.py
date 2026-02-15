@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import TYPE_CHECKING
 
 from apl.types import EventPayload, EventType
@@ -9,23 +11,16 @@ if TYPE_CHECKING:
 
 
 class AgentPostHandoffEvent(BaseEvent):
+
     @property
     def event_type(self) -> EventType:
         return EventType.AGENT_POST_HANDOFF
 
     def build_payload(
-        self, context: "LifecycleContext"
+        self, context: LifecycleContext
     ) -> EventPayload:
         return EventPayload(
             target_agent=context.target_agent,
             source_agent=context.source_agent,
             handoff_payload=context.handoff_payload,
         )
-
-    def _apply_modification_for_target(
-        self,
-        target: str,
-        value: any,
-        context: "LifecycleContext",
-    ) -> None:
-        pass

@@ -1,9 +1,14 @@
+from __future__ import annotations
+
 from typing import Dict, Type
 
 from apl.types import CompositionMode
 
 from .allow_overrides import AllowOverridesStrategy
-from .base_strategy import CompositionStrategy
+from .base_strategy import (
+    BaseCompositionStrategy,
+    CompositionStrategy,
+)
 from .deny_overrides import DenyOverridesStrategy
 from .first_applicable import FirstApplicableStrategy
 from .unanimous import UnanimousStrategy
@@ -23,7 +28,9 @@ STRATEGY_REGISTRY: Dict[
 def get_strategy(
     mode: CompositionMode,
 ) -> CompositionStrategy:
-    strategy_class = STRATEGY_REGISTRY.get(mode)
+    strategy_class: Type[CompositionStrategy] | None = (
+        STRATEGY_REGISTRY.get(mode)
+    )
     if strategy_class is None:
         raise ValueError(
             f"Unknown composition mode: {mode}"
@@ -31,8 +38,9 @@ def get_strategy(
     return strategy_class()
 
 
-__all__ = [
+__all__: list[str] = [
     "CompositionStrategy",
+    "BaseCompositionStrategy",
     "STRATEGY_REGISTRY",
     "get_strategy",
     "DenyOverridesStrategy",

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Any
 
 from apl.logging import get_logger
@@ -8,6 +10,7 @@ logger = get_logger("instrumentation.watsonx")
 
 
 class WatsonXProvider(BaseProvider):
+
     @property
     def provider_name(self) -> str:
         return "watsonx"
@@ -31,12 +34,14 @@ class WatsonXProvider(BaseProvider):
         self.method_patcher.register_patch(
             ModelInference,
             "chat",
-            self._create_sync_wrapper(),
+            self._create_instance_method_sync_wrapper(
+                patch_target_index=0
+            ),
         )
         self.method_patcher.apply_all_patches()
 
     def extract_messages_from_request(
-        self, *args, **kwargs
+        self, *args: Any, **kwargs: Any
     ) -> Any:
         if "messages" in kwargs:
             return kwargs["messages"]
@@ -45,7 +50,7 @@ class WatsonXProvider(BaseProvider):
         return []
 
     def extract_model_from_request(
-        self, *args, **kwargs
+        self, *args: Any, **kwargs: Any
     ) -> str:
         return "watsonx"
 
@@ -72,21 +77,3 @@ class WatsonXProvider(BaseProvider):
                 "Failed to apply modified text to WatsonX response"
             )
         return response
-
-    def _create_sync_wrapper(self):
-        provider = self
-
-        def wrapper(model_self, *args, **kwargs):
-            original = (
-                provider.method_patcher.patch_targets[
-                    0
-                ].original_method
-            )
-            bound_method = lambda *a, **kw: original(
-                model_self, *a, **kw
-            )
-            return provider.execute_llm_call_sync(
-                bound_method, *args, **kwargs
-            )
-
-        return wrapper

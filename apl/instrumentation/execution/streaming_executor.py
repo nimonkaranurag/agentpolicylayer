@@ -1,24 +1,13 @@
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    AsyncIterator,
-    Iterator,
-)
+from __future__ import annotations
 
-from ..evaluation import PolicyEvaluator, VerdictHandler
+from typing import Any, AsyncIterator, Iterator
+
 from ..lifecycle.context import LifecycleContext
 from ..lifecycle.sequence import EventSequence
 from .base_executor import BaseLifecycleExecutor
 
-if TYPE_CHECKING:
-    from ..state import InstrumentationState
-
 
 class StreamingLifecycleExecutor(BaseLifecycleExecutor):
-    def __init__(self, state: "InstrumentationState"):
-        super().__init__(state)
-        self.policy_evaluator = PolicyEvaluator(state)
-        self.verdict_handler = VerdictHandler()
 
     def execute_sequence(
         self,
@@ -45,10 +34,10 @@ class StreamingLifecycleExecutor(BaseLifecycleExecutor):
         context: LifecycleContext,
         chunk_text_extractor: callable,
     ) -> Iterator[Any]:
-        accumulated_text = ""
+        accumulated_text: str = ""
 
         for chunk in stream:
-            chunk_text = chunk_text_extractor(chunk)
+            chunk_text: str = chunk_text_extractor(chunk)
             accumulated_text += chunk_text
             yield chunk
 
@@ -62,15 +51,24 @@ class StreamingLifecycleExecutor(BaseLifecycleExecutor):
         context: LifecycleContext,
         chunk_text_extractor: callable,
     ) -> AsyncIterator[Any]:
-        accumulated_text = ""
+        accumulated_text: str = ""
 
         async for chunk in stream:
-            chunk_text = chunk_text_extractor(chunk)
+            chunk_text: str = chunk_text_extractor(chunk)
             accumulated_text += chunk_text
             yield chunk
 
         context.response_text = accumulated_text
-        for event in post_sequence:
+        await self._execute_sequence_async(
+            post_sequence, context
+        )
+
+    async def _execute_sequence_async(
+        self,
+        sequence: EventSequence,
+        context: LifecycleContext,
+    ) -> None:
+        for event in sequence:
             verdict = await self.policy_evaluator.evaluate_event_async(
                 event, context
             )

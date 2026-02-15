@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import TYPE_CHECKING
 
 from apl.logging import get_logger
@@ -12,13 +14,14 @@ logger = get_logger("server")
 
 
 class PolicyRegistry:
-    def __init__(self):
-        self._policies: dict[str, "RegisteredPolicy"] = {}
+
+    def __init__(self) -> None:
+        self._policies: dict[str, RegisteredPolicy] = {}
         self._handlers_by_event: dict[
-            EventType, list["RegisteredPolicy"]
+            EventType, list[RegisteredPolicy]
         ] = {}
 
-    def register(self, policy: "RegisteredPolicy") -> None:
+    def register(self, policy: RegisteredPolicy) -> None:
         self._policies[policy.name] = policy
 
         for event_type in policy.events:
@@ -35,22 +38,22 @@ class PolicyRegistry:
 
     def get_policy_by_name(
         self, name: str
-    ) -> "RegisteredPolicy | None":
+    ) -> RegisteredPolicy | None:
         return self._policies.get(name)
 
     def get_handlers_for_event_type(
         self, event_type: EventType
-    ) -> list["RegisteredPolicy"]:
+    ) -> list[RegisteredPolicy]:
         return self._handlers_by_event.get(event_type, [])
 
-    def all_policies(self) -> list["RegisteredPolicy"]:
+    def all_policies(self) -> list[RegisteredPolicy]:
         return list(self._policies.values())
 
     async def evaluate_event(
         self, event: PolicyEvent
     ) -> list[Verdict]:
-        handlers = self.get_handlers_for_event_type(
-            event.type
+        handlers: list[RegisteredPolicy] = (
+            self.get_handlers_for_event_type(event.type)
         )
 
         if not handlers:
@@ -60,9 +63,9 @@ class PolicyRegistry:
                 )
             ]
 
-        verdicts = []
+        verdicts: list[Verdict] = []
         for policy in handlers:
-            verdict = await invoke_policy_handler(
+            verdict: Verdict = await invoke_policy_handler(
                 policy, event
             )
             verdicts.append(verdict)

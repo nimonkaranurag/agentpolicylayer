@@ -14,7 +14,11 @@ from ..formatting import RichCommand
 _banner = BannerRenderer(console, __version__)
 
 TRANSPORT_ENTRIES = [
-    ("[green]✓[/green]", "stdio", "Local subprocess communication"),
+    (
+        "[green]✓[/green]",
+        "stdio",
+        "Local subprocess communication",
+    ),
     ("[green]✓[/green]", "HTTP", "REST API with SSE"),
     ("[yellow]○[/yellow]", "WebSocket", "Coming soon"),
 ]
@@ -22,7 +26,11 @@ TRANSPORT_ENTRIES = [
 ADAPTER_ENTRIES = [
     ("[green]✓[/green]", "LangGraph", "StateGraph wrapper"),
     ("[green]✓[/green]", "OpenAI", "Auto-instrumentation"),
-    ("[green]✓[/green]", "Anthropic", "Auto-instrumentation"),
+    (
+        "[green]✓[/green]",
+        "Anthropic",
+        "Auto-instrumentation",
+    ),
     ("[green]✓[/green]", "LiteLLM", "Auto-instrumentation"),
     ("[green]✓[/green]", "LangChain", "ChatModel wrapper"),
     ("[yellow]○[/yellow]", "AutoGen", "Coming soon"),
@@ -40,13 +48,17 @@ class SystemInfoRenderer:
             "Transports", TRANSPORT_ENTRIES, "Transport"
         )
         self._render_capability_table(
-            "Framework Adapters", ADAPTER_ENTRIES, "Framework"
+            "Framework Adapters",
+            ADAPTER_ENTRIES,
+            "Framework",
         )
         self._render_links()
 
     def _render_system_properties(self):
         table = Table(
-            box=box.SIMPLE, show_header=False, padding=(0, 2)
+            box=box.SIMPLE,
+            show_header=False,
+            padding=(0, 2),
         )
         table.add_column("Property", style="cyan")
         table.add_column("Value", style="white")

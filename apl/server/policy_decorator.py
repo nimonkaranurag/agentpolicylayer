@@ -1,5 +1,7 @@
+from __future__ import annotations
+
 from functools import wraps
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Callable
 
 from apl.types import (
     ContextRequirement,
@@ -18,7 +20,7 @@ if TYPE_CHECKING:
 
 
 def create_policy_decorator(
-    registry: "PolicyRegistry",
+    registry: PolicyRegistry,
     policy_name: str,
     events: list[str],
     version: str = "1.0.0",
@@ -26,14 +28,16 @@ def create_policy_decorator(
     blocking: bool = True,
     timeout_ms: int = 1000,
     description: str | None = None,
-):
-    event_types = _parse_event_types(events)
-    context_requirements = _parse_context_requirements(
-        context
+) -> Callable[[PolicyHandler], PolicyHandler]:
+    event_types: list[EventType] = _parse_event_types(
+        events
+    )
+    context_requirements: list[ContextRequirement] = (
+        _parse_context_requirements(context)
     )
 
     def decorator(handler: PolicyHandler) -> PolicyHandler:
-        registered = RegisteredPolicy(
+        registered: RegisteredPolicy = RegisteredPolicy(
             name=policy_name,
             version=version,
             handler=handler,
@@ -64,7 +68,7 @@ def create_policy_decorator(
 def _parse_event_types(
     events: list[str | EventType],
 ) -> list[EventType]:
-    result = []
+    result: list[EventType] = []
     for event in events:
         if isinstance(event, EventType):
             result.append(event)
@@ -84,7 +88,7 @@ def _parse_context_requirements(
     if context is None:
         return []
 
-    result = []
+    result: list[ContextRequirement] = []
     for item in context:
         if isinstance(item, ContextRequirement):
             result.append(item)

@@ -14,14 +14,16 @@ class RichGroup(click.Group):
         self._console = None
         self._banner = None
 
-    def _ensure_initialized(self, console: Console, version: str):
+    def _ensure_initialized(
+        self, console: Console, version: str
+    ):
         if self._console is None:
             self._console = console
             self._banner = BannerRenderer(console, version)
 
     def format_help(self, ctx, formatter):
-        from .. import console
         from ... import __version__
+        from .. import console
 
         self._ensure_initialized(console, __version__)
         self._banner.render("small")

@@ -28,7 +28,5 @@ class PolicyValidatorRegistry:
     def validate(self, path: Path) -> list[str]:
         validator = self.find_validator_for_path(path)
         if validator is None:
-            return [
-                f"Unsupported file type: {path.suffix}"
-            ]
+            return [f"Unsupported file type: {path.suffix}"]
         return validator.validate(path)
