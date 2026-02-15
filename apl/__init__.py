@@ -54,7 +54,7 @@ CLI:
     apl init my-policy                    # Create new policy project
     apl info                              # Show system info
 
-Documentation: https://github.com/nimonkaranurag/agent_policy_layer
+Documentation: https://github.com/nimonkaranurag/agentpolicylayer
 """
 
 __version__ = "0.1.0"

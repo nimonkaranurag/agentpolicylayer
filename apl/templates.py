@@ -121,8 +121,8 @@ apl test policy.py
 
 ## Learn More
 
-- [APL Documentation](https://github.com/nimonkaranurag/agent_policy_layer)
-- [Policy Examples](https://github.com/nimonkaranurag/agent_policy_layer/tree/main/examples)
+- [APL Documentation](https://github.com/nimonkaranurag/agentpolicylayer)
+- [Policy Examples](https://github.com/nimonkaranurag/agentpolicylayer/tree/main/examples)
 """,
     },
     "pii": {
