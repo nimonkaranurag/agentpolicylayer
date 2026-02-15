@@ -6,7 +6,7 @@ from .base_adapter import BaseMessageAdapter
 
 
 class LangChainMessageAdapter(BaseMessageAdapter):
-    
+
     LANGCHAIN_TYPE_TO_ROLE = {
         "human": "user",
         "ai": "assistant",
@@ -48,11 +48,12 @@ class LangChainMessageAdapter(BaseMessageAdapter):
         )
 
     def _extract_role(self, langchain_message: Any) -> str:
+        if isinstance(langchain_message, dict):
+            return langchain_message.get("role", "user")
         if hasattr(langchain_message, "type"):
             return self.LANGCHAIN_TYPE_TO_ROLE.get(
                 langchain_message.type, "user"
             )
-
         if hasattr(langchain_message, "role"):
             return langchain_message.role
 
@@ -61,6 +62,8 @@ class LangChainMessageAdapter(BaseMessageAdapter):
     def _extract_content(
         self, langchain_message: Any
     ) -> str:
+        if isinstance(langchain_message, dict):
+            return langchain_message.get("content", "")
         if hasattr(langchain_message, "content"):
             return langchain_message.content
 

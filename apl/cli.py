@@ -787,19 +787,10 @@ def _load_policies_from_directory(
         ):
             sub_server = _load_python_policy(file, logger)
             if sub_server:
-                for policy in sub_server._policies.values():
-                    server._policies[policy.name] = policy
-                    for event_type in policy.events:
-                        if (
-                            event_type
-                            not in server._event_handlers
-                        ):
-                            server._event_handlers[
-                                event_type
-                            ] = []
-                        server._event_handlers[
-                            event_type
-                        ].append(policy)
+                for (
+                    policy
+                ) in sub_server.registry.all_policies():
+                    server.registry.register(policy)
                 loaded += 1
 
     return server if loaded > 0 else None
@@ -832,7 +823,7 @@ def _validate_python_policy(path: Path) -> list[str]:
             obj = getattr(module, name)
             if isinstance(obj, PolicyServer):
                 found_server = True
-                if not obj._policies:
+                if not obj.registry.all_policies():
                     errors.append(
                         "PolicyServer has no registered policies"
                     )
@@ -854,7 +845,7 @@ def _display_loaded_policies(server: PolicyServer):
         f"[bold cyan]🛡️  {server.name}[/bold cyan] [dim]v{server.version}[/dim]"
     )
 
-    for policy in server._policies.values():
+    for policy in server.registry.all_policies():
         events_str = ", ".join(
             e.value for e in policy.events
         )
@@ -878,7 +869,7 @@ def _run_http_server(
     quiet: bool,
 ):
     """Run HTTP server."""
-    from .transports.http import run_http_server
+    from .transports.http import HTTPTransport
 
     if not quiet:
         console.print()
@@ -895,7 +886,10 @@ def _run_http_server(
         )
         console.print()
 
-    asyncio.run(run_http_server(server, host, port, logger))
+    transport = HTTPTransport(
+        server, host=host, port=port, apl_logger=logger
+    )
+    transport.run()
 
 
 def main():
