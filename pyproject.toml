@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "agent-policy-layer"
-version = "0.2.1"
+version = "0.3.0"
 description = "Agent Policy Layer - Portable, composable policies for AI agents"
 readme = "README.md"
 license = "MIT"
