@@ -1,7 +1,3 @@
-# TOOL_POST_INVOKE Test Prompts
-# Server: python servers/tool_post_invoke.py
-# Client: python tools.py
-
 # ═══════════════════════════════════════════════════════════════════════
 # SHOULD TRIGGER REDACTION (MODIFY)
 # ═══════════════════════════════════════════════════════════════════════
