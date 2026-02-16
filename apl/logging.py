@@ -85,7 +85,9 @@ class APLRichHandler(RichHandler):
         kwargs.setdefault("show_time", True)
         kwargs.setdefault("show_path", False)
         kwargs.setdefault("rich_tracebacks", True)
-        kwargs.setdefault("tracebacks_show_locals", True)
+        kwargs.setdefault(
+            "tracebacks_show_locals", True
+        )
         super().__init__(*args, **kwargs)
 
     def get_level_text(
@@ -116,7 +118,9 @@ class APLRichHandler(RichHandler):
             "SECURITY": "bold cyan",
         }.get(level_name, "white")
 
-        return Text(f"{icon} {level_name:<8}", style=style)
+        return Text(
+            f"{icon} {level_name:<8}", style=style
+        )
 
 
 # =============================================================================
@@ -164,7 +168,9 @@ class APLLogger:
     # =========================================================================
 
     def server_started(
-        self, transport: str, address: Optional[str] = None
+        self,
+        transport: str,
+        address: Optional[str] = None,
     ):
         """Log server startup."""
         if address:
@@ -180,7 +186,9 @@ class APLLogger:
 
     def server_stopped(self):
         """Log server shutdown."""
-        self._log(logging.INFO, "[dim]Server stopped[/dim]")
+        self._log(
+            logging.INFO, "[dim]Server stopped[/dim]"
+        )
 
     def policy_registered(
         self, policy_name: str, events: list[str]
@@ -228,7 +236,9 @@ class APLLogger:
         message = f"[policy.name]{policy_name}[/policy.name] → {decision_str}{timing_str}"
 
         if verdict.reasoning:
-            message += f" [dim]// {verdict.reasoning}[/dim]"
+            message += (
+                f" [dim]// {verdict.reasoning}[/dim]"
+            )
 
         level = (
             logging.WARNING
@@ -277,14 +287,17 @@ class APLLogger:
             f"[dim]Client disconnected: {client_id}[/dim]",
         )
 
-    def error(self, message: str, exc_info: bool = False):
+    def error(
+        self, message: str, exc_info: bool = False
+    ):
         """Log error."""
         self._logger.error(message, exc_info=exc_info)
 
     def warning(self, message: str):
         """Log warning."""
         self._log(
-            logging.WARNING, f"[warning]{message}[/warning]"
+            logging.WARNING,
+            f"[warning]{message}[/warning]",
         )
 
     def info(self, message: str):
@@ -293,7 +306,9 @@ class APLLogger:
 
     def debug(self, message: str):
         """Log debug."""
-        self._log(logging.DEBUG, f"[dim]{message}[/dim]")
+        self._log(
+            logging.DEBUG, f"[dim]{message}[/dim]"
+        )
 
 
 # =============================================================================
@@ -323,7 +338,9 @@ def setup_logging(
     """
     # Configure root APL logger
     root_logger = logging.getLogger("apl")
-    root_logger.setLevel(getattr(logging, level.upper()))
+    root_logger.setLevel(
+        getattr(logging, level.upper())
+    )
     root_logger.handlers.clear()
 
     if rich_output:

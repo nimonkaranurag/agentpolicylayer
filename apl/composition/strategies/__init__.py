@@ -28,9 +28,9 @@ STRATEGY_REGISTRY: Dict[
 def get_strategy(
     mode: CompositionMode,
 ) -> CompositionStrategy:
-    strategy_class: Type[CompositionStrategy] | None = (
-        STRATEGY_REGISTRY.get(mode)
-    )
+    strategy_class: (
+        Type[CompositionStrategy] | None
+    ) = STRATEGY_REGISTRY.get(mode)
     if strategy_class is None:
         raise ValueError(
             f"Unknown composition mode: {mode}"

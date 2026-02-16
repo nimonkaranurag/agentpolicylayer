@@ -37,7 +37,9 @@ class EventType(str, Enum):
     )
 
     # Planning/reasoning
-    PLAN_PROPOSED = "plan.proposed"  # Agent proposed a plan
+    PLAN_PROPOSED = (
+        "plan.proposed"  # Agent proposed a plan
+    )
     PLAN_APPROVED = (
         "plan.approved"  # Plan approved for execution
     )
@@ -63,9 +65,7 @@ class EventType(str, Enum):
     AGENT_POST_HANDOFF = "agent.post_handoff"  # After receiving from another agent
 
     # Output
-    OUTPUT_PRE_SEND = (
-        "output.pre_send"  # Before sending response to user
-    )
+    OUTPUT_PRE_SEND = "output.pre_send"  # Before sending response to user
 
     # Session lifecycle
     SESSION_START = "session.start"
@@ -83,13 +83,17 @@ class Message:
     OpenAI chat/completions compatible message format.
     """
 
-    role: Literal["system", "user", "assistant", "tool"]
+    role: Literal[
+        "system", "user", "assistant", "tool"
+    ]
     content: Optional[str] = None
     name: Optional[str] = None  # For tool messages
     tool_calls: Optional[list[ToolCall]] = (
         None  # For assistant messages
     )
-    tool_call_id: Optional[str] = None  # For tool messages
+    tool_call_id: Optional[str] = (
+        None  # For tool messages
+    )
 
 
 @dataclass
@@ -132,7 +136,9 @@ class SessionMetadata:
     user_region: Optional[str] = (
         None  # For GDPR, data residency
     )
-    compliance_tags: list[str] = field(default_factory=list)
+    compliance_tags: list[str] = field(
+        default_factory=list
+    )
 
     # Timing
     started_at: datetime = field(
@@ -140,7 +146,9 @@ class SessionMetadata:
     )
 
     # Extensible
-    custom: dict[str, Any] = field(default_factory=dict)
+    custom: dict[str, Any] = field(
+        default_factory=dict
+    )
 
 
 @dataclass
@@ -232,7 +240,11 @@ class Modification:
         "input", "tool_args", "llm_prompt", "output"
     ]
     operation: Literal[
-        "replace", "redact", "append", "prepend", "patch"
+        "replace",
+        "redact",
+        "append",
+        "prepend",
+        "patch",
     ]
     value: Any
 
@@ -247,13 +259,20 @@ class Escalation:
     """How to escalate to humans."""
 
     type: Literal[
-        "human_confirm", "human_review", "abort", "fallback"
+        "human_confirm",
+        "human_review",
+        "abort",
+        "fallback",
     ]
-    prompt: Optional[str] = None  # What to show the human
+    prompt: Optional[str] = (
+        None  # What to show the human
+    )
     fallback_action: Optional[str] = (
         None  # What to do instead
     )
-    timeout_ms: Optional[int] = None  # How long to wait
+    timeout_ms: Optional[int] = (
+        None  # How long to wait
+    )
 
     # For structured confirmations
     options: Optional[list[str]] = (
@@ -263,37 +282,25 @@ class Escalation:
 
 @dataclass
 class Verdict:
-    """
-    The complete response from a policy.
-
-    Rich verdicts enable policies to GUIDE, not just BLOCK.
-    """
+    """Policy response."""
 
     decision: Decision
-    confidence: float = 1.0  # 0.0 - 1.0
-    reasoning: Optional[str] = (
-        None  # Human-readable explanation
+    confidence: float = 1.0
+    reasoning: Optional[str] = None
+    modifications: list[Modification] = field(
+        default_factory=list
     )
-
-    # For MODIFY decisions
-    modification: Optional[Modification] = None
-
-    # For ESCALATE decisions
     escalation: Optional[Escalation] = None
-
-    # For observability
     policy_name: Optional[str] = None
     policy_version: Optional[str] = None
     evaluation_ms: Optional[float] = None
-
-    # For audit trails
     trace: Optional[dict[str, Any]] = None
-
-    # --- Factory methods for ergonomic API ---
 
     @classmethod
     def allow(
-        cls, reasoning: str = None, confidence: float = 1.0
+        cls,
+        reasoning: str = None,
+        confidence: float = 1.0,
     ) -> Verdict:
         return cls(
             decision=Decision.ALLOW,
@@ -325,12 +332,14 @@ class Verdict:
             decision=Decision.MODIFY,
             reasoning=reasoning,
             confidence=confidence,
-            modification=Modification(
-                target=target,
-                operation=operation,
-                value=value,
-                path=path,
-            ),
+            modifications=[
+                Modification(
+                    target=target,
+                    operation=operation,
+                    value=value,
+                    path=path,
+                )
+            ],
         )
 
     @classmethod
@@ -384,7 +393,9 @@ class ContextRequirement:
     required: bool = (
         True  # If False, policy handles missing
     )
-    description: Optional[str] = None  # For documentation
+    description: Optional[str] = (
+        None  # For documentation
+    )
 
 
 @dataclass
@@ -401,12 +412,14 @@ class PolicyDefinition:
     events: list[EventType]
 
     # What context it needs (the contract)
-    context_requirements: list[ContextRequirement] = field(
-        default_factory=list
+    context_requirements: list[ContextRequirement] = (
+        field(default_factory=list)
     )
 
     # Execution characteristics
-    blocking: bool = True  # Must await vs fire-and-forget
+    blocking: bool = (
+        True  # Must await vs fire-and-forget
+    )
     timeout_ms: int = 1000  # Max evaluation time
 
     # Metadata
@@ -424,7 +437,7 @@ class PolicyManifest:
 
     server_name: str
     server_version: str
-    protocol_version: str = "0.2.0"
+    protocol_version: str = "0.3.0"
 
     policies: list[PolicyDefinition] = field(
         default_factory=list
@@ -434,7 +447,9 @@ class PolicyManifest:
     supports_batch: bool = (
         False  # Can handle multiple events at once
     )
-    supports_streaming: bool = False  # Can stream verdicts
+    supports_streaming: bool = (
+        False  # Can stream verdicts
+    )
 
     # Documentation
     description: Optional[str] = None
@@ -464,11 +479,17 @@ class CompositionMode(str, Enum):
 class CompositionConfig:
     """Configuration for verdict composition."""
 
-    mode: CompositionMode = CompositionMode.DENY_OVERRIDES
+    mode: CompositionMode = (
+        CompositionMode.DENY_OVERRIDES
+    )
 
     # Execution settings
-    parallel: bool = True  # Evaluate policies in parallel
-    timeout_ms: int = 500  # Total timeout for all policies
+    parallel: bool = (
+        True  # Evaluate policies in parallel
+    )
+    timeout_ms: int = (
+        500  # Total timeout for all policies
+    )
     on_timeout: Decision = (
         Decision.ALLOW
     )  # Fail-open or fail-closed
@@ -477,4 +498,6 @@ class CompositionConfig:
     priority: list[str] = field(default_factory=list)
 
     # For weighted mode
-    weights: dict[str, float] = field(default_factory=dict)
+    weights: dict[str, float] = field(
+        default_factory=dict
+    )

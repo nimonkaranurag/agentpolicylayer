@@ -33,15 +33,15 @@ class PolicyLayer:
         )
         self._clients: list[PolicyClient] = []
         self._is_connected: bool = False
-        self._composer: VerdictComposer = VerdictComposer(
-            self._composition
+        self._composer: VerdictComposer = (
+            VerdictComposer(self._composition)
         )
         self._event_builder: PolicyEventBuilder = (
             PolicyEventBuilder()
         )
-        self._decorator_factory: PolicyDecoratorFactory = (
-            PolicyDecoratorFactory(self)
-        )
+        self._decorator_factory: (
+            PolicyDecoratorFactory
+        ) = PolicyDecoratorFactory(self)
 
     def add_server(self, uri: str) -> PolicyLayer:
         client: PolicyClient = PolicyClient(uri)
@@ -53,7 +53,10 @@ class PolicyLayer:
             return
 
         await asyncio.gather(
-            *[client.connect() for client in self._clients]
+            *[
+                client.connect()
+                for client in self._clients
+            ]
         )
         self._is_connected = True
 
@@ -72,7 +75,10 @@ class PolicyLayer:
 
     async def close(self) -> None:
         await asyncio.gather(
-            *[client.close() for client in self._clients]
+            *[
+                client.close()
+                for client in self._clients
+            ]
         )
         self._is_connected = False
 
@@ -86,13 +92,11 @@ class PolicyLayer:
         if not self._is_connected:
             await self.connect()
 
-        event = (
-            self._event_builder.build_from_evaluation_args(
-                event_type=event_type,
-                messages=messages,
-                payload=payload,
-                metadata=metadata,
-            )
+        event = self._event_builder.build_from_evaluation_args(
+            event_type=event_type,
+            messages=messages,
+            payload=payload,
+            metadata=metadata,
         )
 
         start_time: float = time.perf_counter()
@@ -112,13 +116,13 @@ class PolicyLayer:
     def on(
         self,
         event_type: str,
-        messages_from: Callable[[], list] | None = None,
+        messages_from: (
+            Callable[[], list] | None
+        ) = None,
     ) -> Callable:
-        return (
-            self._decorator_factory.create_event_decorator(
-                event_type=event_type,
-                messages_from=messages_from,
-            )
+        return self._decorator_factory.create_event_decorator(
+            event_type=event_type,
+            messages_from=messages_from,
         )
 
     def wrap(self, agent: Any) -> Any:
@@ -135,15 +139,19 @@ class PolicyLayer:
         return agent
 
     def _wrap_langgraph(self, graph: Any) -> Any:
-        logger.info("LangGraph wrapper not yet implemented")
+        logger.info(
+            "LangGraph wrapper not yet implemented"
+        )
         return graph
 
     async def _collect_verdicts(
         self, event: Any
     ) -> list[Verdict]:
         if self._composition.parallel:
-            return await self._collect_verdicts_parallel(
-                event
+            return (
+                await self._collect_verdicts_parallel(
+                    event
+                )
             )
         return await self._collect_verdicts_sequential(
             event

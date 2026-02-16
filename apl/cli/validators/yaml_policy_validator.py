@@ -11,7 +11,8 @@ class YamlPolicyValidator(BasePolicyValidator):
     def can_validate(self, path: Path) -> bool:
         return (
             path.is_file()
-            and path.suffix in self.SUPPORTED_EXTENSIONS
+            and path.suffix
+            in self.SUPPORTED_EXTENSIONS
         )
 
     def validate(self, path: Path) -> list[str]:

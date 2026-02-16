@@ -16,9 +16,9 @@ class StdioClientTransport(BaseClientTransport):
 
     def __init__(self, uri: str) -> None:
         self._raw_command: str = uri[len("stdio://") :]
-        self._process: asyncio.subprocess.Process | None = (
-            None
-        )
+        self._process: (
+            asyncio.subprocess.Process | None
+        ) = None
 
     async def connect(self) -> dict | None:
         args: list[str] = self._build_spawn_args()
@@ -53,7 +53,9 @@ class StdioClientTransport(BaseClientTransport):
             self._process is None
             or self._process.stdin is None
         ):
-            return []
+            raise ConnectionError(
+                "Policy server subprocess is not running"
+            )
 
         wire_message: dict[str, Any] = {
             "type": "evaluate",
@@ -68,7 +70,9 @@ class StdioClientTransport(BaseClientTransport):
             await self._process.stdout.readline()
         )
         if not response_line:
-            return []
+            raise ConnectionError(
+                "Policy server subprocess returned no response"
+            )
 
         response: dict[str, Any] = json.loads(
             response_line.decode()

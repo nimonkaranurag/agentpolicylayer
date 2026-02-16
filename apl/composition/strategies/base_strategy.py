@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Protocol
 
-from apl.types import Decision, Verdict
+from apl.types import Decision, Modification, Verdict
 
 
 class CompositionStrategy(Protocol):
@@ -34,3 +34,42 @@ class BaseCompositionStrategy:
                 reasoning=fallback_reasoning
             )
         return None
+
+    @staticmethod
+    def _collect_all_modifications(
+        verdicts: list[Verdict],
+    ) -> list[Modification]:
+        by_target: dict[str, Modification] = {}
+        for verdict in verdicts:
+            if verdict.decision == Decision.OBSERVE:
+                continue
+            for mod in verdict.modifications:
+                by_target[mod.target] = mod
+        return list(by_target.values())
+
+    @staticmethod
+    def _build_modified_verdict(
+        verdicts: list[Verdict],
+    ) -> Verdict | None:
+        all_mods = BaseCompositionStrategy._collect_all_modifications(
+            verdicts
+        )
+        if not all_mods:
+            return None
+
+        reasons = [
+            v.reasoning
+            for v in verdicts
+            if v.decision == Decision.MODIFY
+            and v.reasoning
+        ]
+
+        return Verdict(
+            decision=Decision.MODIFY,
+            reasoning=(
+                " + ".join(reasons)
+                if reasons
+                else None
+            ),
+            modifications=all_mods,
+        )

@@ -19,7 +19,9 @@ class RichGroup(click.Group):
     ):
         if self._console is None:
             self._console = console
-            self._banner = BannerRenderer(console, version)
+            self._banner = BannerRenderer(
+                console, version
+            )
 
     def format_help(self, ctx, formatter):
         from ... import __version__

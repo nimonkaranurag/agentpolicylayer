@@ -19,9 +19,18 @@ from apl.types import (
 @pytest.fixture
 def sample_messages() -> list[Message]:
     return [
-        Message(role="system", content="You are a helpful assistant."),
-        Message(role="user", content="What is the capital of France?"),
-        Message(role="assistant", content="The capital of France is Paris."),
+        Message(
+            role="system",
+            content="You are a helpful assistant.",
+        ),
+        Message(
+            role="user",
+            content="What is the capital of France?",
+        ),
+        Message(
+            role="assistant",
+            content="The capital of France is Paris.",
+        ),
     ]
 
 
@@ -50,7 +59,9 @@ def sample_tool_payload() -> EventPayload:
 
 
 @pytest.fixture
-def sample_llm_payload(sample_messages: list[Message]) -> EventPayload:
+def sample_llm_payload(
+    sample_messages: list[Message],
+) -> EventPayload:
     return EventPayload(
         llm_model="gpt-4",
         llm_prompt=sample_messages,
@@ -87,7 +98,8 @@ def make_event():
             timestamp=datetime.now(timezone.utc),
             messages=messages or [],
             payload=payload or EventPayload(),
-            metadata=metadata or SessionMetadata(session_id="test"),
+            metadata=metadata
+            or SessionMetadata(session_id="test"),
         )
 
     return _factory

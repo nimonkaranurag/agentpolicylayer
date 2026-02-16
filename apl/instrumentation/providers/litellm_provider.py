@@ -53,14 +53,18 @@ class LiteLLMProvider(BaseProvider):
     def _create_module_async_wrapper(self) -> Any:
         provider: LiteLLMProvider = self
 
-        async def wrapper(*args: Any, **kwargs: Any) -> Any:
+        async def wrapper(
+            *args: Any, **kwargs: Any
+        ) -> Any:
             original = (
                 provider.method_patcher.patch_targets[
                     1
                 ].original_method
             )
-            return await provider.execute_llm_call_async(
-                original, *args, **kwargs
+            return (
+                await provider.execute_llm_call_async(
+                    original, *args, **kwargs
+                )
             )
 
         return wrapper

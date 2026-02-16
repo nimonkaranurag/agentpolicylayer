@@ -21,9 +21,13 @@ class StdioProtocolHandler:
         self._server = server
         self._event_serializer = EventSerializer()
         self._verdict_serializer = VerdictSerializer()
-        self._manifest_serializer = ManifestSerializer()
+        self._manifest_serializer = (
+            ManifestSerializer()
+        )
 
-    async def handle_message(self, message: dict) -> None:
+    async def handle_message(
+        self, message: dict
+    ) -> None:
         message_type = message.get("type")
 
         if message_type == "evaluate":
@@ -37,7 +41,9 @@ class StdioProtocolHandler:
                 f"Unknown message type: {message_type}"
             )
 
-    async def _handle_evaluate(self, message: dict) -> None:
+    async def _handle_evaluate(
+        self, message: dict
+    ) -> None:
         event = self._event_serializer.deserialize(
             message.get("event", {})
         )
@@ -48,7 +54,9 @@ class StdioProtocolHandler:
                 "type": "verdicts",
                 "event_id": event.id,
                 "verdicts": [
-                    self._verdict_serializer.serialize(v)
+                    self._verdict_serializer.serialize(
+                        v
+                    )
                     for v in verdicts
                 ],
             }

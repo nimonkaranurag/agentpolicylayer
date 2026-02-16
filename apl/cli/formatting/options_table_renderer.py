@@ -12,7 +12,9 @@ class OptionsTableRenderer:
 
     def render(self, params):
         opts = [
-            p for p in params if isinstance(p, click.Option)
+            p
+            for p in params
+            if isinstance(p, click.Option)
         ]
         if not opts:
             return
@@ -42,7 +44,9 @@ class OptionsTableRenderer:
     def _format_option_name(opt):
         opt_str = ", ".join(opt.opts)
         if opt.secondary_opts:
-            opt_str += ", " + ", ".join(opt.secondary_opts)
+            opt_str += ", " + ", ".join(
+                opt.secondary_opts
+            )
         return opt_str
 
     @staticmethod

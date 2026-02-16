@@ -10,11 +10,15 @@ from apl.types import Message, SessionMetadata
 class LangGraphStateExtractor:
 
     def __init__(self):
-        self._message_adapter = LangChainMessageAdapter()
+        self._message_adapter = (
+            LangChainMessageAdapter()
+        )
 
-    def extract_messages(self, state: Any) -> list[Message]:
-        raw_messages = self._get_raw_messages_from_state(
-            state
+    def extract_messages(
+        self, state: Any
+    ) -> list[Message]:
+        raw_messages = (
+            self._get_raw_messages_from_state(state)
         )
         if not raw_messages:
             return []
@@ -29,7 +33,9 @@ class LangGraphStateExtractor:
         user_id = None
 
         if config:
-            configurable = config.get("configurable", {})
+            configurable = config.get(
+                "configurable", {}
+            )
             session_id = configurable.get(
                 "thread_id", session_id
             )

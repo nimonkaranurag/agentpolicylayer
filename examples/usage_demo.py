@@ -44,7 +44,9 @@ async def demo_manual_evaluation():
 
     # Create policy layer and add servers
     policies = PolicyLayer()
-    policies.add_server("stdio://./examples/pii_filter.py")
+    policies.add_server(
+        "stdio://./examples/pii_filter.py"
+    )
     policies.add_server(
         "stdio://./examples/budget_limiter.py"
     )
@@ -57,7 +59,9 @@ async def demo_manual_evaluation():
     verdict = await policies.evaluate(
         event_type="output.pre_send",
         messages=[
-            Message(role="user", content="What's my SSN?"),
+            Message(
+                role="user", content="What's my SSN?"
+            ),
             Message(
                 role="assistant",
                 content="Your SSN is 123-45-6789",
@@ -118,9 +122,13 @@ async def demo_decorator_api():
 
     # Define a tool function with policy checks
     @policies.on("tool.pre_invoke")
-    async def execute_tool(tool_name: str, tool_args: dict):
+    async def execute_tool(
+        tool_name: str, tool_args: dict
+    ):
         """Simulated tool execution."""
-        print(f"  Executing {tool_name} with {tool_args}")
+        print(
+            f"  Executing {tool_name} with {tool_args}"
+        )
         return {"status": "success"}
 
     # Test with a safe tool
@@ -178,7 +186,9 @@ async def demo_composition():
     )
 
     # Add multiple policy servers
-    policies.add_server("stdio://./examples/pii_filter.py")
+    policies.add_server(
+        "stdio://./examples/pii_filter.py"
+    )
     policies.add_server(
         "stdio://./examples/budget_limiter.py"
     )
@@ -211,7 +221,9 @@ async def demo_composition():
         ),
     )
 
-    print(f"  Final Decision: {verdict.decision.value}")
+    print(
+        f"  Final Decision: {verdict.decision.value}"
+    )
     print(f"  Reasoning: {verdict.reasoning}")
     print(f"  Policy: {verdict.policy_name}")
 
@@ -255,7 +267,9 @@ async def main():
         events=["output.pre_send"],
         context=["payload.output_text"],
     )
-    async def always_warn(event: PolicyEvent) -> Verdict:
+    async def always_warn(
+        event: PolicyEvent,
+    ) -> Verdict:
         return Verdict.observe(
             reasoning="This is just a test observation",
             trace={
@@ -269,7 +283,11 @@ async def main():
     import uuid
     from datetime import datetime
 
-    from apl import EventPayload, EventType, SessionMetadata
+    from apl import (
+        EventPayload,
+        EventType,
+        SessionMetadata,
+    )
 
     event = PolicyEvent(
         id=str(uuid.uuid4()),
@@ -277,10 +295,13 @@ async def main():
         timestamp=datetime.utcnow(),
         messages=[
             Message(
-                role="assistant", content="Hello, world!"
+                role="assistant",
+                content="Hello, world!",
             )
         ],
-        payload=EventPayload(output_text="Hello, world!"),
+        payload=EventPayload(
+            output_text="Hello, world!"
+        ),
         metadata=SessionMetadata(session_id="test"),
     )
 
@@ -290,7 +311,9 @@ async def main():
         print(f"\nVerdict from '{v.policy_name}':")
         print(f"  Decision: {v.decision.value}")
         print(f"  Reasoning: {v.reasoning}")
-        print(f"  Evaluation time: {v.evaluation_ms:.2f}ms")
+        print(
+            f"  Evaluation time: {v.evaluation_ms:.2f}ms"
+        )
 
 
 if __name__ == "__main__":

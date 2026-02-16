@@ -85,7 +85,9 @@ def serve(
     )
 
     path_obj = Path(path)
-    if not _loader_registry.find_loader_for_path(path_obj):
+    if not _loader_registry.find_loader_for_path(
+        path_obj
+    ):
         _status.print(
             f"Unsupported file type: {path_obj.suffix}",
             "error",
@@ -115,7 +117,9 @@ def serve(
         _serve_over_stdio(server, quiet)
 
 
-def _serve_over_http(server, host, port, logger, quiet):
+def _serve_over_http(
+    server, host, port, logger, quiet
+):
     if not quiet:
         _status.print(
             f"Starting HTTP server on"
@@ -141,6 +145,8 @@ def _serve_over_stdio(server, quiet):
         console.print(
             "  [dim]Waiting for events on stdin...[/dim]"
         )
-        console.print("  [dim]Press Ctrl+C to stop[/dim]")
+        console.print(
+            "  [dim]Press Ctrl+C to stop[/dim]"
+        )
         console.print()
     server.run(transport="stdio")

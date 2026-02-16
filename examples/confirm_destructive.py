@@ -56,7 +56,9 @@ HIGH_RISK_TOOLS = [
     context=["payload.tool_name", "payload.tool_args"],
     description="Requires human confirmation for delete operations",
 )
-async def confirm_delete(event: PolicyEvent) -> Verdict:
+async def confirm_delete(
+    event: PolicyEvent,
+) -> Verdict:
     """
     Check if tool is destructive and require confirmation.
     """
@@ -95,7 +97,9 @@ async def confirm_delete(event: PolicyEvent) -> Verdict:
     ],
     description="Warns about high-risk operations, blocks for non-admin users",
 )
-async def warn_high_risk(event: PolicyEvent) -> Verdict:
+async def warn_high_risk(
+    event: PolicyEvent,
+) -> Verdict:
     """
     High-risk operations require admin role or explicit confirmation.
     """

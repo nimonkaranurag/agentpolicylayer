@@ -28,11 +28,15 @@ class EvaluateRouteHandler:
 
         if "type" not in data:
             return web.json_response(
-                {"error": "Missing required field: type"},
+                {
+                    "error": "Missing required field: type"
+                },
                 status=400,
             )
 
-        event = self._event_serializer.deserialize(data)
+        event = self._event_serializer.deserialize(
+            data
+        )
 
         if logger:
             logger.event_received(
@@ -40,7 +44,9 @@ class EvaluateRouteHandler:
             )
 
         verdicts = await server.evaluate(event)
-        elapsed_ms = (time.perf_counter() - start) * 1000
+        elapsed_ms = (
+            time.perf_counter() - start
+        ) * 1000
 
         if logger:
             for v in verdicts:
@@ -61,14 +67,18 @@ class EvaluateRouteHandler:
 
         if logger:
             logger.composition_result(
-                len(verdicts), composed.decision, elapsed_ms
+                len(verdicts),
+                composed.decision,
+                elapsed_ms,
             )
 
         return web.json_response(
             {
                 "event_id": event.id,
                 "verdicts": [
-                    self._verdict_serializer.serialize(v)
+                    self._verdict_serializer.serialize(
+                        v
+                    )
                     for v in verdicts
                 ],
                 "composed_verdict": self._verdict_serializer.serialize(

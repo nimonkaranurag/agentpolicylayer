@@ -62,4 +62,6 @@ def uninstrument(state: InstrumentationState) -> None:
     for provider in state.active_providers:
         provider.unpatch_all_methods()
     state.clear_providers()
-    console.print("[dim]APL instrumentation removed[/dim]")
+    console.print(
+        "[dim]APL instrumentation removed[/dim]"
+    )

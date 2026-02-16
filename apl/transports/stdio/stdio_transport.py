@@ -51,6 +51,8 @@ class StdioTransport(BaseTransport):
             except json.JSONDecodeError as e:
                 logger.error(f"Invalid JSON: {e}")
             except Exception as e:
-                logger.error(f"Error handling message: {e}")
+                logger.error(
+                    f"Error handling message: {e}"
+                )
 
         await self.stop()

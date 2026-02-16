@@ -42,5 +42,7 @@ class PythonModulePolicyLoader(BasePolicyLoader):
             if isinstance(obj, PolicyServer):
                 return obj
 
-        logger.error(f"No PolicyServer found in {path}")
+        logger.error(
+            f"No PolicyServer found in {path}"
+        )
         return None

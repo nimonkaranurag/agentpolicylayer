@@ -24,15 +24,31 @@ TRANSPORT_ENTRIES = [
 ]
 
 ADAPTER_ENTRIES = [
-    ("[green]✓[/green]", "LangGraph", "StateGraph wrapper"),
-    ("[green]✓[/green]", "OpenAI", "Auto-instrumentation"),
+    (
+        "[green]✓[/green]",
+        "LangGraph",
+        "StateGraph wrapper",
+    ),
+    (
+        "[green]✓[/green]",
+        "OpenAI",
+        "Auto-instrumentation",
+    ),
     (
         "[green]✓[/green]",
         "Anthropic",
         "Auto-instrumentation",
     ),
-    ("[green]✓[/green]", "LiteLLM", "Auto-instrumentation"),
-    ("[green]✓[/green]", "LangChain", "ChatModel wrapper"),
+    (
+        "[green]✓[/green]",
+        "LiteLLM",
+        "Auto-instrumentation",
+    ),
+    (
+        "[green]✓[/green]",
+        "LangChain",
+        "ChatModel wrapper",
+    ),
     ("[yellow]○[/yellow]", "AutoGen", "Coming soon"),
     ("[yellow]○[/yellow]", "CrewAI", "Coming soon"),
 ]
@@ -45,7 +61,9 @@ class SystemInfoRenderer:
     def render(self):
         self._render_system_properties()
         self._render_capability_table(
-            "Transports", TRANSPORT_ENTRIES, "Transport"
+            "Transports",
+            TRANSPORT_ENTRIES,
+            "Transport",
         )
         self._render_capability_table(
             "Framework Adapters",
@@ -65,7 +83,7 @@ class SystemInfoRenderer:
         table.add_row("Version", __version__)
         table.add_row("Python", sys.version.split()[0])
         table.add_row("Platform", sys.platform)
-        table.add_row("Protocol", "0.2.0")
+        table.add_row("Protocol", "0.3.0")
 
         self._console.print(table)
         self._console.print()

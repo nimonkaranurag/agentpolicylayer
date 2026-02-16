@@ -32,7 +32,9 @@ class ConditionEvaluator:
     ) -> None:
         self._handler_registry[operator_name] = handler
 
-    def evaluate(self, value: Any, condition: Any) -> bool:
+    def evaluate(
+        self, value: Any, condition: Any
+    ) -> bool:
         if condition is None:
             return value is None
 
@@ -44,22 +46,28 @@ class ConditionEvaluator:
         return value == condition
 
     def _evaluate_dict_condition(
-        self, value: Any, condition: dict[str, Any]
-    ) -> bool:
+        self, value, condition
+    ):
+        results = []
         for (
             operator_name,
             operator_argument,
         ) in condition.items():
-            handler: ConditionHandler | None = (
-                self._handler_registry.get(operator_name)
+            handler = self._handler_registry.get(
+                operator_name
             )
             if handler is not None:
-                return handler(value, operator_argument)
-
+                results.append(
+                    handler(value, operator_argument)
+                )
+        if results:
+            return all(results)
         return value == condition
 
     @staticmethod
-    def _handle_equals(value: Any, expected: Any) -> bool:
+    def _handle_equals(
+        value: Any, expected: Any
+    ) -> bool:
         return value == expected
 
     @staticmethod
@@ -69,14 +77,20 @@ class ConditionEvaluator:
         if value is None:
             return False
         return bool(
-            re.match(pattern, str(value), re.IGNORECASE)
+            re.match(
+                pattern, str(value), re.IGNORECASE
+            )
         )
 
     @staticmethod
-    def _handle_contains(value: Any, needle: Any) -> bool:
+    def _handle_contains(
+        value: Any, needle: Any
+    ) -> bool:
         if value is None:
             return False
-        if isinstance(value, (str, list, tuple, set, dict)):
+        if isinstance(
+            value, (str, list, tuple, set, dict)
+        ):
             return needle in value
         return False
 
@@ -113,7 +127,9 @@ class ConditionEvaluator:
     def _handle_negation(
         self, value: Any, inner_condition: Any
     ) -> bool:
-        return not self.evaluate(value, inner_condition)
+        return not self.evaluate(
+            value, inner_condition
+        )
 
     def _handle_any_of(
         self, value: Any, conditions: list[Any]

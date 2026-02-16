@@ -24,6 +24,14 @@ class PayloadSerializer:
         if payload.llm_model is not None:
             result["llm_model"] = payload.llm_model
         if (
+            payload.llm_prompt is not None
+            and self._message_serializer
+        ):
+            result["llm_prompt"] = [
+                self._message_serializer.serialize(m)
+                for m in payload.llm_prompt
+            ]
+        if (
             payload.llm_response is not None
             and self._message_serializer
         ):
@@ -32,6 +40,7 @@ class PayloadSerializer:
                     payload.llm_response
                 )
             )
+
         if payload.llm_tokens_used is not None:
             result["llm_tokens_used"] = (
                 payload.llm_tokens_used
@@ -48,9 +57,13 @@ class PayloadSerializer:
             result["plan"] = payload.plan
 
         if payload.target_agent is not None:
-            result["target_agent"] = payload.target_agent
+            result["target_agent"] = (
+                payload.target_agent
+            )
         if payload.source_agent is not None:
-            result["source_agent"] = payload.source_agent
+            result["source_agent"] = (
+                payload.source_agent
+            )
         if payload.handoff_payload is not None:
             result["handoff_payload"] = (
                 payload.handoff_payload
@@ -67,12 +80,36 @@ class PayloadSerializer:
             tool_result=data.get("tool_result"),
             tool_error=data.get("tool_error"),
             llm_model=data.get("llm_model"),
-            llm_response=data.get("llm_response"),
-            llm_tokens_used=data.get("llm_tokens_used"),
+            llm_response=(
+                self._message_serializer.deserialize(
+                    data["llm_response"]
+                )
+                if data.get("llm_response")
+                and self._message_serializer
+                else data.get("llm_response")
+            ),
+            llm_tokens_used=data.get(
+                "llm_tokens_used"
+            ),
             output_text=data.get("output_text"),
-            output_structured=data.get("output_structured"),
+            output_structured=data.get(
+                "output_structured"
+            ),
             plan=data.get("plan"),
             target_agent=data.get("target_agent"),
             source_agent=data.get("source_agent"),
-            handoff_payload=data.get("handoff_payload"),
+            handoff_payload=data.get(
+                "handoff_payload"
+            ),
+            llm_prompt=(
+                [
+                    self._message_serializer.deserialize(
+                        m
+                    )
+                    for m in data["llm_prompt"]
+                ]
+                if data.get("llm_prompt")
+                and self._message_serializer
+                else data.get("llm_prompt")
+            ),
         )

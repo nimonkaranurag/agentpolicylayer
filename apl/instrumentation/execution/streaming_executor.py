@@ -7,7 +7,9 @@ from ..lifecycle.sequence import EventSequence
 from .base_executor import BaseLifecycleExecutor
 
 
-class StreamingLifecycleExecutor(BaseLifecycleExecutor):
+class StreamingLifecycleExecutor(
+    BaseLifecycleExecutor
+):
 
     def execute_sequence(
         self,
@@ -15,10 +17,8 @@ class StreamingLifecycleExecutor(BaseLifecycleExecutor):
         context: LifecycleContext,
     ) -> None:
         for event in sequence:
-            verdict = (
-                self.policy_evaluator.evaluate_event_sync(
-                    event, context
-                )
+            verdict = self.policy_evaluator.evaluate_event_sync(
+                event, context
             )
             self.verdict_handler.raise_if_blocked(
                 verdict, event.event_type.value
@@ -37,7 +37,9 @@ class StreamingLifecycleExecutor(BaseLifecycleExecutor):
         accumulated_text: str = ""
 
         for chunk in stream:
-            chunk_text: str = chunk_text_extractor(chunk)
+            chunk_text: str = chunk_text_extractor(
+                chunk
+            )
             accumulated_text += chunk_text
             yield chunk
 
@@ -54,7 +56,9 @@ class StreamingLifecycleExecutor(BaseLifecycleExecutor):
         accumulated_text: str = ""
 
         async for chunk in stream:
-            chunk_text: str = chunk_text_extractor(chunk)
+            chunk_text: str = chunk_text_extractor(
+                chunk
+            )
             accumulated_text += chunk_text
             yield chunk
 

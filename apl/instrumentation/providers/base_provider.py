@@ -21,9 +21,13 @@ if TYPE_CHECKING:
 
 class BaseProvider(ABC):
 
-    def __init__(self, state: InstrumentationState) -> None:
+    def __init__(
+        self, state: InstrumentationState
+    ) -> None:
         self.state: InstrumentationState = state
-        self.method_patcher: MethodPatcher = MethodPatcher()
+        self.method_patcher: MethodPatcher = (
+            MethodPatcher()
+        )
         self.message_adapter = get_message_adapter(
             self.provider_name
         )
@@ -62,7 +66,10 @@ class BaseProvider(ABC):
         self, response: Any
     ) -> str:
         try:
-            return response.choices[0].message.content or ""
+            return (
+                response.choices[0].message.content
+                or ""
+            )
         except (AttributeError, IndexError):
             return ""
 
@@ -78,7 +85,9 @@ class BaseProvider(ABC):
         provider: BaseProvider = self
 
         def wrapper(
-            instance_self: Any, *args: Any, **kwargs: Any
+            instance_self: Any,
+            *args: Any,
+            **kwargs: Any,
         ) -> Any:
             original = (
                 provider.method_patcher.patch_targets[
@@ -100,7 +109,9 @@ class BaseProvider(ABC):
         provider: BaseProvider = self
 
         async def wrapper(
-            instance_self: Any, *args: Any, **kwargs: Any
+            instance_self: Any,
+            *args: Any,
+            **kwargs: Any,
         ) -> Any:
             original = (
                 provider.method_patcher.patch_targets[
@@ -115,8 +126,10 @@ class BaseProvider(ABC):
                     instance_self, *a, **kw
                 )
 
-            return await provider.execute_llm_call_async(
-                bound_method, *args, **kwargs
+            return (
+                await provider.execute_llm_call_async(
+                    bound_method, *args, **kwargs
+                )
             )
 
         return wrapper
@@ -124,11 +137,15 @@ class BaseProvider(ABC):
     def build_lifecycle_context(
         self, *args: Any, **kwargs: Any
     ) -> LifecycleContext:
-        raw_messages = self.extract_messages_from_request(
-            *args, **kwargs
+        raw_messages = (
+            self.extract_messages_from_request(
+                *args, **kwargs
+            )
         )
-        apl_messages = self.message_adapter.to_apl_messages(
-            raw_messages
+        apl_messages = (
+            self.message_adapter.to_apl_messages(
+                raw_messages
+            )
         )
 
         return LifecycleContext(
@@ -151,7 +168,9 @@ class BaseProvider(ABC):
             return original_method(*args, **kwargs)
 
         context: LifecycleContext = (
-            self.build_lifecycle_context(*args, **kwargs)
+            self.build_lifecycle_context(
+                *args, **kwargs
+            )
         )
 
         self.sync_executor.execute_sequence(
@@ -183,10 +202,14 @@ class BaseProvider(ABC):
         **kwargs: Any,
     ) -> Any:
         if self.state.is_inside_policy_evaluation():
-            return await original_method(*args, **kwargs)
+            return await original_method(
+                *args, **kwargs
+            )
 
         context: LifecycleContext = (
-            self.build_lifecycle_context(*args, **kwargs)
+            self.build_lifecycle_context(
+                *args, **kwargs
+            )
         )
 
         await self.async_executor.execute_sequence(

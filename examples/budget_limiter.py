@@ -42,13 +42,16 @@ WARNING_THRESHOLD = 0.8  # Warn at 80%
     ],
     description="Enforces token limits per session",
 )
-async def check_token_budget(event: PolicyEvent) -> Verdict:
+async def check_token_budget(
+    event: PolicyEvent,
+) -> Verdict:
     """
     Check if session is within token budget.
     """
     token_count = event.metadata.token_count
     token_budget = (
-        event.metadata.token_budget or DEFAULT_TOKEN_BUDGET
+        event.metadata.token_budget
+        or DEFAULT_TOKEN_BUDGET
     )
 
     ratio = (
@@ -86,7 +89,9 @@ async def check_token_budget(event: PolicyEvent) -> Verdict:
     ],
     description="Enforces cost limits per session",
 )
-async def check_cost_budget(event: PolicyEvent) -> Verdict:
+async def check_cost_budget(
+    event: PolicyEvent,
+) -> Verdict:
     """
     Check if session is within cost budget.
     """
@@ -96,7 +101,11 @@ async def check_cost_budget(event: PolicyEvent) -> Verdict:
         or DEFAULT_COST_BUDGET_USD
     )
 
-    ratio = cost_usd / cost_budget if cost_budget > 0 else 0
+    ratio = (
+        cost_usd / cost_budget
+        if cost_budget > 0
+        else 0
+    )
 
     if ratio >= 1.0:
         return Verdict.deny(
@@ -139,7 +148,11 @@ async def expensive_model_guard(
         or DEFAULT_COST_BUDGET_USD
     )
 
-    ratio = cost_usd / cost_budget if cost_budget > 0 else 0
+    ratio = (
+        cost_usd / cost_budget
+        if cost_budget > 0
+        else 0
+    )
 
     # Expensive models (rough heuristic)
     expensive_models = [
@@ -149,7 +162,8 @@ async def expensive_model_guard(
     ]
 
     is_expensive = any(
-        exp in model.lower() for exp in expensive_models
+        exp in model.lower()
+        for exp in expensive_models
     )
 
     if is_expensive and ratio >= 0.5:

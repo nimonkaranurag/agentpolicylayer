@@ -57,7 +57,7 @@ CLI:
 Documentation: https://github.com/nimonkaranurag/agentpolicylayer
 """
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"
 
 # =============================================================================
 # CORE TYPES
@@ -68,14 +68,21 @@ from .declarative_engine import (
     load_yaml_policy,
     validate_yaml_policy,
 )
-from .instrumentation import auto_instrument, uninstrument
+from .instrumentation import (
+    auto_instrument,
+    uninstrument,
+)
 from .layer import (
     PolicyClient,
     PolicyDenied,
     PolicyEscalation,
     PolicyLayer,
 )
-from .logging import APLLogger, get_logger, setup_logging
+from .logging import (
+    APLLogger,
+    get_logger,
+    setup_logging,
+)
 from .serialization import (
     EventSerializer,
     VerdictSerializer,

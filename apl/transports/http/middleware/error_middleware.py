@@ -5,14 +5,19 @@ from aiohttp.web import middleware
 
 
 @middleware
-async def error_middleware(request: web.Request, handler):
+async def error_middleware(
+    request: web.Request, handler
+):
     try:
         return await handler(request)
     except web.HTTPException:
         raise
     except json.JSONDecodeError as e:
         return web.json_response(
-            {"error": "Invalid JSON", "detail": str(e)},
+            {
+                "error": "Invalid JSON",
+                "detail": str(e),
+            },
             status=400,
         )
     except Exception as e:

@@ -5,13 +5,15 @@ from typing import Any
 
 from apl.types import PolicyEvent
 
-from .object_traversal import get_nested_value_by_dot_path
+from .object_traversal import (
+    get_nested_value_by_dot_path,
+)
 
 
 class TemplateRenderer:
 
-    TEMPLATE_VARIABLE_PATTERN: re.Pattern[str] = re.compile(
-        r"\{\{(.+?)\}\}"
+    TEMPLATE_VARIABLE_PATTERN: re.Pattern[str] = (
+        re.compile(r"\{\{(.+?)\}\}")
     )
 
     def render(

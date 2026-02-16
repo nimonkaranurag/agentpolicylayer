@@ -9,7 +9,9 @@ class StatusPrinter:
     def __init__(self, console: Console):
         self._console = console
 
-    def print(self, message: str, status: str = "info"):
+    def print(
+        self, message: str, status: str = "info"
+    ):
         icon = STATUS_ICON_MAP.get(
             status, STATUS_ICON_MAP["info"]
         )

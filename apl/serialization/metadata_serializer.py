@@ -23,13 +23,17 @@ class MetadataSerializer:
         if metadata.agent_id is not None:
             result["agent_id"] = metadata.agent_id
         if metadata.token_budget is not None:
-            result["token_budget"] = metadata.token_budget
+            result["token_budget"] = (
+                metadata.token_budget
+            )
         if metadata.cost_budget_usd is not None:
             result["cost_budget_usd"] = (
                 metadata.cost_budget_usd
             )
         if metadata.user_region is not None:
-            result["user_region"] = metadata.user_region
+            result["user_region"] = (
+                metadata.user_region
+            )
 
         return result
 
@@ -45,9 +49,13 @@ class MetadataSerializer:
             token_count=data.get("token_count", 0),
             token_budget=data.get("token_budget"),
             cost_usd=data.get("cost_usd", 0.0),
-            cost_budget_usd=data.get("cost_budget_usd"),
+            cost_budget_usd=data.get(
+                "cost_budget_usd"
+            ),
             user_roles=data.get("user_roles", []),
             user_region=data.get("user_region"),
-            compliance_tags=data.get("compliance_tags", []),
+            compliance_tags=data.get(
+                "compliance_tags", []
+            ),
             custom=data.get("custom", {}),
         )
