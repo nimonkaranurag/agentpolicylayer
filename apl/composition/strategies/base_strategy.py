@@ -41,6 +41,8 @@ class BaseCompositionStrategy:
     ) -> list[Modification]:
         by_target: dict[str, Modification] = {}
         for verdict in verdicts:
+            if verdict.decision == Decision.OBSERVE:
+                continue
             for mod in verdict.modifications:
                 by_target[mod.target] = mod
         return list(by_target.values())

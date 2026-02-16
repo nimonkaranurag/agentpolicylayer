@@ -45,7 +45,6 @@ class ConditionEvaluator:
 
         return value == condition
 
-    # FIXED:
     def _evaluate_dict_condition(
         self, value, condition
     ):
