@@ -5,7 +5,9 @@ from pathlib import Path
 from apl.server import PolicyServer
 
 from .condition_evaluator import ConditionEvaluator
-from .object_traversal import get_nested_value_by_dot_path
+from .object_traversal import (
+    get_nested_value_by_dot_path,
+)
 from .rule_evaluator import RuleEvaluator
 from .schema import (
     YAMLManifest,
@@ -26,7 +28,9 @@ def load_yaml_policy(path: Path | str) -> PolicyServer:
     return _DEFAULT_LOADER.load_from_file(path)
 
 
-def validate_yaml_policy(path: Path | str) -> list[str]:
+def validate_yaml_policy(
+    path: Path | str,
+) -> list[str]:
     return _DEFAULT_VALIDATOR.validate_file(path)
 
 

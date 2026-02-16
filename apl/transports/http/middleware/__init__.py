@@ -1,6 +1,8 @@
 from .cors_middleware import cors_middleware
 from .error_middleware import error_middleware
-from .request_id_middleware import request_id_middleware
+from .request_id_middleware import (
+    request_id_middleware,
+)
 
 MIDDLEWARE_STACK = [
     error_middleware,

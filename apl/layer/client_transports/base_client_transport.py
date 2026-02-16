@@ -14,7 +14,9 @@ if TYPE_CHECKING:
 class BaseClientTransport(abc.ABC):
 
     @abc.abstractmethod
-    async def connect(self) -> PolicyManifest | None: ...
+    async def connect(
+        self,
+    ) -> PolicyManifest | None: ...
 
     @abc.abstractmethod
     async def evaluate(

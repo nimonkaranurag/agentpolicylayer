@@ -18,7 +18,9 @@ async def handle_manifest(
                     "name": p.name,
                     "version": p.version,
                     "description": p.description,
-                    "events": [e.value for e in p.events],
+                    "events": [
+                        e.value for e in p.events
+                    ],
                     "blocking": p.blocking,
                     "timeout_ms": p.timeout_ms,
                 }

@@ -12,7 +12,9 @@ from ...types import (
     PolicyEvent,
     SessionMetadata,
 )
-from .sample_payloads import SAMPLE_PAYLOADS_BY_EVENT_TYPE
+from .sample_payloads import (
+    SAMPLE_PAYLOADS_BY_EVENT_TYPE,
+)
 
 
 class TestEventFactory:
@@ -29,7 +31,9 @@ class TestEventFactory:
             type=EventType(event_type_str),
             timestamp=datetime.now(),
             messages=[
-                Message(role="user", content="Test message")
+                Message(
+                    role="user", content="Test message"
+                )
             ],
             payload=payload,
             metadata=SessionMetadata(
@@ -44,7 +48,9 @@ class TestEventFactory:
         self, event_type_str, payload_json
     ) -> EventPayload:
         if payload_json:
-            return EventPayload(**json.loads(payload_json))
+            return EventPayload(
+                **json.loads(payload_json)
+            )
         return SAMPLE_PAYLOADS_BY_EVENT_TYPE.get(
             event_type_str, EventPayload()
         )

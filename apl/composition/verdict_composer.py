@@ -1,6 +1,9 @@
 from apl.types import CompositionConfig, Verdict
 
-from .strategies import CompositionStrategy, get_strategy
+from .strategies import (
+    CompositionStrategy,
+    get_strategy,
+)
 
 
 class VerdictComposer:
@@ -8,7 +11,9 @@ class VerdictComposer:
         self, config: CompositionConfig | None = None
     ):
         self._config = config or CompositionConfig()
-        self._strategy = get_strategy(self._config.mode)
+        self._strategy = get_strategy(
+            self._config.mode
+        )
 
     @property
     def config(self) -> CompositionConfig:
@@ -18,5 +23,7 @@ class VerdictComposer:
     def strategy(self) -> CompositionStrategy:
         return self._strategy
 
-    def compose(self, verdicts: list[Verdict]) -> Verdict:
+    def compose(
+        self, verdicts: list[Verdict]
+    ) -> Verdict:
         return self._strategy.compose(verdicts)

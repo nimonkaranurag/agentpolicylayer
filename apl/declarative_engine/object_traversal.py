@@ -15,7 +15,10 @@ def get_nested_value_by_dot_path(
 
         if hasattr(current, part):
             current = getattr(current, part)
-        elif isinstance(current, dict) and part in current:
+        elif (
+            isinstance(current, dict)
+            and part in current
+        ):
             current = current[part]
         else:
             return None

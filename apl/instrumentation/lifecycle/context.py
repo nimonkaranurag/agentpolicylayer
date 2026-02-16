@@ -46,7 +46,9 @@ class LifecycleContext:
     ) -> None:
         self.modified_kwargs["messages"] = new_messages
 
-    def modify_response_text(self, new_text: str) -> None:
+    def modify_response_text(
+        self, new_text: str
+    ) -> None:
         self.response_text = new_text
         if (
             self.response is not None
@@ -61,7 +63,9 @@ class LifecycleContext:
     ) -> None:
         self.tool_args = new_args
 
-    def modify_tool_result(self, new_result: Any) -> None:
+    def modify_tool_result(
+        self, new_result: Any
+    ) -> None:
         self.tool_result = new_result
 
     def modify_proposed_plan(

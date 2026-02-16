@@ -83,13 +83,23 @@ class InstrumentationState:
                 or not self._background_loop.is_running()
             )
             if needs_new_loop:
+                ready = threading.Event()
                 self._background_loop = (
                     asyncio.new_event_loop()
                 )
+                loop = self._background_loop
+
+                def _run(l, r):
+                    asyncio.set_event_loop(l)
+                    r.set()
+                    l.run_forever()
+
                 loop_thread = threading.Thread(
-                    target=self._background_loop.run_forever,
+                    target=_run,
+                    args=(loop, ready),
                     daemon=True,
                     name="apl-instrumentation-loop",
                 )
                 loop_thread.start()
+                ready.wait()
         return self._background_loop

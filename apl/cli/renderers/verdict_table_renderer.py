@@ -60,12 +60,12 @@ class VerdictTableRenderer:
 
     def _render_modifications(self, verdicts):
         for v in verdicts:
-            if v.modification:
+            for mod in v.modifications:
                 self._console.print()
                 self._console.print(
                     Panel(
-                        "[bold]Modified Output:[/bold]\n"
-                        f"{v.modification.value}",
+                        f"[bold]Modified ({mod.target}):[/bold]\n"
+                        f"{mod.value}",
                         title="[yellow]Modification[/yellow]",
                         border_style="yellow",
                     )

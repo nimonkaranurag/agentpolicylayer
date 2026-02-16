@@ -42,7 +42,9 @@ class ManifestSerializer:
             supports_streaming=data.get(
                 "supports_streaming", False
             ),
-            documentation_url=data.get("documentation_url"),
+            documentation_url=data.get(
+                "documentation_url"
+            ),
             policies=[
                 self._deserialize_policy_definition(p)
                 for p in data.get("policies", [])
@@ -80,7 +82,9 @@ class ManifestSerializer:
                 required=c.get("required", True),
                 description=c.get("description"),
             )
-            for c in data.get("context_requirements", [])
+            for c in data.get(
+                "context_requirements", []
+            )
         ]
 
         return PolicyDefinition(
@@ -88,7 +92,8 @@ class ManifestSerializer:
             version=data["version"],
             description=data.get("description"),
             events=[
-                EventType(e) for e in data.get("events", [])
+                EventType(e)
+                for e in data.get("events", [])
             ],
             context_requirements=context_reqs,
             blocking=data.get("blocking", True),

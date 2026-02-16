@@ -15,7 +15,9 @@ class EventSerializer:
         self._payload_serializer = PayloadSerializer(
             self._message_serializer
         )
-        self._metadata_serializer = MetadataSerializer()
+        self._metadata_serializer = (
+            MetadataSerializer()
+        )
 
     def serialize(
         self, event: PolicyEvent

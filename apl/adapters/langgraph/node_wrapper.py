@@ -16,7 +16,9 @@ class NodeWrapper:
         policy_layer: "PolicyLayer",
         checkpoints: list[PolicyCheckpoint],
     ):
-        self._evaluator = CheckpointEvaluator(policy_layer)
+        self._evaluator = CheckpointEvaluator(
+            policy_layer
+        )
         self._checkpoints = checkpoints
 
     def wrap(
@@ -52,7 +54,9 @@ class NodeWrapper:
         def sync_wrapped(
             state: Any, config: Any = None
         ) -> Any:
-            return asyncio.run(async_wrapped(state, config))
+            return asyncio.run(
+                async_wrapped(state, config)
+            )
 
         if asyncio.iscoroutinefunction(node_func):
             return async_wrapped
@@ -66,7 +70,10 @@ class NodeWrapper:
                 checkpoint, node_name, before=True
             ):
                 await self._evaluator.evaluate(
-                    checkpoint, state, config, node_name
+                    checkpoint,
+                    state,
+                    config,
+                    node_name,
                 )
 
     async def _evaluate_after_checkpoints(
@@ -77,7 +84,10 @@ class NodeWrapper:
                 checkpoint, node_name, before=False
             ):
                 await self._evaluator.evaluate(
-                    checkpoint, state, config, node_name
+                    checkpoint,
+                    state,
+                    config,
+                    node_name,
                 )
 
     def _should_evaluate(

@@ -59,7 +59,9 @@ class WatsonXProvider(BaseProvider):
     ) -> str:
         try:
             return (
-                response["choices"][0]["message"]["content"]
+                response["choices"][0]["message"][
+                    "content"
+                ]
                 or ""
             )
         except (KeyError, IndexError, TypeError):

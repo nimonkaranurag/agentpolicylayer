@@ -27,11 +27,13 @@ class YamlPolicyLoader:
         self, path: Path | str
     ) -> PolicyServer:
         resolved_path: Path = Path(path)
-        raw_data: dict[str, Any] = self._read_yaml_file(
-            resolved_path
+        raw_data: dict[str, Any] = (
+            self._read_yaml_file(resolved_path)
         )
         manifest: YAMLManifest = (
-            self._parse_manifest_from_raw_data(raw_data)
+            self._parse_manifest_from_raw_data(
+                raw_data
+            )
         )
 
         server: PolicyServer = PolicyServer(
@@ -57,9 +59,13 @@ class YamlPolicyLoader:
         data: dict[str, Any],
     ) -> YAMLManifest:
         if "name" not in data:
-            raise ValueError("Missing required field: name")
+            raise ValueError(
+                "Missing required field: name"
+            )
 
-        parsed_policies: list[YAMLPolicyDefinition] = []
+        parsed_policies: list[YAMLPolicyDefinition] = (
+            []
+        )
 
         for raw_policy in data.get("policies", []):
             parsed_rules: list[YAMLRule] = [
@@ -67,13 +73,17 @@ class YamlPolicyLoader:
                     when=raw_rule.get("when", {}),
                     then=raw_rule.get("then", {}),
                 )
-                for raw_rule in raw_policy.get("rules", [])
+                for raw_rule in raw_policy.get(
+                    "rules", []
+                )
             ]
 
             parsed_policies.append(
                 YAMLPolicyDefinition(
                     name=raw_policy["name"],
-                    events=raw_policy.get("events", []),
+                    events=raw_policy.get(
+                        "events", []
+                    ),
                     rules=parsed_rules,
                     description=raw_policy.get(
                         "description"
@@ -102,7 +112,9 @@ class YamlPolicyLoader:
         server: PolicyServer,
         policy_definition: YAMLPolicyDefinition,
     ) -> None:
-        rule_evaluator: RuleEvaluator = self._rule_evaluator
+        rule_evaluator: RuleEvaluator = (
+            self._rule_evaluator
+        )
         captured_rules: list[YAMLRule] = (
             policy_definition.rules
         )

@@ -22,7 +22,9 @@ class CheckpointEvaluator:
 
     def __init__(self, policy_layer: "PolicyLayer"):
         self._policy_layer = policy_layer
-        self._state_extractor = LangGraphStateExtractor()
+        self._state_extractor = (
+            LangGraphStateExtractor()
+        )
 
     async def evaluate(
         self,
@@ -31,11 +33,15 @@ class CheckpointEvaluator:
         config: dict | None,
         node_name: str,
     ) -> None:
-        messages = self._state_extractor.extract_messages(
-            state
+        messages = (
+            self._state_extractor.extract_messages(
+                state
+            )
         )
-        metadata = self._state_extractor.extract_metadata(
-            state, config
+        metadata = (
+            self._state_extractor.extract_metadata(
+                state, config
+            )
         )
         payload = self._build_payload(
             checkpoint, state, node_name, messages
@@ -111,9 +117,11 @@ class CheckpointEvaluator:
             ) or state.get("response")
         elif messages:
             assistant_messages = [
-                m for m in messages if m.role == "assistant"
+                m
+                for m in messages
+                if m.role == "assistant"
             ]
             if assistant_messages:
-                payload.output_text = assistant_messages[
-                    -1
-                ].content
+                payload.output_text = (
+                    assistant_messages[-1].content
+                )

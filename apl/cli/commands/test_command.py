@@ -37,7 +37,9 @@ _verdict_renderer = VerdictTableRenderer(console)
     default=None,
     help="JSON payload",
 )
-def test(path: str, event: str, payload: Optional[str]):
+def test(
+    path: str, event: str, payload: Optional[str]
+):
     """
     Test a policy with sample events.
 

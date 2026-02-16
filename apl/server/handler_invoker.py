@@ -41,7 +41,9 @@ async def invoke_policy_handler(
         logger.warning(
             f"Policy {policy.name} timed out after {elapsed_ms:.1f}ms"
         )
-        return _create_timeout_verdict(policy, elapsed_ms)
+        return _create_timeout_verdict(
+            policy, elapsed_ms
+        )
 
     except Exception as exc:
         elapsed_ms = _calculate_elapsed_ms(start_time)

@@ -24,15 +24,31 @@ TRANSPORT_ENTRIES = [
 ]
 
 ADAPTER_ENTRIES = [
-    ("[green]✓[/green]", "LangGraph", "StateGraph wrapper"),
-    ("[green]✓[/green]", "OpenAI", "Auto-instrumentation"),
+    (
+        "[green]✓[/green]",
+        "LangGraph",
+        "StateGraph wrapper",
+    ),
+    (
+        "[green]✓[/green]",
+        "OpenAI",
+        "Auto-instrumentation",
+    ),
     (
         "[green]✓[/green]",
         "Anthropic",
         "Auto-instrumentation",
     ),
-    ("[green]✓[/green]", "LiteLLM", "Auto-instrumentation"),
-    ("[green]✓[/green]", "LangChain", "ChatModel wrapper"),
+    (
+        "[green]✓[/green]",
+        "LiteLLM",
+        "Auto-instrumentation",
+    ),
+    (
+        "[green]✓[/green]",
+        "LangChain",
+        "ChatModel wrapper",
+    ),
     ("[yellow]○[/yellow]", "AutoGen", "Coming soon"),
     ("[yellow]○[/yellow]", "CrewAI", "Coming soon"),
 ]
@@ -45,7 +61,9 @@ class SystemInfoRenderer:
     def render(self):
         self._render_system_properties()
         self._render_capability_table(
-            "Transports", TRANSPORT_ENTRIES, "Transport"
+            "Transports",
+            TRANSPORT_ENTRIES,
+            "Transport",
         )
         self._render_capability_table(
             "Framework Adapters",

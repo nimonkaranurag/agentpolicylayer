@@ -12,7 +12,9 @@ from .python_module_loader import (
 
 class DirectoryPolicyLoader(BasePolicyLoader):
     def __init__(self):
-        self._python_loader = PythonModulePolicyLoader()
+        self._python_loader = (
+            PythonModulePolicyLoader()
+        )
 
     def can_load(self, path: Path) -> bool:
         return path.is_dir()
@@ -33,7 +35,9 @@ class DirectoryPolicyLoader(BasePolicyLoader):
                 file, logger
             )
             if sub_server:
-                self._merge_policies(server, sub_server)
+                self._merge_policies(
+                    server, sub_server
+                )
                 loaded_count += 1
 
         return server if loaded_count > 0 else None

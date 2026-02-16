@@ -7,7 +7,9 @@ from ..events.base_event import BaseEvent
 @dataclass
 class EventSequence:
     name: str
-    events: List[BaseEvent] = field(default_factory=list)
+    events: List[BaseEvent] = field(
+        default_factory=list
+    )
 
     def add_event(
         self, event: BaseEvent

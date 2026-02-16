@@ -7,7 +7,9 @@ from ..branding import APL_LOGO_MINI
 from .arguments_table_renderer import (
     ArgumentsTableRenderer,
 )
-from .options_table_renderer import OptionsTableRenderer
+from .options_table_renderer import (
+    OptionsTableRenderer,
+)
 
 
 class RichCommand(click.Command):
@@ -23,8 +25,8 @@ class RichCommand(click.Command):
             self._arguments_renderer = (
                 ArgumentsTableRenderer(console)
             )
-            self._options_renderer = OptionsTableRenderer(
-                console
+            self._options_renderer = (
+                OptionsTableRenderer(console)
             )
 
     def format_help(self, ctx, formatter):
@@ -65,7 +67,10 @@ class RichCommand(click.Command):
         self._console.print()
 
     def _render_examples_section(self):
-        if not self.help or "Examples:" not in self.help:
+        if (
+            not self.help
+            or "Examples:" not in self.help
+        ):
             return
 
         start = self.help.index("Examples:")

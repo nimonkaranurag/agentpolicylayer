@@ -4,7 +4,9 @@ import sys
 from typing import AsyncIterator
 
 
-async def create_stdin_reader() -> asyncio.StreamReader:
+async def create_stdin_reader() -> (
+    asyncio.StreamReader
+):
     reader = asyncio.StreamReader()
     protocol = asyncio.StreamReaderProtocol(reader)
     await asyncio.get_event_loop().connect_read_pipe(

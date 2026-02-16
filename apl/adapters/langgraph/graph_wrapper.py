@@ -11,7 +11,8 @@ logger = get_logger("adapter.langgraph")
 
 DEFAULT_CHECKPOINTS = [
     PolicyCheckpoint(
-        EventType.INPUT_RECEIVED, before_node_execution=True
+        EventType.INPUT_RECEIVED,
+        before_node_execution=True,
     ),
     PolicyCheckpoint(
         EventType.TOOL_PRE_INVOKE,
@@ -32,7 +33,9 @@ class APLGraphWrapper:
         self._layer = policy_layer or PolicyLayer()
         self._checkpoints: list[PolicyCheckpoint] = []
 
-    def add_server(self, uri: str) -> "APLGraphWrapper":
+    def add_server(
+        self, uri: str
+    ) -> "APLGraphWrapper":
         self._layer.add_server(uri)
         return self
 
@@ -66,11 +69,16 @@ class APLGraphWrapper:
         checkpoints = (
             self._checkpoints or DEFAULT_CHECKPOINTS
         )
-        node_wrapper = NodeWrapper(self._layer, checkpoints)
+        node_wrapper = NodeWrapper(
+            self._layer, checkpoints
+        )
 
         original_nodes = dict(graph.nodes)
 
-        for node_name, node_func in original_nodes.items():
+        for (
+            node_name,
+            node_func,
+        ) in original_nodes.items():
             graph.nodes[node_name] = node_wrapper.wrap(
                 node_name, node_func
             )

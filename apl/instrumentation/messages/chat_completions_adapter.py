@@ -5,7 +5,9 @@ from apl.types import Message
 from .base_adapter import BaseMessageAdapter
 
 
-class ChatCompletionsMessageAdapter(BaseMessageAdapter):
+class ChatCompletionsMessageAdapter(
+    BaseMessageAdapter
+):
 
     def to_apl_messages(
         self, raw_messages: Any
@@ -16,7 +18,8 @@ class ChatCompletionsMessageAdapter(BaseMessageAdapter):
         return [
             self._convert_single_message(msg)
             for msg in raw_messages
-            if self._convert_single_message(msg) is not None
+            if self._convert_single_message(msg)
+            is not None
         ]
 
     def _convert_single_message(
@@ -62,7 +65,9 @@ class ChatCompletionsMessageAdapter(BaseMessageAdapter):
                 and block.get("type") == "text"
             ]
             return (
-                "".join(text_parts) if text_parts else None
+                "".join(text_parts)
+                if text_parts
+                else None
             )
 
         return str(content)

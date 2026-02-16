@@ -19,7 +19,9 @@ class LangChainMessageAdapter(BaseMessageAdapter):
         self, raw_input: Any
     ) -> List[Message]:
         if isinstance(raw_input, str):
-            return [Message(role="user", content=raw_input)]
+            return [
+                Message(role="user", content=raw_input)
+            ]
 
         if isinstance(raw_input, list):
             return [
@@ -39,9 +41,13 @@ class LangChainMessageAdapter(BaseMessageAdapter):
             ),
         )
 
-    def _extract_role(self, langchain_message: Any) -> str:
+    def _extract_role(
+        self, langchain_message: Any
+    ) -> str:
         if isinstance(langchain_message, dict):
-            return langchain_message.get("role", "user")
+            return langchain_message.get(
+                "role", "user"
+            )
         if hasattr(langchain_message, "type"):
             return self.LANGCHAIN_TYPE_TO_ROLE.get(
                 langchain_message.type, "user"

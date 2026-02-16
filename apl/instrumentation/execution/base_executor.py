@@ -3,7 +3,10 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
-from ..evaluation import PolicyEvaluator, VerdictHandler
+from ..evaluation import (
+    PolicyEvaluator,
+    VerdictHandler,
+)
 from ..lifecycle.context import LifecycleContext
 from ..lifecycle.sequence import EventSequence
 
@@ -13,7 +16,9 @@ if TYPE_CHECKING:
 
 class BaseLifecycleExecutor(ABC):
 
-    def __init__(self, state: InstrumentationState) -> None:
+    def __init__(
+        self, state: InstrumentationState
+    ) -> None:
         self.state: InstrumentationState = state
         self.policy_evaluator: PolicyEvaluator = (
             PolicyEvaluator(state)

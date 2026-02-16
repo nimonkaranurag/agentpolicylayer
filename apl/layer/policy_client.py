@@ -8,7 +8,11 @@ from apl.serialization import (
     ManifestSerializer,
     VerdictSerializer,
 )
-from apl.types import PolicyEvent, PolicyManifest, Verdict
+from apl.types import (
+    PolicyEvent,
+    PolicyManifest,
+    Verdict,
+)
 
 from .client_transports import (
     BaseClientTransport,
@@ -29,9 +33,9 @@ class PolicyClient:
         self._event_serializer: EventSerializer = (
             EventSerializer()
         )
-        self._manifest_serializer: ManifestSerializer = (
-            ManifestSerializer()
-        )
+        self._manifest_serializer: (
+            ManifestSerializer
+        ) = ManifestSerializer()
         self._verdict_serializer: VerdictSerializer = (
             VerdictSerializer()
         )
@@ -48,7 +52,9 @@ class PolicyClient:
                     raw_manifest
                 )
             )
-            policy_count: int = len(self.manifest.policies)
+            policy_count: int = len(
+                self.manifest.policies
+            )
             logger.info(
                 f"Connected to '{self.manifest.server_name}' "
                 f"with {policy_count} policies via {self.uri}"
@@ -66,7 +72,9 @@ class PolicyClient:
             self._event_serializer.serialize(event)
         )
         raw_verdicts: list[dict[str, Any]] = (
-            await self._transport.evaluate(serialized_event)
+            await self._transport.evaluate(
+                serialized_event
+            )
         )
 
         if not raw_verdicts:

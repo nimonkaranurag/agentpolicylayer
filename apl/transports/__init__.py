@@ -18,7 +18,9 @@ def create_transport(
     server: "PolicyServer",
     **kwargs,
 ) -> BaseTransport:
-    transport_class = TRANSPORT_REGISTRY.get(transport_type)
+    transport_class = TRANSPORT_REGISTRY.get(
+        transport_type
+    )
     if transport_class is None:
         raise ValueError(
             f"Unknown transport: {transport_type}"

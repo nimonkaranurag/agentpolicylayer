@@ -3,7 +3,11 @@ from typing import TYPE_CHECKING
 
 from aiohttp import web
 
-from apl.logging import APLLogger, get_logger, setup_logging
+from apl.logging import (
+    APLLogger,
+    get_logger,
+    setup_logging,
+)
 from apl.transports.base_transport import BaseTransport
 from apl.utilities import kill_process_on_port
 

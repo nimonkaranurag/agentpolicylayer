@@ -26,7 +26,9 @@ class PolicyEventBuilder:
         )
         resolved_metadata: SessionMetadata = (
             metadata
-            or SessionMetadata(session_id=str(uuid.uuid4()))
+            or SessionMetadata(
+                session_id=str(uuid.uuid4())
+            )
         )
 
         return PolicyEvent(

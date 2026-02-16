@@ -18,9 +18,7 @@ APL_LOGO_SMALL = """[bold cyan]
   █▀█ █▀▀ █▄▄   [dim]v{version}[/dim]
 [/bold cyan]"""
 
-APL_LOGO_MINI = (
-    "[bold cyan]🛡️  APL[/bold cyan] [dim]v{version}[/dim]"
-)
+APL_LOGO_MINI = "[bold cyan]🛡️  APL[/bold cyan] [dim]v{version}[/dim]"
 
 BANNER_STYLE_MAP = {
     "full": APL_LOGO_FULL,

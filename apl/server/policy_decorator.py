@@ -36,22 +36,28 @@ def create_policy_decorator(
         _parse_context_requirements(context)
     )
 
-    def decorator(handler: PolicyHandler) -> PolicyHandler:
-        registered: RegisteredPolicy = RegisteredPolicy(
-            name=policy_name,
-            version=version,
-            handler=handler,
-            events=event_types,
-            context_requirements=context_requirements,
-            blocking=blocking,
-            timeout_ms=timeout_ms,
-            description=description,
+    def decorator(
+        handler: PolicyHandler,
+    ) -> PolicyHandler:
+        registered: RegisteredPolicy = (
+            RegisteredPolicy(
+                name=policy_name,
+                version=version,
+                handler=handler,
+                events=event_types,
+                context_requirements=context_requirements,
+                blocking=blocking,
+                timeout_ms=timeout_ms,
+                description=description,
+            )
         )
 
         registry.register(registered)
 
         @wraps(handler)
-        async def wrapper(event: PolicyEvent) -> Verdict:
+        async def wrapper(
+            event: PolicyEvent,
+        ) -> Verdict:
             from .handler_invoker import (
                 invoke_policy_handler,
             )
@@ -93,5 +99,7 @@ def _parse_context_requirements(
         if isinstance(item, ContextRequirement):
             result.append(item)
         else:
-            result.append(ContextRequirement(path=item))
+            result.append(
+                ContextRequirement(path=item)
+            )
     return result

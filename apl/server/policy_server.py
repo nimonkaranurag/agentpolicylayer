@@ -2,7 +2,11 @@ from __future__ import annotations
 
 from typing import Callable
 
-from apl.types import PolicyEvent, PolicyManifest, Verdict
+from apl.types import (
+    PolicyEvent,
+    PolicyManifest,
+    Verdict,
+)
 
 from .manifest_generator import (
     generate_manifest_from_server,
@@ -23,7 +27,9 @@ class PolicyServer:
         self.name: str = name
         self.version: str = version
         self.description: str | None = description
-        self._registry: PolicyRegistry = PolicyRegistry()
+        self._registry: PolicyRegistry = (
+            PolicyRegistry()
+        )
 
     @property
     def registry(self) -> PolicyRegistry:
@@ -53,7 +59,9 @@ class PolicyServer:
     async def evaluate(
         self, event: PolicyEvent
     ) -> list[Verdict]:
-        return await self._registry.evaluate_event(event)
+        return await self._registry.evaluate_event(
+            event
+        )
 
     def get_manifest(self) -> PolicyManifest:
         return generate_manifest_from_server(self)

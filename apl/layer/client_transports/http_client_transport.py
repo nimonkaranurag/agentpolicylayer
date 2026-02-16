@@ -19,7 +19,9 @@ class HttpClientTransport(BaseClientTransport):
 
     def __init__(self, base_url: str) -> None:
         self._base_url: str = base_url.rstrip("/")
-        self._session: aiohttp.ClientSession | None = None
+        self._session: aiohttp.ClientSession | None = (
+            None
+        )
 
     async def connect(self) -> dict | None:
         if not HAS_AIOHTTP:
@@ -29,19 +31,25 @@ class HttpClientTransport(BaseClientTransport):
             )
 
         self._session = aiohttp.ClientSession()
-        manifest_url: str = f"{self._base_url}/manifest"
-
-        async with self._session.get(
-            manifest_url
-        ) as response:
-            if response.status != 200:
-                raise ConnectionError(
-                    f"Failed to connect to {self._base_url}: HTTP {response.status}"
-                )
-            manifest_data: dict[str, Any] = (
-                await response.json()
+        try:
+            manifest_url: str = (
+                f"{self._base_url}/manifest"
             )
-            return manifest_data
+            async with self._session.get(
+                manifest_url
+            ) as response:
+                if response.status != 200:
+                    raise ConnectionError(
+                        f"Failed to connect to {self._base_url}: HTTP {response.status}"
+                    )
+                manifest_data: dict[str, Any] = (
+                    await response.json()
+                )
+                return manifest_data
+        except Exception:
+            await self._session.close()
+            self._session = None
+            raise
 
     async def evaluate(
         self, serialized_event: dict
@@ -49,7 +57,9 @@ class HttpClientTransport(BaseClientTransport):
         if self._session is None:
             return []
 
-        evaluate_url: str = f"{self._base_url}/evaluate"
+        evaluate_url: str = (
+            f"{self._base_url}/evaluate"
+        )
 
         async with self._session.post(
             evaluate_url, json=serialized_event
@@ -60,7 +70,9 @@ class HttpClientTransport(BaseClientTransport):
                 )
                 return []
 
-            data: dict[str, Any] = await response.json()
+            data: dict[str, Any] = (
+                await response.json()
+            )
             return data.get("verdicts", [])
 
     async def close(self) -> None:

@@ -12,7 +12,9 @@ console = Console()
 
 
 @click.group(cls=RichGroup)
-@click.version_option(version=__version__, prog_name="APL")
+@click.version_option(
+    version=__version__, prog_name="APL"
+)
 def cli():
     """Portable, composable policies for AI agents."""
     pass

@@ -11,10 +11,11 @@ from apl.types import Decision, EventType
 class YamlPolicyValidator:
 
     def __init__(self) -> None:
-        self._valid_event_type_values: frozenset[str] = (
-            frozenset(
-                event_type.value for event_type in EventType
-            )
+        self._valid_event_type_values: frozenset[
+            str
+        ] = frozenset(
+            event_type.value
+            for event_type in EventType
         )
         self._valid_decision_values: frozenset[str] = (
             frozenset(
@@ -22,7 +23,9 @@ class YamlPolicyValidator:
             )
         )
 
-    def validate_file(self, path: Path | str) -> list[str]:
+    def validate_file(
+        self, path: Path | str
+    ) -> list[str]:
         resolved_path: Path = Path(path)
         errors: list[str] = []
 
@@ -66,7 +69,9 @@ class YamlPolicyValidator:
         data: dict[str, Any], errors: list[str]
     ) -> bool:
         if "name" not in data:
-            errors.append("Missing required field: name")
+            errors.append(
+                "Missing required field: name"
+            )
 
         if "policies" not in data:
             errors.append(
@@ -151,7 +156,9 @@ class YamlPolicyValidator:
         if not isinstance(policy.get("rules"), list):
             return
 
-        for rule_index, rule in enumerate(policy["rules"]):
+        for rule_index, rule in enumerate(
+            policy["rules"]
+        ):
             rule_prefix: str = (
                 f"{error_prefix}.rules[{rule_index}]"
             )
@@ -175,9 +182,9 @@ class YamlPolicyValidator:
                 f"{rule_prefix}: Missing required field 'then'"
             )
         elif isinstance(rule.get("then"), dict):
-            decision_value: str | None = rule["then"].get(
-                "decision"
-            )
+            decision_value: str | None = rule[
+                "then"
+            ].get("decision")
             if (
                 decision_value
                 and decision_value

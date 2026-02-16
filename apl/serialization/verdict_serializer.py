@@ -9,7 +9,10 @@ from apl.types import (
 
 
 class VerdictSerializer:
-    def serialize(self, verdict: Verdict) -> dict[str, Any]:
+
+    def serialize(
+        self, verdict: Verdict
+    ) -> dict[str, Any]:
         result = {
             "decision": verdict.decision.value,
             "confidence": verdict.confidence,
@@ -24,15 +27,16 @@ class VerdictSerializer:
                 verdict.policy_version
             )
         if verdict.evaluation_ms is not None:
-            result["evaluation_ms"] = verdict.evaluation_ms
+            result["evaluation_ms"] = (
+                verdict.evaluation_ms
+            )
         if verdict.trace is not None:
             result["trace"] = verdict.trace
-        if verdict.modification is not None:
-            result["modification"] = (
-                self._serialize_modification(
-                    verdict.modification
-                )
-            )
+        if verdict.modifications:
+            result["modifications"] = [
+                self._serialize_modification(m)
+                for m in verdict.modifications
+            ]
         if verdict.escalation is not None:
             result["escalation"] = (
                 self._serialize_escalation(
@@ -42,12 +46,15 @@ class VerdictSerializer:
 
         return result
 
-    def deserialize(self, data: dict[str, Any]) -> Verdict:
-        modification = None
-        if data.get("modification"):
-            modification = self._deserialize_modification(
-                data["modification"]
-            )
+    def deserialize(
+        self, data: dict[str, Any]
+    ) -> Verdict:
+        modifications = []
+        if data.get("modifications"):
+            modifications = [
+                self._deserialize_modification(m)
+                for m in data["modifications"]
+            ]
 
         escalation = None
         if data.get("escalation"):
@@ -59,7 +66,7 @@ class VerdictSerializer:
             decision=Decision(data["decision"]),
             confidence=data.get("confidence", 1.0),
             reasoning=data.get("reasoning"),
-            modification=modification,
+            modifications=modifications,
             escalation=escalation,
             policy_name=data.get("policy_name"),
             policy_version=data.get("policy_version"),
@@ -90,7 +97,9 @@ class VerdictSerializer:
                 escalation.fallback_action
             )
         if escalation.timeout_ms is not None:
-            result["timeout_ms"] = escalation.timeout_ms
+            result["timeout_ms"] = (
+                escalation.timeout_ms
+            )
         if escalation.options is not None:
             result["options"] = escalation.options
         return result
@@ -111,7 +120,9 @@ class VerdictSerializer:
         return Escalation(
             type=data["type"],
             prompt=data.get("prompt"),
-            fallback_action=data.get("fallback_action"),
+            fallback_action=data.get(
+                "fallback_action"
+            ),
             timeout_ms=data.get("timeout_ms"),
             options=data.get("options"),
         )
