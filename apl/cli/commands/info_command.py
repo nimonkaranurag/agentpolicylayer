@@ -65,7 +65,7 @@ class SystemInfoRenderer:
         table.add_row("Version", __version__)
         table.add_row("Python", sys.version.split()[0])
         table.add_row("Platform", sys.platform)
-        table.add_row("Protocol", "0.1.0")
+        table.add_row("Protocol", "0.2.0")
 
         self._console.print(table)
         self._console.print()

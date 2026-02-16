@@ -424,7 +424,7 @@ class PolicyManifest:
 
     server_name: str
     server_version: str
-    protocol_version: str = "0.1.0"
+    protocol_version: str = "0.2.0"
 
     policies: list[PolicyDefinition] = field(
         default_factory=list
