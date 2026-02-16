@@ -53,8 +53,9 @@ class AnthropicProvider(BaseProvider):
             pass
         return ""
 
-    def apply_text_to_response(
-        self, response: Any, new_text: str
-    ) -> Any:
-        response.content[0].text = new_text
+    def apply_text_to_response(self, response, new_text):
+        try:
+            response.content[0].text = new_text
+        except (AttributeError, IndexError):
+            pass
         return response
