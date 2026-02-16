@@ -145,7 +145,7 @@ class PolicyRegistry:
             logger.warning(
                 f"Modification target 'input' is not supported during sequential evaluation; "
                 f"use instrumentation-level events for input modifications"
-                )
+            )
         elif target == "tool_args":
             new_payload_kwargs["tool_args"] = value
         elif target == "llm_prompt":

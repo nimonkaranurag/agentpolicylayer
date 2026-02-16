@@ -80,9 +80,14 @@ class PayloadSerializer:
             tool_result=data.get("tool_result"),
             tool_error=data.get("tool_error"),
             llm_model=data.get("llm_model"),
-            llm_response=self._message_serializer.deserialize(data["llm_response"])
-                if data.get("llm_response") and self._message_serializer
-                else data.get("llm_response"),
+            llm_response=(
+                self._message_serializer.deserialize(
+                    data["llm_response"]
+                )
+                if data.get("llm_response")
+                and self._message_serializer
+                else data.get("llm_response")
+            ),
             llm_tokens_used=data.get(
                 "llm_tokens_used"
             ),
