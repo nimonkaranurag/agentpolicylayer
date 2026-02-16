@@ -33,7 +33,7 @@ class ManifestSerializer:
             server_name=data["server_name"],
             server_version=data["server_version"],
             protocol_version=data.get(
-                "protocol_version", "0.2.0"
+                "protocol_version", "0.3.0"
             ),
             description=data.get("description"),
             supports_batch=data.get(

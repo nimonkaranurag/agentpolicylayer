@@ -22,16 +22,27 @@ from apl.types import (
 
 class TestEventType:
 
-    def test_all_lifecycle_events_have_dotted_values(self):
+    def test_all_lifecycle_events_have_dotted_values(
+        self,
+    ):
         for member in EventType:
             assert "." in member.value
 
     def test_event_type_from_string(self):
-        assert EventType("input.received") == EventType.INPUT_RECEIVED
-        assert EventType("output.pre_send") == EventType.OUTPUT_PRE_SEND
+        assert (
+            EventType("input.received")
+            == EventType.INPUT_RECEIVED
+        )
+        assert (
+            EventType("output.pre_send")
+            == EventType.OUTPUT_PRE_SEND
+        )
 
     def test_event_type_string_equality(self):
-        assert EventType.LLM_PRE_REQUEST == "llm.pre_request"
+        assert (
+            EventType.LLM_PRE_REQUEST
+            == "llm.pre_request"
+        )
 
 
 class TestDecision:
@@ -43,7 +54,13 @@ class TestDecision:
     def test_five_decision_types_exist(self):
         assert len(Decision) == 5
         names = {d.name for d in Decision}
-        assert names == {"ALLOW", "DENY", "MODIFY", "ESCALATE", "OBSERVE"}
+        assert names == {
+            "ALLOW",
+            "DENY",
+            "MODIFY",
+            "ESCALATE",
+            "OBSERVE",
+        }
 
 
 class TestMessage:
@@ -55,9 +72,18 @@ class TestMessage:
         assert msg.tool_calls is None
 
     def test_assistant_message_with_tool_calls(self):
-        tc = ToolCall(id="tc-1", function=FunctionCall(name="search", arguments='{"q":"test"}'))
-        msg = Message(role="assistant", tool_calls=[tc])
-        assert msg.tool_calls[0].function.name == "search"
+        tc = ToolCall(
+            id="tc-1",
+            function=FunctionCall(
+                name="search", arguments='{"q":"test"}'
+            ),
+        )
+        msg = Message(
+            role="assistant", tool_calls=[tc]
+        )
+        assert (
+            msg.tool_calls[0].function.name == "search"
+        )
 
 
 class TestEventPayload:
@@ -69,7 +95,9 @@ class TestEventPayload:
         assert p.llm_model is None
 
     def test_tool_payload(self):
-        p = EventPayload(tool_name="calc", tool_args={"x": 1})
+        p = EventPayload(
+            tool_name="calc", tool_args={"x": 1}
+        )
         assert p.tool_name == "calc"
         assert p.tool_args["x"] == 1
 
@@ -109,14 +137,21 @@ class TestVerdictFactories:
             reasoning="PII found",
         )
         assert v.decision == Decision.MODIFY
-        assert v.modification is not None
-        assert v.modification.target == "output"
-        assert v.modification.operation == "replace"
-        assert v.modification.value == "redacted"
+        assert len(v.modifications) == 1
+        assert v.modifications[0].target == "output"
+        assert (
+            v.modifications[0].operation == "replace"
+        )
+        assert v.modifications[0].value == "redacted"
 
     def test_modify_with_path(self):
-        v = Verdict.modify(target="tool_args", operation="patch", value=42, path="$.limit")
-        assert v.modification.path == "$.limit"
+        v = Verdict.modify(
+            target="tool_args",
+            operation="patch",
+            value=42,
+            path="$.limit",
+        )
+        assert v.modifications[0].path == "$.limit"
 
     def test_escalate_creates_escalation(self):
         v = Verdict.escalate(
@@ -130,11 +165,16 @@ class TestVerdictFactories:
         assert v.escalation.type == "human_confirm"
         assert v.escalation.prompt == "Allow deletion?"
         assert v.escalation.timeout_ms == 5000
-        assert v.escalation.options == ["Proceed", "Cancel"]
+        assert v.escalation.options == [
+            "Proceed",
+            "Cancel",
+        ]
 
     def test_observe_with_trace(self):
         trace = {"latency_ms": 42, "cache_hit": True}
-        v = Verdict.observe(reasoning="monitoring", trace=trace)
+        v = Verdict.observe(
+            reasoning="monitoring", trace=trace
+        )
         assert v.decision == Decision.OBSERVE
         assert v.trace == trace
 
@@ -146,33 +186,53 @@ class TestVerdictFactories:
 class TestPolicyDefinition:
 
     def test_definition_defaults(self):
-        d = PolicyDefinition(name="test", version="1.0", events=[EventType.OUTPUT_PRE_SEND])
+        d = PolicyDefinition(
+            name="test",
+            version="1.0",
+            events=[EventType.OUTPUT_PRE_SEND],
+        )
         assert d.blocking is True
         assert d.timeout_ms == 1000
         assert d.context_requirements == []
 
     def test_definition_with_context(self):
-        ctx = ContextRequirement(path="metadata.user_region", required=True)
+        ctx = ContextRequirement(
+            path="metadata.user_region", required=True
+        )
         d = PolicyDefinition(
             name="geo-filter",
             version="1.0",
             events=[EventType.INPUT_RECEIVED],
             context_requirements=[ctx],
         )
-        assert d.context_requirements[0].path == "metadata.user_region"
+        assert (
+            d.context_requirements[0].path
+            == "metadata.user_region"
+        )
 
 
 class TestPolicyManifest:
 
     def test_manifest_defaults(self):
-        m = PolicyManifest(server_name="test-server", server_version="1.0")
-        assert m.protocol_version == "0.2.0"
+        m = PolicyManifest(
+            server_name="test-server",
+            server_version="1.0",
+        )
+        assert m.protocol_version == "0.3.0"
         assert m.policies == []
         assert m.supports_batch is False
 
     def test_manifest_with_policies(self):
-        p = PolicyDefinition(name="p1", version="1.0", events=[EventType.OUTPUT_PRE_SEND])
-        m = PolicyManifest(server_name="s", server_version="1.0", policies=[p])
+        p = PolicyDefinition(
+            name="p1",
+            version="1.0",
+            events=[EventType.OUTPUT_PRE_SEND],
+        )
+        m = PolicyManifest(
+            server_name="s",
+            server_version="1.0",
+            policies=[p],
+        )
         assert len(m.policies) == 1
 
 

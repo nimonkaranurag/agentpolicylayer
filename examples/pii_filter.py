@@ -31,7 +31,10 @@ server = PolicyServer(
 
 # Pattern definitions
 PATTERNS = {
-    "ssn": (r"\b\d{3}-\d{2}-\d{4}\b", "[SSN REDACTED]"),
+    "ssn": (
+        r"\b\d{3}-\d{2}-\d{4}\b",
+        "[SSN REDACTED]",
+    ),
     "credit_card": (
         r"\b\d{4}[-\s]?\d{4}[-\s]?\d{4}[-\s]?\d{4}\b",
         "[CC REDACTED]",
@@ -70,7 +73,10 @@ async def redact_pii(event: PolicyEvent) -> Verdict:
     found = []
     redacted_text = text
 
-    for name, (pattern, replacement) in PATTERNS.items():
+    for name, (
+        pattern,
+        replacement,
+    ) in PATTERNS.items():
         matches = re.findall(pattern, redacted_text)
         if matches:
             found.append(
@@ -98,7 +104,9 @@ async def redact_pii(event: PolicyEvent) -> Verdict:
     context=["payload.tool_name", "payload.tool_args"],
     description="Prevents PII from being passed to external tools",
 )
-async def block_pii_in_tools(event: PolicyEvent) -> Verdict:
+async def block_pii_in_tools(
+    event: PolicyEvent,
+) -> Verdict:
     """
     Block tool calls that would send PII to external services.
     """

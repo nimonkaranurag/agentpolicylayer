@@ -21,7 +21,7 @@ class PolicyServer:
     def __init__(
         self,
         name: str,
-        version: str = "0.2.0",
+        version: str = "0.3.0",
         description: str | None = None,
     ) -> None:
         self.name: str = name
