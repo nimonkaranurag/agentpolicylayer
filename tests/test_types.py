@@ -166,7 +166,7 @@ class TestPolicyManifest:
 
     def test_manifest_defaults(self):
         m = PolicyManifest(server_name="test-server", server_version="1.0")
-        assert m.protocol_version == "0.1.0"
+        assert m.protocol_version == "0.2.0"
         assert m.policies == []
         assert m.supports_batch is False
 
