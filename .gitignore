@@ -1,6 +1,49 @@
+# Python
 __pycache__/
 *.pyc
-.DS_Store
+*.pyo
+*.pyd
 
+# Distribution / Packaging
+dist/
+build/
+*.egg-info/
+*.egg
+wheels/
+
+# Virtual Environments
+.venv/
+venv/
+env/
+
+# Testing / Coverage
+.coverage
+.coverage.*
+htmlcov/
+.pytest_cache/
+.tox/
+
+# Type Checking / Linting
+.mypy_cache/
+.ruff_cache/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment / Secrets
+.env
+.env.*
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Project-specific
 ENGINEERING_REVIEW.md
 REVAMP_PLAN.md
