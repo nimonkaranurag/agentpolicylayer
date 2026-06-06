@@ -5,7 +5,8 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
-    
+
+jobs:
   test:
     runs-on: ubuntu-latest
     strategy:
@@ -27,13 +28,6 @@ on:
       - name: Run tests
         run: pytest tests/ -v --tb=short
 
-      - name: Run example policies (smoke test)
-        run: |
-          # Test that policy servers can start and return manifests
-          timeout 5 python examples/pii_filter.py &
-          sleep 2
-          echo '{"type": "ping"}' | timeout 2 cat || true
-          
   build:
     runs-on: ubuntu-latest
     steps:
