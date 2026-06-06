@@ -24,10 +24,13 @@ jobs:
         with:
           python-version: "3.12"
 
-      - run: pip install ruff docformatter
+      - run: pip install black isort ruff docformatter
 
       - name: Check formatting
-        run: ruff format --check .
+        run: black --check .
+
+      - name: Check import sorting
+        run: isort --check-only .
 
       - name: Lint
         run: ruff check .
