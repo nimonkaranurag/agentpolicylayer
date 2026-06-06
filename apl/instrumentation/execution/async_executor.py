@@ -13,12 +13,6 @@ class AsyncLifecycleExecutor(BaseLifecycleExecutor):
         context: LifecycleContext,
     ) -> None:
         for event in sequence:
-            verdict = await self.policy_evaluator.evaluate_event_async(
-                event, context
-            )
-            self.verdict_handler.raise_if_blocked(
-                verdict, event.event_type.value
-            )
-            event.apply_verdict_modifications(
-                verdict, context
-            )
+            verdict = await self.policy_evaluator.evaluate_event_async(event, context)
+            self.verdict_handler.raise_if_blocked(verdict, event.event_type.value)
+            event.apply_verdict_modifications(verdict, context)

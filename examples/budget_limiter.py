@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-Token & Cost Budget Policy
+Token & Cost Budget Policy.
 
-Enforces token and cost limits on agent sessions.
-Demonstrates using session metadata for stateful policies.
+Enforces token and cost limits on agent sessions. Demonstrates using session metadata
+for stateful policies.
 
 Run: python examples/budget_limiter.py
 """
@@ -13,9 +13,7 @@ import sys
 
 sys.path.insert(
     0,
-    os.path.dirname(
-        os.path.dirname(os.path.abspath(__file__))
-    ),
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
 )
 
 from apl import PolicyEvent, PolicyServer, Verdict
@@ -45,20 +43,11 @@ WARNING_THRESHOLD = 0.8  # Warn at 80%
 async def check_token_budget(
     event: PolicyEvent,
 ) -> Verdict:
-    """
-    Check if session is within token budget.
-    """
+    """Check if session is within token budget."""
     token_count = event.metadata.token_count
-    token_budget = (
-        event.metadata.token_budget
-        or DEFAULT_TOKEN_BUDGET
-    )
+    token_budget = event.metadata.token_budget or DEFAULT_TOKEN_BUDGET
 
-    ratio = (
-        token_count / token_budget
-        if token_budget > 0
-        else 0
-    )
+    ratio = token_count / token_budget if token_budget > 0 else 0
 
     if ratio >= 1.0:
         return Verdict.deny(
@@ -92,20 +81,11 @@ async def check_token_budget(
 async def check_cost_budget(
     event: PolicyEvent,
 ) -> Verdict:
-    """
-    Check if session is within cost budget.
-    """
+    """Check if session is within cost budget."""
     cost_usd = event.metadata.cost_usd
-    cost_budget = (
-        event.metadata.cost_budget_usd
-        or DEFAULT_COST_BUDGET_USD
-    )
+    cost_budget = event.metadata.cost_budget_usd or DEFAULT_COST_BUDGET_USD
 
-    ratio = (
-        cost_usd / cost_budget
-        if cost_budget > 0
-        else 0
-    )
+    ratio = cost_usd / cost_budget if cost_budget > 0 else 0
 
     if ratio >= 1.0:
         return Verdict.deny(
@@ -138,21 +118,12 @@ async def check_cost_budget(
 async def expensive_model_guard(
     event: PolicyEvent,
 ) -> Verdict:
-    """
-    Suggest cheaper models when budget is running low.
-    """
+    """Suggest cheaper models when budget is running low."""
     model = event.payload.llm_model or ""
     cost_usd = event.metadata.cost_usd
-    cost_budget = (
-        event.metadata.cost_budget_usd
-        or DEFAULT_COST_BUDGET_USD
-    )
+    cost_budget = event.metadata.cost_budget_usd or DEFAULT_COST_BUDGET_USD
 
-    ratio = (
-        cost_usd / cost_budget
-        if cost_budget > 0
-        else 0
-    )
+    ratio = cost_usd / cost_budget if cost_budget > 0 else 0
 
     # Expensive models (rough heuristic)
     expensive_models = [
@@ -161,10 +132,7 @@ async def expensive_model_guard(
         "claude-opus",
     ]
 
-    is_expensive = any(
-        exp in model.lower()
-        for exp in expensive_models
-    )
+    is_expensive = any(exp in model.lower() for exp in expensive_models)
 
     if is_expensive and ratio >= 0.5:
         # Suggest switching to a cheaper model

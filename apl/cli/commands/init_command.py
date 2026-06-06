@@ -18,9 +18,7 @@ _status = StatusPrinter(console)
 @click.option(
     "-t",
     "--template",
-    type=click.Choice(
-        ["basic", "pii", "budget", "confirm"]
-    ),
+    type=click.Choice(["basic", "pii", "budget", "confirm"]),
     default="basic",
     help="Template to use",
 )
@@ -38,31 +36,23 @@ def init(name: str, template: str):
     from ...templates import create_policy_project
 
     _status.print(
-        f"Creating policy project:"
-        f" [cyan]{name}[/cyan]",
+        f"Creating policy project:" f" [cyan]{name}[/cyan]",
         "loading",
     )
 
     try:
-        project_path = create_policy_project(
-            name, template
-        )
+        project_path = create_policy_project(name, template)
         _status.print(
-            f"Created project at:"
-            f" [cyan]{project_path}[/cyan]",
+            f"Created project at:" f" [cyan]{project_path}[/cyan]",
             "success",
         )
 
         console.print()
         console.print("  [bold]Next steps:[/bold]")
         console.print(f"    [dim]$[/dim] cd {name}")
-        console.print(
-            f"    [dim]$[/dim] apl serve policy.py"
-        )
+        console.print("    [dim]$[/dim] apl serve policy.py")
         console.print()
 
     except Exception as e:
-        _status.print(
-            f"Failed to create project: {e}", "error"
-        )
+        _status.print(f"Failed to create project: {e}", "error")
         sys.exit(1)

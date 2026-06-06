@@ -19,9 +19,7 @@ from .yaml_policy_loader import YamlPolicyLoader
 from .yaml_policy_validator import YamlPolicyValidator
 
 _DEFAULT_LOADER: YamlPolicyLoader = YamlPolicyLoader()
-_DEFAULT_VALIDATOR: YamlPolicyValidator = (
-    YamlPolicyValidator()
-)
+_DEFAULT_VALIDATOR: YamlPolicyValidator = YamlPolicyValidator()
 
 
 def load_yaml_policy(path: Path | str) -> PolicyServer:

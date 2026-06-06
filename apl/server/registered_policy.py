@@ -10,9 +10,7 @@ from apl.types import (
     Verdict,
 )
 
-PolicyHandler = Callable[
-    [PolicyEvent], Union[Verdict, Awaitable[Verdict]]
-]
+PolicyHandler = Callable[[PolicyEvent], Union[Verdict, Awaitable[Verdict]]]
 
 
 @dataclass

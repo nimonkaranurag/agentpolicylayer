@@ -11,9 +11,5 @@ class BannerRenderer:
         self._version = version
 
     def render(self, style: str = "full"):
-        template = BANNER_STYLE_MAP.get(
-            style, APL_LOGO_MINI
-        )
-        self._console.print(
-            template.format(version=self._version)
-        )
+        template = BANNER_STYLE_MAP.get(style, APL_LOGO_MINI)
+        self._console.print(template.format(version=self._version))

@@ -29,15 +29,11 @@ class TestDenyOverridesStrategy:
         assert result.decision == Decision.ALLOW
 
     def test_single_allow(self):
-        result = self.strategy.compose(
-            [Verdict.allow()]
-        )
+        result = self.strategy.compose([Verdict.allow()])
         assert result.decision == Decision.ALLOW
 
     def test_single_deny_wins(self):
-        result = self.strategy.compose(
-            [Verdict.deny("no")]
-        )
+        result = self.strategy.compose([Verdict.deny("no")])
         assert result.decision == Decision.DENY
 
     def test_deny_overrides_allow(self):
@@ -89,25 +85,17 @@ class TestUnanimousStrategy:
         self.strategy = UnanimousStrategy()
 
     def test_empty_verdicts_returns_allow(self):
-        assert (
-            self.strategy.compose([]).decision
-            == Decision.ALLOW
-        )
+        assert self.strategy.compose([]).decision == Decision.ALLOW
 
     def test_same_logic_as_deny_overrides(self):
         verdicts = [
             Verdict.allow(),
             Verdict.deny("no"),
         ]
-        assert (
-            self.strategy.compose(verdicts).decision
-            == Decision.DENY
-        )
+        assert self.strategy.compose(verdicts).decision == Decision.DENY
 
     def test_all_allow_has_unanimous_reasoning(self):
-        result = self.strategy.compose(
-            [Verdict.allow()]
-        )
+        result = self.strategy.compose([Verdict.allow()])
         assert "agreed" in result.reasoning
 
 
@@ -144,10 +132,7 @@ class TestFirstApplicableStrategy:
         self.strategy = FirstApplicableStrategy()
 
     def test_empty_verdicts_returns_allow(self):
-        assert (
-            self.strategy.compose([]).decision
-            == Decision.ALLOW
-        )
+        assert self.strategy.compose([]).decision == Decision.ALLOW
 
     def test_first_non_observe_wins(self):
         verdicts = [
@@ -174,10 +159,7 @@ class TestWeightedStrategy:
         self.strategy = WeightedStrategy()
 
     def test_empty_verdicts_returns_allow(self):
-        assert (
-            self.strategy.compose([]).decision
-            == Decision.ALLOW
-        )
+        assert self.strategy.compose([]).decision == Decision.ALLOW
 
     def test_high_deny_confidence_wins(self):
         verdicts = [
@@ -223,10 +205,7 @@ class TestVerdictComposer:
 
     def test_default_mode_is_deny_overrides(self):
         composer = VerdictComposer()
-        assert (
-            composer.config.mode
-            == CompositionMode.DENY_OVERRIDES
-        )
+        assert composer.config.mode == CompositionMode.DENY_OVERRIDES
 
     def test_compose_delegates_to_strategy(self):
         composer = VerdictComposer()
@@ -235,9 +214,7 @@ class TestVerdictComposer:
         assert result.decision == Decision.DENY
 
     def test_custom_mode(self):
-        config = CompositionConfig(
-            mode=CompositionMode.ALLOW_OVERRIDES
-        )
+        config = CompositionConfig(mode=CompositionMode.ALLOW_OVERRIDES)
         composer = VerdictComposer(config)
         verdicts = [Verdict.deny("x"), Verdict.allow()]
         result = composer.compose(verdicts)

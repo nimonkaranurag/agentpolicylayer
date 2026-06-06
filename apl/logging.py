@@ -85,14 +85,10 @@ class APLRichHandler(RichHandler):
         kwargs.setdefault("show_time", True)
         kwargs.setdefault("show_path", False)
         kwargs.setdefault("rich_tracebacks", True)
-        kwargs.setdefault(
-            "tracebacks_show_locals", True
-        )
+        kwargs.setdefault("tracebacks_show_locals", True)
         super().__init__(*args, **kwargs)
 
-    def get_level_text(
-        self, record: logging.LogRecord
-    ) -> Text:
+    def get_level_text(self, record: logging.LogRecord) -> Text:
         """Custom level text with icons."""
         level_name = record.levelname
 
@@ -118,9 +114,7 @@ class APLRichHandler(RichHandler):
             "SECURITY": "bold cyan",
         }.get(level_name, "white")
 
-        return Text(
-            f"{icon} {level_name:<8}", style=style
-        )
+        return Text(f"{icon} {level_name:<8}", style=style)
 
 
 # =============================================================================
@@ -153,9 +147,7 @@ class APLLogger:
         """
         self.name = name
         self._logger = logging.getLogger(f"apl.{name}")
-        self._logger.setLevel(
-            getattr(logging, level.upper())
-        )
+        self._logger.setLevel(getattr(logging, level.upper()))
         self._console = Console(theme=APL_THEME)
 
     def _log(self, level: int, message: str, **kwargs):
@@ -186,13 +178,9 @@ class APLLogger:
 
     def server_stopped(self):
         """Log server shutdown."""
-        self._log(
-            logging.INFO, "[dim]Server stopped[/dim]"
-        )
+        self._log(logging.INFO, "[dim]Server stopped[/dim]")
 
-    def policy_registered(
-        self, policy_name: str, events: list[str]
-    ):
+    def policy_registered(self, policy_name: str, events: list[str]):
         """Log policy registration."""
         events_str = ", ".join(events)
         self._log(
@@ -200,9 +188,7 @@ class APLLogger:
             f"[policy.name]{policy_name}[/policy.name] registered for events: [event]{events_str}[/event]",
         )
 
-    def event_received(
-        self, event_type: str, event_id: str
-    ):
+    def event_received(self, event_type: str, event_id: str):
         """Log incoming event."""
         self._log(
             logging.DEBUG,
@@ -224,27 +210,17 @@ class APLLogger:
             Decision.OBSERVE: "[policy.observe]OBSERVE[/policy.observe]",
         }
 
-        decision_str = decision_styles.get(
-            verdict.decision, str(verdict.decision)
-        )
-        timing_str = (
-            f" [timing]({elapsed_ms:.2f}ms)[/timing]"
-            if elapsed_ms
-            else ""
-        )
+        decision_str = decision_styles.get(verdict.decision, str(verdict.decision))
+        timing_str = f" [timing]({elapsed_ms:.2f}ms)[/timing]" if elapsed_ms else ""
 
-        message = f"[policy.name]{policy_name}[/policy.name] → {decision_str}{timing_str}"
+        message = (
+            f"[policy.name]{policy_name}[/policy.name] → {decision_str}{timing_str}"
+        )
 
         if verdict.reasoning:
-            message += (
-                f" [dim]// {verdict.reasoning}[/dim]"
-            )
+            message += f" [dim]// {verdict.reasoning}[/dim]"
 
-        level = (
-            logging.WARNING
-            if verdict.decision == Decision.DENY
-            else logging.INFO
-        )
+        level = logging.WARNING if verdict.decision == Decision.DENY else logging.INFO
         self._log(level, message)
 
     def composition_result(
@@ -262,18 +238,14 @@ class APLLogger:
             Decision.OBSERVE: "[policy.observe]OBSERVE[/policy.observe]",
         }
 
-        decision_str = decision_styles.get(
-            final_decision, str(final_decision)
-        )
+        decision_str = decision_styles.get(final_decision, str(final_decision))
 
         self._log(
             logging.INFO,
             f"[security]Composed {total_policies} verdicts[/security] → {decision_str} [timing]({elapsed_ms:.2f}ms)[/timing]",
         )
 
-    def client_connected(
-        self, client_id: str, address: str
-    ):
+    def client_connected(self, client_id: str, address: str):
         """Log client connection."""
         self._log(
             logging.INFO,
@@ -287,9 +259,7 @@ class APLLogger:
             f"[dim]Client disconnected: {client_id}[/dim]",
         )
 
-    def error(
-        self, message: str, exc_info: bool = False
-    ):
+    def error(self, message: str, exc_info: bool = False):
         """Log error."""
         self._logger.error(message, exc_info=exc_info)
 
@@ -306,9 +276,7 @@ class APLLogger:
 
     def debug(self, message: str):
         """Log debug."""
-        self._log(
-            logging.DEBUG, f"[dim]{message}[/dim]"
-        )
+        self._log(logging.DEBUG, f"[dim]{message}[/dim]")
 
 
 # =============================================================================
@@ -338,9 +306,7 @@ def setup_logging(
     """
     # Configure root APL logger
     root_logger = logging.getLogger("apl")
-    root_logger.setLevel(
-        getattr(logging, level.upper())
-    )
+    root_logger.setLevel(getattr(logging, level.upper()))
     root_logger.handlers.clear()
 
     if rich_output:
@@ -351,9 +317,7 @@ def setup_logging(
             show_time=True,
             show_path=False,
         )
-        handler.setFormatter(
-            logging.Formatter("%(message)s")
-        )
+        handler.setFormatter(logging.Formatter("%(message)s"))
         root_logger.addHandler(handler)
     else:
         # Simple stream handler for stdio transport

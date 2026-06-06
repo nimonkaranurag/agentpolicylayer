@@ -34,48 +34,29 @@ class WatsonXProvider(BaseProvider):
         self.method_patcher.register_patch(
             ModelInference,
             "chat",
-            self._create_instance_method_sync_wrapper(
-                patch_target_index=0
-            ),
+            self._create_instance_method_sync_wrapper(patch_target_index=0),
         )
         self.method_patcher.apply_all_patches()
 
-    def extract_messages_from_request(
-        self, *args: Any, **kwargs: Any
-    ) -> Any:
+    def extract_messages_from_request(self, *args: Any, **kwargs: Any) -> Any:
         if "messages" in kwargs:
             return kwargs["messages"]
         if len(args) >= 1:
             return args[0]
         return []
 
-    def extract_model_from_request(
-        self, *args: Any, **kwargs: Any
-    ) -> str:
+    def extract_model_from_request(self, *args: Any, **kwargs: Any) -> str:
         return "watsonx"
 
-    def extract_text_from_response(
-        self, response: Any
-    ) -> str:
+    def extract_text_from_response(self, response: Any) -> str:
         try:
-            return (
-                response["choices"][0]["message"][
-                    "content"
-                ]
-                or ""
-            )
+            return response["choices"][0]["message"]["content"] or ""
         except (KeyError, IndexError, TypeError):
             return ""
 
-    def apply_text_to_response(
-        self, response: Any, new_text: str
-    ) -> Any:
+    def apply_text_to_response(self, response: Any, new_text: str) -> Any:
         try:
-            response["choices"][0]["message"][
-                "content"
-            ] = new_text
+            response["choices"][0]["message"]["content"] = new_text
         except (KeyError, IndexError, TypeError):
-            logger.warning(
-                "Failed to apply modified text to WatsonX response"
-            )
+            logger.warning("Failed to apply modified text to WatsonX response")
         return response

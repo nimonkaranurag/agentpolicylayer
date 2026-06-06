@@ -5,14 +5,11 @@ from apl.types import (
     CompositionMode,
     ContextRequirement,
     Decision,
-    Escalation,
     EventPayload,
     EventType,
     FunctionCall,
     Message,
-    Modification,
     PolicyDefinition,
-    PolicyEvent,
     PolicyManifest,
     SessionMetadata,
     ToolCall,
@@ -29,20 +26,11 @@ class TestEventType:
             assert "." in member.value
 
     def test_event_type_from_string(self):
-        assert (
-            EventType("input.received")
-            == EventType.INPUT_RECEIVED
-        )
-        assert (
-            EventType("output.pre_send")
-            == EventType.OUTPUT_PRE_SEND
-        )
+        assert EventType("input.received") == EventType.INPUT_RECEIVED
+        assert EventType("output.pre_send") == EventType.OUTPUT_PRE_SEND
 
     def test_event_type_string_equality(self):
-        assert (
-            EventType.LLM_PRE_REQUEST
-            == "llm.pre_request"
-        )
+        assert EventType.LLM_PRE_REQUEST == "llm.pre_request"
 
 
 class TestDecision:
@@ -74,16 +62,10 @@ class TestMessage:
     def test_assistant_message_with_tool_calls(self):
         tc = ToolCall(
             id="tc-1",
-            function=FunctionCall(
-                name="search", arguments='{"q":"test"}'
-            ),
+            function=FunctionCall(name="search", arguments='{"q":"test"}'),
         )
-        msg = Message(
-            role="assistant", tool_calls=[tc]
-        )
-        assert (
-            msg.tool_calls[0].function.name == "search"
-        )
+        msg = Message(role="assistant", tool_calls=[tc])
+        assert msg.tool_calls[0].function.name == "search"
 
 
 class TestEventPayload:
@@ -95,9 +77,7 @@ class TestEventPayload:
         assert p.llm_model is None
 
     def test_tool_payload(self):
-        p = EventPayload(
-            tool_name="calc", tool_args={"x": 1}
-        )
+        p = EventPayload(tool_name="calc", tool_args={"x": 1})
         assert p.tool_name == "calc"
         assert p.tool_args["x"] == 1
 
@@ -139,9 +119,7 @@ class TestVerdictFactories:
         assert v.decision == Decision.MODIFY
         assert len(v.modifications) == 1
         assert v.modifications[0].target == "output"
-        assert (
-            v.modifications[0].operation == "replace"
-        )
+        assert v.modifications[0].operation == "replace"
         assert v.modifications[0].value == "redacted"
 
     def test_modify_with_path(self):
@@ -172,9 +150,7 @@ class TestVerdictFactories:
 
     def test_observe_with_trace(self):
         trace = {"latency_ms": 42, "cache_hit": True}
-        v = Verdict.observe(
-            reasoning="monitoring", trace=trace
-        )
+        v = Verdict.observe(reasoning="monitoring", trace=trace)
         assert v.decision == Decision.OBSERVE
         assert v.trace == trace
 
@@ -196,19 +172,14 @@ class TestPolicyDefinition:
         assert d.context_requirements == []
 
     def test_definition_with_context(self):
-        ctx = ContextRequirement(
-            path="metadata.user_region", required=True
-        )
+        ctx = ContextRequirement(path="metadata.user_region", required=True)
         d = PolicyDefinition(
             name="geo-filter",
             version="1.0",
             events=[EventType.INPUT_RECEIVED],
             context_requirements=[ctx],
         )
-        assert (
-            d.context_requirements[0].path
-            == "metadata.user_region"
-        )
+        assert d.context_requirements[0].path == "metadata.user_region"
 
 
 class TestPolicyManifest:

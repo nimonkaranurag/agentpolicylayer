@@ -13,34 +13,22 @@ class DenyOverridesStrategy(BaseCompositionStrategy):
     ) -> None:
         self._allow_reasoning = allow_reasoning
 
-    def compose(
-        self, verdicts: list[Verdict]
-    ) -> Verdict:
+    def compose(self, verdicts: list[Verdict]) -> Verdict:
 
         guard = self._guard_empty_verdicts(verdicts)
         if guard is not None:
             return guard
 
-        deny = self._find_first_verdict_with_decision(
-            verdicts, Decision.DENY
-        )
+        deny = self._find_first_verdict_with_decision(verdicts, Decision.DENY)
         if deny is not None:
             return deny
 
-        escalate = (
-            self._find_first_verdict_with_decision(
-                verdicts, Decision.ESCALATE
-            )
-        )
+        escalate = self._find_first_verdict_with_decision(verdicts, Decision.ESCALATE)
         if escalate is not None:
             return escalate
 
-        modified = self._build_modified_verdict(
-            verdicts
-        )
+        modified = self._build_modified_verdict(verdicts)
         if modified is not None:
             return modified
 
-        return Verdict.allow(
-            reasoning=self._allow_reasoning
-        )
+        return Verdict.allow(reasoning=self._allow_reasoning)

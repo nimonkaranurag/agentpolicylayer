@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-Destructive Action Confirmation Policy
+Destructive Action Confirmation Policy.
 
-Requires human confirmation before executing destructive operations.
-Demonstrates the ESCALATE verdict type.
+Requires human confirmation before executing destructive operations. Demonstrates the
+ESCALATE verdict type.
 
 Run: python examples/confirm_destructive.py
 """
@@ -14,9 +14,7 @@ import sys
 
 sys.path.insert(
     0,
-    os.path.dirname(
-        os.path.dirname(os.path.abspath(__file__))
-    ),
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
 )
 
 from apl import PolicyEvent, PolicyServer, Verdict
@@ -59,9 +57,7 @@ HIGH_RISK_TOOLS = [
 async def confirm_delete(
     event: PolicyEvent,
 ) -> Verdict:
-    """
-    Check if tool is destructive and require confirmation.
-    """
+    """Check if tool is destructive and require confirmation."""
     tool_name = event.payload.tool_name or ""
     tool_args = event.payload.tool_args or {}
 
@@ -100,9 +96,7 @@ async def confirm_delete(
 async def warn_high_risk(
     event: PolicyEvent,
 ) -> Verdict:
-    """
-    High-risk operations require admin role or explicit confirmation.
-    """
+    """High-risk operations require admin role or explicit confirmation."""
     tool_name = event.payload.tool_name or ""
     user_roles = event.metadata.user_roles or []
 
@@ -122,7 +116,7 @@ async def warn_high_risk(
             return Verdict.escalate(
                 type="human_confirm",
                 prompt=f"🔒 This operation requires elevated privileges.\n\nTool: {tool_name}\n\nRequest admin approval?",
-                reasoning=f"Non-admin user attempting high-risk tool",
+                reasoning="Non-admin user attempting high-risk tool",
                 options=["Request Approval", "Cancel"],
             )
 

@@ -21,9 +21,7 @@ from .template_renderer import TemplateRenderer
 class RuleEvaluator:
 
     def __init__(self) -> None:
-        self._condition_evaluator = (
-            ConditionEvaluator()
-        )
+        self._condition_evaluator = ConditionEvaluator()
         self._template_renderer = TemplateRenderer()
 
     def evaluate_rule_against_event(
@@ -31,14 +29,10 @@ class RuleEvaluator:
         rule: YAMLRule,
         event: PolicyEvent,
     ) -> Verdict | None:
-        if not self._all_conditions_match(
-            rule.when, event
-        ):
+        if not self._all_conditions_match(rule.when, event):
             return None
 
-        return self._build_verdict_from_then_clause(
-            rule.then, event
-        )
+        return self._build_verdict_from_then_clause(rule.then, event)
 
     def _all_conditions_match(
         self,
@@ -46,14 +40,8 @@ class RuleEvaluator:
         event: PolicyEvent,
     ) -> bool:
         for dot_path, condition in when_clause.items():
-            actual_value = (
-                get_nested_value_by_dot_path(
-                    event, dot_path
-                )
-            )
-            if not self._condition_evaluator.evaluate(
-                actual_value, condition
-            ):
+            actual_value = get_nested_value_by_dot_path(event, dot_path)
+            if not self._condition_evaluator.evaluate(actual_value, condition):
                 return False
         return True
 
@@ -62,37 +50,23 @@ class RuleEvaluator:
         then_clause: dict[str, Any],
         event: PolicyEvent,
     ) -> Verdict:
-        decision = Decision(
-            then_clause.get("decision", "allow")
-        )
-        raw_reasoning = then_clause.get(
-            "reasoning", ""
-        )
-        rendered_reasoning = (
-            self._template_renderer.render(
-                raw_reasoning, event
-            )
-        )
+        decision = Decision(then_clause.get("decision", "allow"))
+        raw_reasoning = then_clause.get("reasoning", "")
+        rendered_reasoning = self._template_renderer.render(raw_reasoning, event)
 
         modifications = []
         if "modification" in then_clause:
             modifications.append(
-                self._build_modification(
-                    then_clause["modification"], event
-                )
+                self._build_modification(then_clause["modification"], event)
             )
 
         escalation = None
         if "escalation" in then_clause:
-            escalation = self._build_escalation(
-                then_clause["escalation"], event
-            )
+            escalation = self._build_escalation(then_clause["escalation"], event)
 
         return Verdict(
             decision=decision,
-            confidence=then_clause.get(
-                "confidence", 1.0
-            ),
+            confidence=then_clause.get("confidence", 1.0),
             reasoning=rendered_reasoning or None,
             modifications=modifications,
             escalation=escalation,
@@ -105,9 +79,7 @@ class RuleEvaluator:
     ) -> Modification:
         raw_value = modification_data["value"]
         resolved_value = (
-            self._template_renderer.render(
-                str(raw_value), event
-            )
+            self._template_renderer.render(str(raw_value), event)
             if isinstance(raw_value, str)
             else raw_value
         )
@@ -125,20 +97,12 @@ class RuleEvaluator:
         event: PolicyEvent,
     ) -> Escalation:
         raw_prompt = escalation_data.get("prompt", "")
-        rendered_prompt = (
-            self._template_renderer.render(
-                raw_prompt, event
-            )
-        )
+        rendered_prompt = self._template_renderer.render(raw_prompt, event)
 
         return Escalation(
             type=escalation_data["type"],
             prompt=rendered_prompt or None,
-            fallback_action=escalation_data.get(
-                "fallback_action"
-            ),
-            timeout_ms=escalation_data.get(
-                "timeout_ms"
-            ),
+            fallback_action=escalation_data.get("fallback_action"),
+            timeout_ms=escalation_data.get("timeout_ms"),
             options=escalation_data.get("options"),
         )

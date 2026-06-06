@@ -29,27 +29,23 @@ def create_policy_decorator(
     timeout_ms: int = 1000,
     description: str | None = None,
 ) -> Callable[[PolicyHandler], PolicyHandler]:
-    event_types: list[EventType] = _parse_event_types(
-        events
-    )
-    context_requirements: list[ContextRequirement] = (
-        _parse_context_requirements(context)
+    event_types: list[EventType] = _parse_event_types(events)
+    context_requirements: list[ContextRequirement] = _parse_context_requirements(
+        context
     )
 
     def decorator(
         handler: PolicyHandler,
     ) -> PolicyHandler:
-        registered: RegisteredPolicy = (
-            RegisteredPolicy(
-                name=policy_name,
-                version=version,
-                handler=handler,
-                events=event_types,
-                context_requirements=context_requirements,
-                blocking=blocking,
-                timeout_ms=timeout_ms,
-                description=description,
-            )
+        registered: RegisteredPolicy = RegisteredPolicy(
+            name=policy_name,
+            version=version,
+            handler=handler,
+            events=event_types,
+            context_requirements=context_requirements,
+            blocking=blocking,
+            timeout_ms=timeout_ms,
+            description=description,
         )
 
         registry.register(registered)
@@ -62,9 +58,7 @@ def create_policy_decorator(
                 invoke_policy_handler,
             )
 
-            return await invoke_policy_handler(
-                registered, event
-            )
+            return await invoke_policy_handler(registered, event)
 
         return wrapper
 
@@ -82,9 +76,7 @@ def _parse_event_types(
             try:
                 result.append(EventType(event))
             except ValueError:
-                raise ValueError(
-                    f"Unknown event type: {event}"
-                )
+                raise ValueError(f"Unknown event type: {event}")
     return result
 
 
@@ -99,7 +91,5 @@ def _parse_context_requirements(
         if isinstance(item, ContextRequirement):
             result.append(item)
         else:
-            result.append(
-                ContextRequirement(path=item)
-            )
+            result.append(ContextRequirement(path=item))
     return result

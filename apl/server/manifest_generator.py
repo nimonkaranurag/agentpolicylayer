@@ -12,9 +12,7 @@ if TYPE_CHECKING:
 def generate_manifest_from_server(
     server: PolicyServer,
 ) -> PolicyManifest:
-    registered_policies: list[RegisteredPolicy] = (
-        server.registry.all_policies()
-    )
+    registered_policies: list[RegisteredPolicy] = server.registry.all_policies()
 
     policy_definitions: list[PolicyDefinition] = [
         PolicyDefinition(

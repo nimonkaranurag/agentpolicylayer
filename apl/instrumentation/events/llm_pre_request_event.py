@@ -16,9 +16,7 @@ class LLMPreRequestEvent(BaseEvent):
     def event_type(self) -> EventType:
         return EventType.LLM_PRE_REQUEST
 
-    def build_payload(
-        self, context: LifecycleContext
-    ) -> EventPayload:
+    def build_payload(self, context: LifecycleContext) -> EventPayload:
         return EventPayload(
             llm_model=context.model_name,
             llm_prompt=context.apl_messages,

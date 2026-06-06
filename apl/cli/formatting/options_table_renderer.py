@@ -11,11 +11,7 @@ class OptionsTableRenderer:
         self._console = console
 
     def render(self, params):
-        opts = [
-            p
-            for p in params
-            if isinstance(p, click.Option)
-        ]
+        opts = [p for p in params if isinstance(p, click.Option)]
         if not opts:
             return
 
@@ -44,9 +40,7 @@ class OptionsTableRenderer:
     def _format_option_name(opt):
         opt_str = ", ".join(opt.opts)
         if opt.secondary_opts:
-            opt_str += ", " + ", ".join(
-                opt.secondary_opts
-            )
+            opt_str += ", " + ", ".join(opt.secondary_opts)
         return opt_str
 
     @staticmethod
@@ -55,12 +49,8 @@ class OptionsTableRenderer:
         if opt.type and opt.type.name != "BOOL":
             type_str = opt.type.name
         has_visible_default = (
-            opt.default is not None
-            and opt.default != ()
-            and not opt.is_flag
+            opt.default is not None and opt.default != () and not opt.is_flag
         )
         if has_visible_default:
-            type_str += (
-                f" [dim](default: {opt.default})[/dim]"
-            )
+            type_str += f" [dim](default: {opt.default})[/dim]"
         return type_str

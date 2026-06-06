@@ -23,18 +23,12 @@ class TestEventFactory:
         event_type_str: str,
         payload_json: Optional[str] = None,
     ) -> PolicyEvent:
-        payload = self._resolve_payload(
-            event_type_str, payload_json
-        )
+        payload = self._resolve_payload(event_type_str, payload_json)
         return PolicyEvent(
             id=str(uuid.uuid4()),
             type=EventType(event_type_str),
             timestamp=datetime.now(),
-            messages=[
-                Message(
-                    role="user", content="Test message"
-                )
-            ],
+            messages=[Message(role="user", content="Test message")],
             payload=payload,
             metadata=SessionMetadata(
                 session_id="test-session",
@@ -44,13 +38,7 @@ class TestEventFactory:
             ),
         )
 
-    def _resolve_payload(
-        self, event_type_str, payload_json
-    ) -> EventPayload:
+    def _resolve_payload(self, event_type_str, payload_json) -> EventPayload:
         if payload_json:
-            return EventPayload(
-                **json.loads(payload_json)
-            )
-        return SAMPLE_PAYLOADS_BY_EVENT_TYPE.get(
-            event_type_str, EventPayload()
-        )
+            return EventPayload(**json.loads(payload_json))
+        return SAMPLE_PAYLOADS_BY_EVENT_TYPE.get(event_type_str, EventPayload())

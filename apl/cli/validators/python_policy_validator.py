@@ -30,9 +30,7 @@ class PythonPolicyValidator(BasePolicyValidator):
         except SyntaxError as e:
             return [f"Syntax error: {e}"]
 
-    def _check_loaded_server(
-        self, path: Path
-    ) -> list[str]:
+    def _check_loaded_server(self, path: Path) -> list[str]:
         from ...logging import get_logger
 
         logger = get_logger("validator")
@@ -41,8 +39,5 @@ class PythonPolicyValidator(BasePolicyValidator):
         if server is None:
             return ["No PolicyServer instance found"]
         if not server.registry.all_policies():
-            return [
-                "PolicyServer has no"
-                " registered policies"
-            ]
+            return ["PolicyServer has no" " registered policies"]
         return []

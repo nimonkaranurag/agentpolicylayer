@@ -11,17 +11,11 @@ async def handle_health(
         "status": "healthy",
         "server": server.name,
         "version": server.version,
-        "policies_loaded": len(
-            server.registry.all_policies()
-        ),
+        "policies_loaded": len(server.registry.all_policies()),
     }
 
     if metrics:
-        response["uptime_seconds"] = (
-            metrics.uptime_seconds
-        )
-        response["requests_total"] = (
-            metrics.requests_total
-        )
+        response["uptime_seconds"] = metrics.uptime_seconds
+        response["requests_total"] = metrics.requests_total
 
     return web.json_response(response)

@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import sys
 
-import click
 from rich import box
 from rich.table import Table
 
@@ -88,9 +87,7 @@ class SystemInfoRenderer:
         self._console.print(table)
         self._console.print()
 
-    def _render_capability_table(
-        self, title, entries, name_column_header
-    ):
+    def _render_capability_table(self, title, entries, name_column_header):
         self._console.print(f"  [bold]{title}[/bold]")
         table = Table(
             box=box.SIMPLE,

@@ -10,9 +10,7 @@ class PatchTarget:
     patched_method: Callable = None
 
     def apply_patch(self) -> None:
-        self.original_method = getattr(
-            self.target_object, self.method_name
-        )
+        self.original_method = getattr(self.target_object, self.method_name)
         setattr(
             self.target_object,
             self.method_name,
@@ -54,9 +52,7 @@ class MethodPatcher:
             patch_target.remove_patch()
         self.patch_targets.clear()
 
-    def get_original_method(
-        self, method_name: str
-    ) -> Callable:
+    def get_original_method(self, method_name: str) -> Callable:
         for patch_target in self.patch_targets:
             if patch_target.method_name == method_name:
                 return patch_target.original_method

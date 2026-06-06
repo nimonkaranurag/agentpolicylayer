@@ -9,11 +9,7 @@ class YamlPolicyValidator(BasePolicyValidator):
     SUPPORTED_EXTENSIONS = (".yaml", ".yml")
 
     def can_validate(self, path: Path) -> bool:
-        return (
-            path.is_file()
-            and path.suffix
-            in self.SUPPORTED_EXTENSIONS
-        )
+        return path.is_file() and path.suffix in self.SUPPORTED_EXTENSIONS
 
     def validate(self, path: Path) -> list[str]:
         from ...declarative_engine import (

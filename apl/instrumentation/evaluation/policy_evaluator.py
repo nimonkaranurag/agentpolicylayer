@@ -38,9 +38,7 @@ class PolicyEvaluator:
                 f"Policy evaluation failed for {event.event_type.value}: {exc}",
                 exc_info=True,
             )
-            return Verdict.allow(
-                reasoning="Policy error (fail-open)"
-            )
+            return Verdict.allow(reasoning="Policy error (fail-open)")
         finally:
             self.state.mark_policy_evaluation_finished()
 
@@ -49,9 +47,5 @@ class PolicyEvaluator:
         event: BaseEvent,
         context: LifecycleContext,
     ) -> Verdict:
-        coroutine = self.evaluate_event_async(
-            event, context
-        )
-        return self.state.run_coroutine_in_background_loop(
-            coroutine
-        )
+        coroutine = self.evaluate_event_async(event, context)
+        return self.state.run_coroutine_in_background_loop(coroutine)

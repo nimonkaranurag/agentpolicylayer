@@ -12,13 +12,9 @@ from .object_traversal import (
 
 class TemplateRenderer:
 
-    TEMPLATE_VARIABLE_PATTERN: re.Pattern[str] = (
-        re.compile(r"\{\{(.+?)\}\}")
-    )
+    TEMPLATE_VARIABLE_PATTERN: re.Pattern[str] = re.compile(r"\{\{(.+?)\}\}")
 
-    def render(
-        self, template: str, event: PolicyEvent
-    ) -> str:
+    def render(self, template: str, event: PolicyEvent) -> str:
         if "{{" not in template:
             return template
 
@@ -26,17 +22,7 @@ class TemplateRenderer:
             match: re.Match[str],
         ) -> str:
             dot_path: str = match.group(1).strip()
-            resolved_value: Any = (
-                get_nested_value_by_dot_path(
-                    event, dot_path
-                )
-            )
-            return (
-                str(resolved_value)
-                if resolved_value is not None
-                else ""
-            )
+            resolved_value: Any = get_nested_value_by_dot_path(event, dot_path)
+            return str(resolved_value) if resolved_value is not None else ""
 
-        return self.TEMPLATE_VARIABLE_PATTERN.sub(
-            replace_variable_reference, template
-        )
+        return self.TEMPLATE_VARIABLE_PATTERN.sub(replace_variable_reference, template)

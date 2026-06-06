@@ -7,16 +7,12 @@ from .base_strategy import BaseCompositionStrategy
 
 class FirstApplicableStrategy(BaseCompositionStrategy):
 
-    def compose(
-        self, verdicts: list[Verdict]
-    ) -> Verdict:
+    def compose(self, verdicts: list[Verdict]) -> Verdict:
         guard = self._guard_empty_verdicts(verdicts)
         if guard is not None:
             return guard
 
-        all_mods = self._collect_all_modifications(
-            verdicts
-        )
+        all_mods = self._collect_all_modifications(verdicts)
 
         for verdict in verdicts:
             if verdict.decision == Decision.OBSERVE:
@@ -34,6 +30,4 @@ class FirstApplicableStrategy(BaseCompositionStrategy):
                 )
             return verdict
 
-        return Verdict.allow(
-            reasoning="No applicable policy"
-        )
+        return Verdict.allow(reasoning="No applicable policy")

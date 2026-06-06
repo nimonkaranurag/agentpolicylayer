@@ -16,7 +16,5 @@ class PlanApprovedEvent(BaseEvent):
     def event_type(self) -> EventType:
         return EventType.PLAN_APPROVED
 
-    def build_payload(
-        self, context: LifecycleContext
-    ) -> EventPayload:
+    def build_payload(self, context: LifecycleContext) -> EventPayload:
         return EventPayload(plan=context.proposed_plan)

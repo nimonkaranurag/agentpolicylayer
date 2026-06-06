@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-PII Redaction Policy
+PII Redaction Policy.
 
-A simple policy that redacts common PII patterns from agent outputs.
-This demonstrates the core APL developer experience: ~30 lines for a real policy.
+A simple policy that redacts common PII patterns from agent outputs. This demonstrates
+the core APL developer experience: ~30 lines for a real policy.
 
 Run: python examples/pii_filter.py
 """
@@ -15,9 +15,7 @@ import sys
 # Add parent to path for local development
 sys.path.insert(
     0,
-    os.path.dirname(
-        os.path.dirname(os.path.abspath(__file__))
-    ),
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
 )
 
 from apl import PolicyEvent, PolicyServer, Verdict
@@ -61,9 +59,7 @@ PATTERNS = {
     description="Scans output text for PII patterns and redacts them",
 )
 async def redact_pii(event: PolicyEvent) -> Verdict:
-    """
-    Scan output text for PII and redact if found.
-    """
+    """Scan output text for PII and redact if found."""
     text = event.payload.output_text
 
     if not text:
@@ -79,12 +75,8 @@ async def redact_pii(event: PolicyEvent) -> Verdict:
     ) in PATTERNS.items():
         matches = re.findall(pattern, redacted_text)
         if matches:
-            found.append(
-                f"{name}: {len(matches)} occurrence(s)"
-            )
-            redacted_text = re.sub(
-                pattern, replacement, redacted_text
-            )
+            found.append(f"{name}: {len(matches)} occurrence(s)")
+            redacted_text = re.sub(pattern, replacement, redacted_text)
 
     if found:
         return Verdict.modify(
@@ -107,9 +99,7 @@ async def redact_pii(event: PolicyEvent) -> Verdict:
 async def block_pii_in_tools(
     event: PolicyEvent,
 ) -> Verdict:
-    """
-    Block tool calls that would send PII to external services.
-    """
+    """Block tool calls that would send PII to external services."""
     tool_args = event.payload.tool_args or {}
     args_str = str(tool_args)
 

@@ -27,15 +27,11 @@ DEFAULT_CHECKPOINTS = [
 
 class APLGraphWrapper:
 
-    def __init__(
-        self, policy_layer: PolicyLayer | None = None
-    ):
+    def __init__(self, policy_layer: PolicyLayer | None = None):
         self._layer = policy_layer or PolicyLayer()
         self._checkpoints: list[PolicyCheckpoint] = []
 
-    def add_server(
-        self, uri: str
-    ) -> "APLGraphWrapper":
+    def add_server(self, uri: str) -> "APLGraphWrapper":
         self._layer.add_server(uri)
         return self
 
@@ -58,20 +54,12 @@ class APLGraphWrapper:
         return self
 
     def wrap(self, graph: Any) -> Any:
-        if not hasattr(graph, "nodes") or not hasattr(
-            graph, "add_node"
-        ):
-            logger.warning(
-                "Object doesn't appear to be a LangGraph StateGraph"
-            )
+        if not hasattr(graph, "nodes") or not hasattr(graph, "add_node"):
+            logger.warning("Object doesn't appear to be a LangGraph StateGraph")
             return graph
 
-        checkpoints = (
-            self._checkpoints or DEFAULT_CHECKPOINTS
-        )
-        node_wrapper = NodeWrapper(
-            self._layer, checkpoints
-        )
+        checkpoints = self._checkpoints or DEFAULT_CHECKPOINTS
+        node_wrapper = NodeWrapper(self._layer, checkpoints)
 
         original_nodes = dict(graph.nodes)
 
@@ -79,12 +67,8 @@ class APLGraphWrapper:
             node_name,
             node_func,
         ) in original_nodes.items():
-            graph.nodes[node_name] = node_wrapper.wrap(
-                node_name, node_func
-            )
+            graph.nodes[node_name] = node_wrapper.wrap(node_name, node_func)
 
-        logger.info(
-            f"Wrapped {len(original_nodes)} nodes with APL policies"
-        )
+        logger.info(f"Wrapped {len(original_nodes)} nodes with APL policies")
 
         return graph

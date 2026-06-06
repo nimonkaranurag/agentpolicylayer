@@ -27,9 +27,7 @@ class PolicyServer:
         self.name: str = name
         self.version: str = version
         self.description: str | None = description
-        self._registry: PolicyRegistry = (
-            PolicyRegistry()
-        )
+        self._registry: PolicyRegistry = PolicyRegistry()
 
     @property
     def registry(self) -> PolicyRegistry:
@@ -56,22 +54,14 @@ class PolicyServer:
             description=description,
         )
 
-    async def evaluate(
-        self, event: PolicyEvent
-    ) -> list[Verdict]:
-        return await self._registry.evaluate_event(
-            event
-        )
+    async def evaluate(self, event: PolicyEvent) -> list[Verdict]:
+        return await self._registry.evaluate_event(event)
 
     def get_manifest(self) -> PolicyManifest:
         return generate_manifest_from_server(self)
 
-    def run(
-        self, transport: str = "stdio", **kwargs
-    ) -> None:
+    def run(self, transport: str = "stdio", **kwargs) -> None:
         from apl.transports import create_transport
 
-        transport_instance = create_transport(
-            transport, self, **kwargs
-        )
+        transport_instance = create_transport(transport, self, **kwargs)
         transport_instance.run()
