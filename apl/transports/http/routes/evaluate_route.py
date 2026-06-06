@@ -15,9 +15,7 @@ class EvaluateRouteHandler:
         self._verdict_serializer = VerdictSerializer()
         self._composer = VerdictComposer()
 
-    async def handle(
-        self, request: web.Request
-    ) -> web.Response:
+    async def handle(self, request: web.Request) -> web.Response:
         server = request.app["server"]
         metrics = request.app.get("metrics")
         logger = request.app.get("logger")
@@ -28,25 +26,17 @@ class EvaluateRouteHandler:
 
         if "type" not in data:
             return web.json_response(
-                {
-                    "error": "Missing required field: type"
-                },
+                {"error": "Missing required field: type"},
                 status=400,
             )
 
-        event = self._event_serializer.deserialize(
-            data
-        )
+        event = self._event_serializer.deserialize(data)
 
         if logger:
-            logger.event_received(
-                event.type.value, event.id
-            )
+            logger.event_received(event.type.value, event.id)
 
         verdicts = await server.evaluate(event)
-        elapsed_ms = (
-            time.perf_counter() - start
-        ) * 1000
+        elapsed_ms = (time.perf_counter() - start) * 1000
 
         if logger:
             for v in verdicts:
@@ -75,15 +65,8 @@ class EvaluateRouteHandler:
         return web.json_response(
             {
                 "event_id": event.id,
-                "verdicts": [
-                    self._verdict_serializer.serialize(
-                        v
-                    )
-                    for v in verdicts
-                ],
-                "composed_verdict": self._verdict_serializer.serialize(
-                    composed
-                ),
+                "verdicts": [self._verdict_serializer.serialize(v) for v in verdicts],
+                "composed_verdict": self._verdict_serializer.serialize(composed),
                 "evaluation_ms": elapsed_ms,
             }
         )

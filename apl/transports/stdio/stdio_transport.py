@@ -21,18 +21,14 @@ class StdioTransport(BaseTransport):
     def __init__(self, server: "PolicyServer"):
         super().__init__(server)
         self._running = False
-        self._protocol_handler = StdioProtocolHandler(
-            server
-        )
+        self._protocol_handler = StdioProtocolHandler(server)
 
     def run(self) -> None:
         asyncio.run(self._run_message_loop())
 
     async def start(self) -> None:
         self._running = True
-        logger.info(
-            f"APL Policy Server '{self.server.name}' starting on stdio..."
-        )
+        logger.info(f"APL Policy Server '{self.server.name}' starting on stdio...")
         self._protocol_handler.send_manifest()
 
     async def stop(self) -> None:
@@ -45,14 +41,10 @@ class StdioTransport(BaseTransport):
 
         async for message in read_json_lines(reader):
             try:
-                await self._protocol_handler.handle_message(
-                    message
-                )
+                await self._protocol_handler.handle_message(message)
             except json.JSONDecodeError as e:
                 logger.error(f"Invalid JSON: {e}")
             except Exception as e:
-                logger.error(
-                    f"Error handling message: {e}"
-                )
+                logger.error(f"Error handling message: {e}")
 
         await self.stop()

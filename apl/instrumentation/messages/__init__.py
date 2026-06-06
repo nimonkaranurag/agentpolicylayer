@@ -6,9 +6,7 @@ from .chat_completions_adapter import (
 )
 from .langchain_adapter import LangChainMessageAdapter
 
-MESSAGE_ADAPTER_REGISTRY: Dict[
-    str, Type[BaseMessageAdapter]
-] = {
+MESSAGE_ADAPTER_REGISTRY: Dict[str, Type[BaseMessageAdapter]] = {
     "openai": ChatCompletionsMessageAdapter,
     "anthropic": ChatCompletionsMessageAdapter,
     "litellm": ChatCompletionsMessageAdapter,

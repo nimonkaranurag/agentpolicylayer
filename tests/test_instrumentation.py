@@ -56,7 +56,6 @@ from apl.types import (
     Decision,
     EventPayload,
     EventType,
-    Modification,
     Verdict,
 )
 
@@ -95,93 +94,50 @@ class TestEventRegistry:
 class TestEventTypes:
 
     def test_session_start_event_type(self):
-        assert (
-            SessionStartEvent().event_type
-            == EventType.SESSION_START
-        )
+        assert SessionStartEvent().event_type == EventType.SESSION_START
 
     def test_session_end_event_type(self):
-        assert (
-            SessionEndEvent().event_type
-            == EventType.SESSION_END
-        )
+        assert SessionEndEvent().event_type == EventType.SESSION_END
 
     def test_input_received_event_type(self):
-        assert (
-            InputReceivedEvent().event_type
-            == EventType.INPUT_RECEIVED
-        )
+        assert InputReceivedEvent().event_type == EventType.INPUT_RECEIVED
 
     def test_input_validated_event_type(self):
-        assert (
-            InputValidatedEvent().event_type
-            == EventType.INPUT_VALIDATED
-        )
+        assert InputValidatedEvent().event_type == EventType.INPUT_VALIDATED
 
     def test_llm_pre_request_event_type(self):
-        assert (
-            LLMPreRequestEvent().event_type
-            == EventType.LLM_PRE_REQUEST
-        )
+        assert LLMPreRequestEvent().event_type == EventType.LLM_PRE_REQUEST
 
     def test_llm_post_response_event_type(self):
-        assert (
-            LLMPostResponseEvent().event_type
-            == EventType.LLM_POST_RESPONSE
-        )
+        assert LLMPostResponseEvent().event_type == EventType.LLM_POST_RESPONSE
 
     def test_tool_pre_invoke_event_type(self):
-        assert (
-            ToolPreInvokeEvent().event_type
-            == EventType.TOOL_PRE_INVOKE
-        )
+        assert ToolPreInvokeEvent().event_type == EventType.TOOL_PRE_INVOKE
 
     def test_tool_post_invoke_event_type(self):
-        assert (
-            ToolPostInvokeEvent().event_type
-            == EventType.TOOL_POST_INVOKE
-        )
+        assert ToolPostInvokeEvent().event_type == EventType.TOOL_POST_INVOKE
 
     def test_output_pre_send_event_type(self):
-        assert (
-            OutputPreSendEvent().event_type
-            == EventType.OUTPUT_PRE_SEND
-        )
+        assert OutputPreSendEvent().event_type == EventType.OUTPUT_PRE_SEND
 
     def test_plan_proposed_event_type(self):
-        assert (
-            PlanProposedEvent().event_type
-            == EventType.PLAN_PROPOSED
-        )
+        assert PlanProposedEvent().event_type == EventType.PLAN_PROPOSED
 
     def test_plan_approved_event_type(self):
-        assert (
-            PlanApprovedEvent().event_type
-            == EventType.PLAN_APPROVED
-        )
+        assert PlanApprovedEvent().event_type == EventType.PLAN_APPROVED
 
     def test_agent_pre_handoff_event_type(self):
-        assert (
-            AgentPreHandoffEvent().event_type
-            == EventType.AGENT_PRE_HANDOFF
-        )
+        assert AgentPreHandoffEvent().event_type == EventType.AGENT_PRE_HANDOFF
 
     def test_agent_post_handoff_event_type(self):
-        assert (
-            AgentPostHandoffEvent().event_type
-            == EventType.AGENT_POST_HANDOFF
-        )
+        assert AgentPostHandoffEvent().event_type == EventType.AGENT_POST_HANDOFF
 
 
 class TestDefaultBuildPayload:
 
     def test_session_start_returns_empty_payload(self):
-        ctx = type(
-            "ctx", (), {"proposed_plan": None}
-        )()
-        payload = SessionStartEvent().build_payload(
-            ctx
-        )
+        ctx = type("ctx", (), {"proposed_plan": None})()
+        payload = SessionStartEvent().build_payload(ctx)
         assert isinstance(payload, EventPayload)
         assert payload.tool_name is None
 
@@ -201,9 +157,7 @@ class TestApplyVerdictModifications:
 
     def test_modify_with_no_modification_is_noop(self):
         event = SessionStartEvent()
-        verdict = Verdict(
-            decision=Decision.MODIFY, modifications=[]
-        )
+        verdict = Verdict(decision=Decision.MODIFY, modifications=[])
         ctx = type("ctx", (), {})()
         event.apply_verdict_modifications(verdict, ctx)
 

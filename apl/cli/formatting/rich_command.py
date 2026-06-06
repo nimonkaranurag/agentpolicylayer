@@ -22,12 +22,8 @@ class RichCommand(click.Command):
     def _ensure_initialized(self, console: Console):
         if self._console is None:
             self._console = console
-            self._arguments_renderer = (
-                ArgumentsTableRenderer(console)
-            )
-            self._options_renderer = (
-                OptionsTableRenderer(console)
-            )
+            self._arguments_renderer = ArgumentsTableRenderer(console)
+            self._options_renderer = OptionsTableRenderer(console)
 
     def format_help(self, ctx, formatter):
         from ... import __version__
@@ -35,9 +31,7 @@ class RichCommand(click.Command):
 
         self._ensure_initialized(console)
 
-        self._console.print(
-            APL_LOGO_MINI.format(version=__version__)
-        )
+        self._console.print(APL_LOGO_MINI.format(version=__version__))
         self._console.print()
         self._render_command_header(ctx)
         self._render_usage_line(ctx)
@@ -67,10 +61,7 @@ class RichCommand(click.Command):
         self._console.print()
 
     def _render_examples_section(self):
-        if (
-            not self.help
-            or "Examples:" not in self.help
-        ):
+        if not self.help or "Examples:" not in self.help:
             return
 
         start = self.help.index("Examples:")
@@ -79,7 +70,5 @@ class RichCommand(click.Command):
         self._console.print("  [bold]Examples[/bold]")
         for line in examples_text.split("\n")[1:]:
             if line.strip():
-                self._console.print(
-                    f"  [dim]{line.strip()}[/dim]"
-                )
+                self._console.print(f"  [dim]{line.strip()}[/dim]")
         self._console.print()

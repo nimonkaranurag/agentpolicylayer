@@ -16,9 +16,7 @@ class PlanProposedEvent(BaseEvent):
     def event_type(self) -> EventType:
         return EventType.PLAN_PROPOSED
 
-    def build_payload(
-        self, context: LifecycleContext
-    ) -> EventPayload:
+    def build_payload(self, context: LifecycleContext) -> EventPayload:
         return EventPayload(plan=context.proposed_plan)
 
     def _apply_modification_for_target(

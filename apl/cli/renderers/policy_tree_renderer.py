@@ -14,23 +14,18 @@ class PolicyTreeRenderer:
         self._console.print()
 
         tree = Tree(
-            f"[bold cyan]🛡️  {server.name}[/bold cyan]"
-            f" [dim]v{server.version}[/dim]"
+            f"[bold cyan]🛡️  {server.name}[/bold cyan]" f" [dim]v{server.version}[/dim]"
         )
 
         for policy in server.registry.all_policies():
-            events_str = ", ".join(
-                e.value for e in policy.events
-            )
+            events_str = ", ".join(e.value for e in policy.events)
             branch = tree.add(
                 f"[green]✓[/green]"
                 f" [white]{policy.name}[/white]"
                 f" [dim]({events_str})[/dim]"
             )
             if policy.description:
-                branch.add(
-                    f"[dim]{policy.description}[/dim]"
-                )
+                branch.add(f"[dim]{policy.description}[/dim]")
 
         self._console.print(tree)
         self._console.print()

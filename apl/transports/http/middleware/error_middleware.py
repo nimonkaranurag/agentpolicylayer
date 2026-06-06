@@ -5,9 +5,7 @@ from aiohttp.web import middleware
 
 
 @middleware
-async def error_middleware(
-    request: web.Request, handler
-):
+async def error_middleware(request: web.Request, handler):
     try:
         return await handler(request)
     except web.HTTPException:
@@ -24,9 +22,7 @@ async def error_middleware(
         if "metrics" in request.app:
             request.app["metrics"].record_error()
         if "logger" in request.app:
-            request.app["logger"].error(
-                f"Unhandled error: {e}", exc_info=True
-            )
+            request.app["logger"].error(f"Unhandled error: {e}", exc_info=True)
         return web.json_response(
             {
                 "error": "Internal server error",

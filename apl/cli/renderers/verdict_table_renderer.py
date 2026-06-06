@@ -35,19 +35,13 @@ class VerdictTableRenderer:
         table.add_column("Decision", style="white")
         table.add_column("Confidence", justify="right")
         table.add_column("Time", justify="right")
-        table.add_column(
-            "Reasoning", style="dim", max_width=40
-        )
+        table.add_column("Reasoning", style="dim", max_width=40)
 
         for v in verdicts:
             decision_display = DECISION_STYLE_MAP.get(
                 v.decision.value, v.decision.value
             )
-            timing_display = (
-                f"{v.evaluation_ms:.2f}ms"
-                if v.evaluation_ms
-                else "-"
-            )
+            timing_display = f"{v.evaluation_ms:.2f}ms" if v.evaluation_ms else "-"
             table.add_row(
                 v.policy_name or "unknown",
                 decision_display,
@@ -64,8 +58,7 @@ class VerdictTableRenderer:
                 self._console.print()
                 self._console.print(
                     Panel(
-                        f"[bold]Modified ({mod.target}):[/bold]\n"
-                        f"{mod.value}",
+                        f"[bold]Modified ({mod.target}):[/bold]\n" f"{mod.value}",
                         title="[yellow]Modification[/yellow]",
                         border_style="yellow",
                     )

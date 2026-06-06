@@ -7,9 +7,7 @@ from apl.types import Decision, Modification, Verdict
 
 class CompositionStrategy(Protocol):
 
-    def compose(
-        self, verdicts: list[Verdict]
-    ) -> Verdict: ...
+    def compose(self, verdicts: list[Verdict]) -> Verdict: ...
 
 
 class BaseCompositionStrategy:
@@ -30,9 +28,7 @@ class BaseCompositionStrategy:
         fallback_reasoning: str = "No policies evaluated",
     ) -> Verdict | None:
         if not verdicts:
-            return Verdict.allow(
-                reasoning=fallback_reasoning
-            )
+            return Verdict.allow(reasoning=fallback_reasoning)
         return None
 
     @staticmethod
@@ -51,25 +47,18 @@ class BaseCompositionStrategy:
     def _build_modified_verdict(
         verdicts: list[Verdict],
     ) -> Verdict | None:
-        all_mods = BaseCompositionStrategy._collect_all_modifications(
-            verdicts
-        )
+        all_mods = BaseCompositionStrategy._collect_all_modifications(verdicts)
         if not all_mods:
             return None
 
         reasons = [
             v.reasoning
             for v in verdicts
-            if v.decision == Decision.MODIFY
-            and v.reasoning
+            if v.decision == Decision.MODIFY and v.reasoning
         ]
 
         return Verdict(
             decision=Decision.MODIFY,
-            reasoning=(
-                " + ".join(reasons)
-                if reasons
-                else None
-            ),
+            reasoning=(" + ".join(reasons) if reasons else None),
             modifications=all_mods,
         )

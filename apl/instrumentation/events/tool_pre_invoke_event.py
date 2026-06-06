@@ -16,9 +16,7 @@ class ToolPreInvokeEvent(BaseEvent):
     def event_type(self) -> EventType:
         return EventType.TOOL_PRE_INVOKE
 
-    def build_payload(
-        self, context: LifecycleContext
-    ) -> EventPayload:
+    def build_payload(self, context: LifecycleContext) -> EventPayload:
         return EventPayload(
             tool_name=context.tool_name,
             tool_args=context.tool_args,

@@ -16,12 +16,8 @@ class OutputPreSendEvent(BaseEvent):
     def event_type(self) -> EventType:
         return EventType.OUTPUT_PRE_SEND
 
-    def build_payload(
-        self, context: LifecycleContext
-    ) -> EventPayload:
-        return EventPayload(
-            output_text=context.response_text
-        )
+    def build_payload(self, context: LifecycleContext) -> EventPayload:
+        return EventPayload(output_text=context.response_text)
 
     def _apply_modification_for_target(
         self,

@@ -49,18 +49,18 @@ server = PolicyServer(
 async def example_policy(event: PolicyEvent) -> Verdict:
     """
     Example policy implementation.
-    
+
     Modify this to implement your policy logic.
     """
     output = event.payload.output_text or ""
-    
+
     # Example: Block responses containing "SECRET"
     if "SECRET" in output.upper():
         return Verdict.deny(
             reasoning="Response contains sensitive information",
             confidence=0.95
         )
-    
+
     return Verdict.allow()
 
 
@@ -87,7 +87,7 @@ policies:
         then:
           decision: deny
           reasoning: "Response contains sensitive information"
-      
+
       - when:
           payload.output_text:
             matches: ".*"
@@ -173,16 +173,16 @@ async def redact_pii_output(event: PolicyEvent) -> Verdict:
     text = event.payload.output_text
     if not text:
         return Verdict.allow()
-    
+
     found = []
     redacted = text
-    
+
     for name, (pattern, replacement) in PATTERNS.items():
         matches = re.findall(pattern, redacted)
         if matches:
             found.append(f"{{name}}: {{len(matches)}}")
             redacted = re.sub(pattern, replacement, redacted)
-    
+
     if found:
         return Verdict.modify(
             target="output",
@@ -191,7 +191,7 @@ async def redact_pii_output(event: PolicyEvent) -> Verdict:
             reasoning=f"Redacted PII: {{', '.join(found)}}",
             confidence=0.95
         )
-    
+
     return Verdict.allow()
 
 
@@ -204,14 +204,14 @@ async def redact_pii_output(event: PolicyEvent) -> Verdict:
 async def block_pii_tools(event: PolicyEvent) -> Verdict:
     """Block tool calls that would send PII externally."""
     args_str = str(event.payload.tool_args or {{}})
-    
+
     for name, (pattern, _) in PATTERNS.items():
         if re.search(pattern, args_str):
             return Verdict.deny(
                 reasoning=f"Tool arguments contain {{name}} - refusing to send externally",
                 confidence=0.9
             )
-    
+
     return Verdict.allow()
 
 
@@ -279,19 +279,19 @@ async def token_budget(event: PolicyEvent) -> Verdict:
     count = event.metadata.token_count
     budget = event.metadata.token_budget or DEFAULT_TOKEN_BUDGET
     ratio = count / budget if budget > 0 else 0
-    
+
     if ratio >= 1.0:
         return Verdict.deny(
             reasoning=f"Token budget exceeded: {{count:,}} / {{budget:,}}",
             confidence=1.0
         )
-    
+
     if ratio >= WARNING_THRESHOLD:
         return Verdict.observe(
             reasoning=f"Token budget at {{ratio*100:.0f}}%",
             trace={{"token_count": count, "token_budget": budget}}
         )
-    
+
     return Verdict.allow()
 
 
@@ -306,13 +306,13 @@ async def cost_budget(event: PolicyEvent) -> Verdict:
     cost = event.metadata.cost_usd
     budget = event.metadata.cost_budget_usd or DEFAULT_COST_BUDGET
     ratio = cost / budget if budget > 0 else 0
-    
+
     if ratio >= 1.0:
         return Verdict.deny(
             reasoning=f"Cost budget exceeded: ${{cost:.4f}} / ${{budget:.2f}}",
             confidence=1.0
         )
-    
+
     return Verdict.allow()
 
 
@@ -376,11 +376,11 @@ async def confirm_destructive(event: PolicyEvent) -> Verdict:
     """Check if tool is destructive and require confirmation."""
     tool_name = event.payload.tool_name or ""
     tool_args = event.payload.tool_args or {{}}
-    
+
     for pattern in DESTRUCTIVE_PATTERNS:
         if re.match(pattern, tool_name.lower()):
             target = tool_args.get("target") or tool_args.get("path") or str(tool_args)
-            
+
             return Verdict.escalate(
                 type="human_confirm",
                 prompt=f"⚠️ Destructive action: {{tool_name}}\\n\\nTarget: {{target}}\\n\\nProceed?",
@@ -388,7 +388,7 @@ async def confirm_destructive(event: PolicyEvent) -> Verdict:
                 reasoning=f"Tool '{{tool_name}}' matches destructive pattern",
                 timeout_ms=60000
             )
-    
+
     return Verdict.allow()
 
 
@@ -420,9 +420,7 @@ apl serve policy.py --http 8080
 # =============================================================================
 
 
-def create_policy_project(
-    name: str, template: str = "basic"
-) -> Path:
+def create_policy_project(name: str, template: str = "basic") -> Path:
     """
     Create a new APL policy project.
 
@@ -445,9 +443,7 @@ def create_policy_project(
     project_path = Path(name)
 
     if project_path.exists():
-        raise FileExistsError(
-            f"Directory already exists: {name}"
-        )
+        raise FileExistsError(f"Directory already exists: {name}")
 
     project_path.mkdir(parents=True)
 

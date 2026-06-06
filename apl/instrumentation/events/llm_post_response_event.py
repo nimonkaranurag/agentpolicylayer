@@ -16,9 +16,7 @@ class LLMPostResponseEvent(BaseEvent):
     def event_type(self) -> EventType:
         return EventType.LLM_POST_RESPONSE
 
-    def build_payload(
-        self, context: LifecycleContext
-    ) -> EventPayload:
+    def build_payload(self, context: LifecycleContext) -> EventPayload:
         return EventPayload(
             llm_model=context.model_name,
             llm_response=Message(

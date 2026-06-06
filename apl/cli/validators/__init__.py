@@ -17,9 +17,7 @@ class PolicyValidatorRegistry:
             YamlPolicyValidator(),
         ]
 
-    def find_validator_for_path(
-        self, path: Path
-    ) -> Optional[BasePolicyValidator]:
+    def find_validator_for_path(self, path: Path) -> Optional[BasePolicyValidator]:
         for validator in self._validators:
             if validator.can_validate(path):
                 return validator
@@ -28,7 +26,5 @@ class PolicyValidatorRegistry:
     def validate(self, path: Path) -> list[str]:
         validator = self.find_validator_for_path(path)
         if validator is None:
-            return [
-                f"Unsupported file type: {path.suffix}"
-            ]
+            return [f"Unsupported file type: {path.suffix}"]
         return validator.validate(path)

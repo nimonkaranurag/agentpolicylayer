@@ -6,10 +6,7 @@ import sys
 
 def kill_process_on_port(port: int) -> bool:
     try:
-        if (
-            sys.platform == "darwin"
-            or sys.platform.startswith("linux")
-        ):
+        if sys.platform == "darwin" or sys.platform.startswith("linux"):
             return _kill_port_unix(port)
         elif sys.platform == "win32":
             return _kill_port_windows(port)

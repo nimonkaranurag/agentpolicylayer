@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import time
-from typing import Any, Coroutine
+from typing import Any
 
 from apl.logging import get_logger
 from apl.types import Decision, PolicyEvent, Verdict
@@ -22,37 +22,21 @@ async def invoke_policy_handler(
         result: Any = policy.handler(event)
 
         if asyncio.iscoroutine(result):
-            timeout_seconds: float = (
-                policy.timeout_ms / 1000
-            )
-            result = await asyncio.wait_for(
-                result, timeout=timeout_seconds
-            )
+            timeout_seconds: float = policy.timeout_ms / 1000
+            result = await asyncio.wait_for(result, timeout=timeout_seconds)
 
-        elapsed_ms: float = _calculate_elapsed_ms(
-            start_time
-        )
-        return _enrich_verdict_with_policy_metadata(
-            result, policy, elapsed_ms
-        )
+        elapsed_ms: float = _calculate_elapsed_ms(start_time)
+        return _enrich_verdict_with_policy_metadata(result, policy, elapsed_ms)
 
     except asyncio.TimeoutError:
         elapsed_ms = _calculate_elapsed_ms(start_time)
-        logger.warning(
-            f"Policy {policy.name} timed out after {elapsed_ms:.1f}ms"
-        )
-        return _create_timeout_verdict(
-            policy, elapsed_ms
-        )
+        logger.warning(f"Policy {policy.name} timed out after {elapsed_ms:.1f}ms")
+        return _create_timeout_verdict(policy, elapsed_ms)
 
     except Exception as exc:
         elapsed_ms = _calculate_elapsed_ms(start_time)
-        logger.error(
-            f"Policy {policy.name} raised exception: {exc}"
-        )
-        return _create_error_verdict(
-            policy, elapsed_ms, str(exc)
-        )
+        logger.error(f"Policy {policy.name} raised exception: {exc}")
+        return _create_error_verdict(policy, elapsed_ms, str(exc))
 
 
 def _calculate_elapsed_ms(start_time: float) -> float:
@@ -65,12 +49,8 @@ def _enrich_verdict_with_policy_metadata(
     elapsed_ms: float,
 ) -> Verdict:
     if not isinstance(result, Verdict):
-        logger.warning(
-            f"Policy {policy.name} returned non-Verdict: {type(result)}"
-        )
-        return Verdict.allow(
-            reasoning="Policy returned invalid type"
-        )
+        logger.warning(f"Policy {policy.name} returned non-Verdict: {type(result)}")
+        return Verdict.allow(reasoning="Policy returned invalid type")
 
     result.policy_name = policy.name
     result.policy_version = policy.version
@@ -78,9 +58,7 @@ def _enrich_verdict_with_policy_metadata(
     return result
 
 
-def _create_timeout_verdict(
-    policy: RegisteredPolicy, elapsed_ms: float
-) -> Verdict:
+def _create_timeout_verdict(policy: RegisteredPolicy, elapsed_ms: float) -> Verdict:
     return Verdict(
         decision=Decision.ALLOW,
         reasoning=f"Policy timed out after {policy.timeout_ms}ms",

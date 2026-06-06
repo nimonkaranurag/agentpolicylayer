@@ -14,14 +14,10 @@ class RichGroup(click.Group):
         self._console = None
         self._banner = None
 
-    def _ensure_initialized(
-        self, console: Console, version: str
-    ):
+    def _ensure_initialized(self, console: Console, version: str):
         if self._console is None:
             self._console = console
-            self._banner = BannerRenderer(
-                console, version
-            )
+            self._banner = BannerRenderer(console, version)
 
     def format_help(self, ctx, formatter):
         from ... import __version__
@@ -46,9 +42,7 @@ class RichGroup(click.Group):
 
     def _render_commands_table(self):
         visible_commands = [
-            (name, cmd)
-            for name, cmd in self.commands.items()
-            if not cmd.hidden
+            (name, cmd) for name, cmd in self.commands.items() if not cmd.hidden
         ]
         if not visible_commands:
             return
@@ -64,9 +58,7 @@ class RichGroup(click.Group):
         table.add_column("Description", style="white")
 
         for name, cmd in visible_commands:
-            table.add_row(
-                name, cmd.get_short_help_str(limit=50)
-            )
+            table.add_row(name, cmd.get_short_help_str(limit=50))
 
         self._console.print("  [bold]Commands[/bold]")
         self._console.print()

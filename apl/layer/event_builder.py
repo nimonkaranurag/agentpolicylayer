@@ -21,14 +21,9 @@ class PolicyEventBuilder:
         payload: EventPayload | None = None,
         metadata: SessionMetadata | None = None,
     ) -> PolicyEvent:
-        normalized_event_type: EventType = (
-            self._normalize_event_type(event_type)
-        )
-        resolved_metadata: SessionMetadata = (
-            metadata
-            or SessionMetadata(
-                session_id=str(uuid.uuid4())
-            )
+        normalized_event_type: EventType = self._normalize_event_type(event_type)
+        resolved_metadata: SessionMetadata = metadata or SessionMetadata(
+            session_id=str(uuid.uuid4())
         )
 
         return PolicyEvent(

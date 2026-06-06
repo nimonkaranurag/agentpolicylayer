@@ -6,13 +6,11 @@ from datetime import datetime, timezone
 import pytest
 
 from apl.types import (
-    Decision,
     EventPayload,
     EventType,
     Message,
     PolicyEvent,
     SessionMetadata,
-    Verdict,
 )
 
 
@@ -98,8 +96,7 @@ def make_event():
             timestamp=datetime.now(timezone.utc),
             messages=messages or [],
             payload=payload or EventPayload(),
-            metadata=metadata
-            or SessionMetadata(session_id="test"),
+            metadata=metadata or SessionMetadata(session_id="test"),
         )
 
     return _factory

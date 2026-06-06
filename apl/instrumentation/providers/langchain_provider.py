@@ -30,40 +30,28 @@ class LangChainProvider(BaseProvider):
         self.method_patcher.register_patch(
             BaseChatModel,
             "invoke",
-            self._create_instance_method_sync_wrapper(
-                patch_target_index=0
-            ),
+            self._create_instance_method_sync_wrapper(patch_target_index=0),
         )
         self.method_patcher.register_patch(
             BaseChatModel,
             "ainvoke",
-            self._create_instance_method_async_wrapper(
-                patch_target_index=1
-            ),
+            self._create_instance_method_async_wrapper(patch_target_index=1),
         )
         self.method_patcher.apply_all_patches()
 
-    def extract_messages_from_request(
-        self, *args: Any, **kwargs: Any
-    ) -> Any:
+    def extract_messages_from_request(self, *args: Any, **kwargs: Any) -> Any:
         if len(args) >= 1:
             return args[0]
         return kwargs.get("input", [])
 
-    def extract_model_from_request(
-        self, *args: Any, **kwargs: Any
-    ) -> str:
+    def extract_model_from_request(self, *args: Any, **kwargs: Any) -> str:
         return "langchain"
 
-    def extract_text_from_response(
-        self, response: Any
-    ) -> str:
+    def extract_text_from_response(self, response: Any) -> str:
         if hasattr(response, "content"):
             return response.content
         return str(response)
 
-    def apply_text_to_response(
-        self, response: Any, new_text: str
-    ) -> Any:
+    def apply_text_to_response(self, response: Any, new_text: str) -> Any:
         response.content = new_text
         return response

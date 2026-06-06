@@ -9,9 +9,7 @@ from apl.types import (
 
 
 class ManifestSerializer:
-    def serialize(
-        self, manifest: PolicyManifest
-    ) -> dict[str, Any]:
+    def serialize(self, manifest: PolicyManifest) -> dict[str, Any]:
         return {
             "server_name": manifest.server_name,
             "server_version": manifest.server_version,
@@ -21,39 +19,25 @@ class ManifestSerializer:
             "supports_streaming": manifest.supports_streaming,
             "documentation_url": manifest.documentation_url,
             "policies": [
-                self._serialize_policy_definition(p)
-                for p in manifest.policies
+                self._serialize_policy_definition(p) for p in manifest.policies
             ],
         }
 
-    def deserialize(
-        self, data: dict[str, Any]
-    ) -> PolicyManifest:
+    def deserialize(self, data: dict[str, Any]) -> PolicyManifest:
         return PolicyManifest(
             server_name=data["server_name"],
             server_version=data["server_version"],
-            protocol_version=data.get(
-                "protocol_version", "0.3.0"
-            ),
+            protocol_version=data.get("protocol_version", "0.3.0"),
             description=data.get("description"),
-            supports_batch=data.get(
-                "supports_batch", False
-            ),
-            supports_streaming=data.get(
-                "supports_streaming", False
-            ),
-            documentation_url=data.get(
-                "documentation_url"
-            ),
+            supports_batch=data.get("supports_batch", False),
+            supports_streaming=data.get("supports_streaming", False),
+            documentation_url=data.get("documentation_url"),
             policies=[
-                self._deserialize_policy_definition(p)
-                for p in data.get("policies", [])
+                self._deserialize_policy_definition(p) for p in data.get("policies", [])
             ],
         )
 
-    def _serialize_policy_definition(
-        self, policy: PolicyDefinition
-    ) -> dict[str, Any]:
+    def _serialize_policy_definition(self, policy: PolicyDefinition) -> dict[str, Any]:
         return {
             "name": policy.name,
             "version": policy.version,
@@ -73,28 +57,21 @@ class ManifestSerializer:
             "tags": policy.tags,
         }
 
-    def _deserialize_policy_definition(
-        self, data: dict[str, Any]
-    ) -> PolicyDefinition:
+    def _deserialize_policy_definition(self, data: dict[str, Any]) -> PolicyDefinition:
         context_reqs = [
             ContextRequirement(
                 path=c["path"],
                 required=c.get("required", True),
                 description=c.get("description"),
             )
-            for c in data.get(
-                "context_requirements", []
-            )
+            for c in data.get("context_requirements", [])
         ]
 
         return PolicyDefinition(
             name=data["name"],
             version=data["version"],
             description=data.get("description"),
-            events=[
-                EventType(e)
-                for e in data.get("events", [])
-            ],
+            events=[EventType(e) for e in data.get("events", [])],
             context_requirements=context_reqs,
             blocking=data.get("blocking", True),
             timeout_ms=data.get("timeout_ms", 1000),

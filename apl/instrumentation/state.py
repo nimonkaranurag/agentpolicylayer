@@ -20,16 +20,14 @@ class InstrumentationState:
     user_id: Optional[str] = None
     custom_metadata: dict = field(default_factory=dict)
 
-    active_providers: List[BaseProvider] = field(
-        default_factory=list
-    )
+    active_providers: List[BaseProvider] = field(default_factory=list)
 
     _reentrancy_flag: threading.local = field(
         default_factory=threading.local, repr=False
     )
-    _background_loop: Optional[
-        asyncio.AbstractEventLoop
-    ] = field(default=None, repr=False)
+    _background_loop: Optional[asyncio.AbstractEventLoop] = field(
+        default=None, repr=False
+    )
     _background_loop_lock: threading.Lock = field(
         default_factory=threading.Lock, repr=False
     )
@@ -46,18 +44,14 @@ class InstrumentationState:
             custom=self.custom_metadata,
         )
 
-    def register_provider(
-        self, provider: BaseProvider
-    ) -> None:
+    def register_provider(self, provider: BaseProvider) -> None:
         self.active_providers.append(provider)
 
     def clear_providers(self) -> None:
         self.active_providers.clear()
 
     def is_inside_policy_evaluation(self) -> bool:
-        return getattr(
-            self._reentrancy_flag, "active", False
-        )
+        return getattr(self._reentrancy_flag, "active", False)
 
     def mark_policy_evaluation_started(self) -> None:
         self._reentrancy_flag.active = True
@@ -65,13 +59,9 @@ class InstrumentationState:
     def mark_policy_evaluation_finished(self) -> None:
         self._reentrancy_flag.active = False
 
-    def run_coroutine_in_background_loop(
-        self, coroutine
-    ) -> Any:
+    def run_coroutine_in_background_loop(self, coroutine) -> Any:
         loop = self._get_or_create_background_loop()
-        future = asyncio.run_coroutine_threadsafe(
-            coroutine, loop
-        )
+        future = asyncio.run_coroutine_threadsafe(coroutine, loop)
         return future.result(timeout=30)
 
     def _get_or_create_background_loop(
@@ -79,14 +69,11 @@ class InstrumentationState:
     ) -> asyncio.AbstractEventLoop:
         with self._background_loop_lock:
             needs_new_loop = (
-                self._background_loop is None
-                or not self._background_loop.is_running()
+                self._background_loop is None or not self._background_loop.is_running()
             )
             if needs_new_loop:
                 ready = threading.Event()
-                self._background_loop = (
-                    asyncio.new_event_loop()
-                )
+                self._background_loop = asyncio.new_event_loop()
                 loop = self._background_loop
 
                 def _run(l, r):

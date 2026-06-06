@@ -37,9 +37,7 @@ _verdict_renderer = VerdictTableRenderer(console)
     default=None,
     help="JSON payload",
 )
-def test(
-    path: str, event: str, payload: Optional[str]
-):
+def test(path: str, event: str, payload: Optional[str]):
     """
     Test a policy with sample events.
 
@@ -49,14 +47,10 @@ def test(
     """
     _banner.render("mini")
     console.print()
-    _status.print(
-        f"Testing: [cyan]{path}[/cyan]", "loading"
-    )
+    _status.print(f"Testing: [cyan]{path}[/cyan]", "loading")
 
     path_obj = Path(path)
-    logger = setup_logging(
-        level="WARNING", rich_output=True
-    )
+    logger = setup_logging(level="WARNING", rich_output=True)
 
     server = _loader_registry.load(path_obj, logger)
     if not server:
@@ -66,9 +60,7 @@ def test(
     test_event = _event_factory.build(event, payload)
 
     console.print()
-    _status.print(
-        f"Event type: [cyan]{event}[/cyan]", "info"
-    )
+    _status.print(f"Event type: [cyan]{event}[/cyan]", "info")
 
     verdicts = asyncio.run(server.evaluate(test_event))
     _verdict_renderer.render(verdicts)

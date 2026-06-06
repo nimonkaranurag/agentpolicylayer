@@ -20,9 +20,7 @@ class BaseEvent(ABC):
     @abstractmethod
     def event_type(self) -> EventType: ...
 
-    def build_payload(
-        self, context: LifecycleContext
-    ) -> EventPayload:
+    def build_payload(self, context: LifecycleContext) -> EventPayload:
         return EventPayload()
 
     def apply_verdict_modifications(

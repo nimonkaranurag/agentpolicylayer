@@ -44,22 +44,14 @@ class OpenAIProvider(BaseProvider):
         original_method: Any = None
 
         @functools.wraps(self._get_sync_original)
-        def wrapper(
-            client_self: Any, *args: Any, **kwargs: Any
-        ) -> Any:
+        def wrapper(client_self: Any, *args: Any, **kwargs: Any) -> Any:
             nonlocal original_method
             if original_method is None:
                 original_method = provider.method_patcher.patch_targets[
                     0
                 ].original_method
-            bound_method = (
-                lambda *a, **kw: original_method(
-                    client_self, *a, **kw
-                )
-            )
-            return provider.execute_llm_call_sync(
-                bound_method, *args, **kwargs
-            )
+            bound_method = lambda *a, **kw: original_method(client_self, *a, **kw)
+            return provider.execute_llm_call_sync(bound_method, *args, **kwargs)
 
         return wrapper
 
@@ -68,27 +60,17 @@ class OpenAIProvider(BaseProvider):
         original_method: Any = None
 
         @functools.wraps(self._get_async_original)
-        async def wrapper(
-            client_self: Any, *args: Any, **kwargs: Any
-        ) -> Any:
+        async def wrapper(client_self: Any, *args: Any, **kwargs: Any) -> Any:
             nonlocal original_method
             if original_method is None:
                 original_method = provider.method_patcher.patch_targets[
                     1
                 ].original_method
 
-            async def bound_method(
-                *a: Any, **kw: Any
-            ) -> Any:
-                return await original_method(
-                    client_self, *a, **kw
-                )
+            async def bound_method(*a: Any, **kw: Any) -> Any:
+                return await original_method(client_self, *a, **kw)
 
-            return (
-                await provider.execute_llm_call_async(
-                    bound_method, *args, **kwargs
-                )
-            )
+            return await provider.execute_llm_call_async(bound_method, *args, **kwargs)
 
         return wrapper
 

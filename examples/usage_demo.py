@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-APL Usage Example
+APL Usage Example.
 
 This demonstrates how to integrate APL into your agent workflow.
 Shows:
@@ -15,9 +15,7 @@ import sys
 
 sys.path.insert(
     0,
-    os.path.dirname(
-        os.path.dirname(os.path.abspath(__file__))
-    ),
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
 )
 
 from apl import (
@@ -33,10 +31,9 @@ from apl import (
 
 async def demo_manual_evaluation():
     """
-    Demo 1: Manual policy evaluation
+    Demo 1: Manual policy evaluation.
 
-    This shows the low-level API where you explicitly create events
-    and evaluate them.
+    This shows the low-level API where you explicitly create events and evaluate them.
     """
     print("\n" + "=" * 60)
     print("Demo 1: Manual Policy Evaluation")
@@ -44,12 +41,8 @@ async def demo_manual_evaluation():
 
     # Create policy layer and add servers
     policies = PolicyLayer()
-    policies.add_server(
-        "stdio://./examples/pii_filter.py"
-    )
-    policies.add_server(
-        "stdio://./examples/budget_limiter.py"
-    )
+    policies.add_server("stdio://./examples/pii_filter.py")
+    policies.add_server("stdio://./examples/budget_limiter.py")
 
     # Connect to servers
     await policies.connect()
@@ -59,17 +52,13 @@ async def demo_manual_evaluation():
     verdict = await policies.evaluate(
         event_type="output.pre_send",
         messages=[
-            Message(
-                role="user", content="What's my SSN?"
-            ),
+            Message(role="user", content="What's my SSN?"),
             Message(
                 role="assistant",
                 content="Your SSN is 123-45-6789",
             ),
         ],
-        payload=EventPayload(
-            output_text="Your SSN is 123-45-6789"
-        ),
+        payload=EventPayload(output_text="Your SSN is 123-45-6789"),
         metadata=SessionMetadata(
             session_id="demo-session",
             user_id="user-123",
@@ -81,9 +70,7 @@ async def demo_manual_evaluation():
     print(f"  Decision: {verdict.decision.value}")
     print(f"  Reasoning: {verdict.reasoning}")
     if verdict.modification:
-        print(
-            f"  Modified output: {verdict.modification.value}"
-        )
+        print(f"  Modified output: {verdict.modification.value}")
 
     # Test budget enforcement
     print("\nEvaluating LLM call near budget limit...")
@@ -107,7 +94,7 @@ async def demo_manual_evaluation():
 
 async def demo_decorator_api():
     """
-    Demo 2: Decorator-based API
+    Demo 2: Decorator-based API.
 
     This shows the ergonomic decorator API for wrapping functions.
     """
@@ -116,57 +103,43 @@ async def demo_decorator_api():
     print("=" * 60)
 
     policies = PolicyLayer()
-    policies.add_server(
-        "stdio://./examples/confirm_destructive.py"
-    )
+    policies.add_server("stdio://./examples/confirm_destructive.py")
 
     # Define a tool function with policy checks
     @policies.on("tool.pre_invoke")
-    async def execute_tool(
-        tool_name: str, tool_args: dict
-    ):
+    async def execute_tool(tool_name: str, tool_args: dict):
         """Simulated tool execution."""
-        print(
-            f"  Executing {tool_name} with {tool_args}"
-        )
+        print(f"  Executing {tool_name} with {tool_args}")
         return {"status": "success"}
 
     # Test with a safe tool
     print("\nCalling safe tool 'search'...")
     try:
-        result = await execute_tool(
-            "search", {"query": "weather"}
-        )
+        result = await execute_tool("search", {"query": "weather"})
         print(f"  Result: {result}")
     except PolicyDenied as e:
         print(f"  DENIED: {e.verdict.reasoning}")
     except PolicyEscalation as e:
-        print(
-            f"  ESCALATION: {e.verdict.escalation.prompt}"
-        )
+        print(f"  ESCALATION: {e.verdict.escalation.prompt}")
 
     # Test with a dangerous tool
     print("\nCalling dangerous tool 'delete_file'...")
     try:
-        result = await execute_tool(
-            "delete_file", {"path": "/important/data"}
-        )
+        result = await execute_tool("delete_file", {"path": "/important/data"})
         print(f"  Result: {result}")
     except PolicyDenied as e:
         print(f"  DENIED: {e.verdict.reasoning}")
     except PolicyEscalation as e:
-        print(f"  ESCALATION REQUIRED:")
+        print("  ESCALATION REQUIRED:")
         print(f"    {e.verdict.escalation.prompt}")
-        print(
-            f"    Options: {e.verdict.escalation.options}"
-        )
+        print(f"    Options: {e.verdict.escalation.options}")
 
     await policies.close()
 
 
 async def demo_composition():
     """
-    Demo 3: Policy composition
+    Demo 3: Policy composition.
 
     Shows how multiple policies combine their verdicts.
     """
@@ -186,22 +159,14 @@ async def demo_composition():
     )
 
     # Add multiple policy servers
-    policies.add_server(
-        "stdio://./examples/pii_filter.py"
-    )
-    policies.add_server(
-        "stdio://./examples/budget_limiter.py"
-    )
-    policies.add_server(
-        "stdio://./examples/confirm_destructive.py"
-    )
+    policies.add_server("stdio://./examples/pii_filter.py")
+    policies.add_server("stdio://./examples/budget_limiter.py")
+    policies.add_server("stdio://./examples/confirm_destructive.py")
 
     await policies.connect()
 
     # Event that triggers multiple policies
-    print(
-        "\nEvaluating tool call with PII and low budget..."
-    )
+    print("\nEvaluating tool call with PII and low budget...")
     verdict = await policies.evaluate(
         event_type="tool.pre_invoke",
         messages=[],
@@ -221,9 +186,7 @@ async def demo_composition():
         ),
     )
 
-    print(
-        f"  Final Decision: {verdict.decision.value}"
-    )
+    print(f"  Final Decision: {verdict.decision.value}")
     print(f"  Reasoning: {verdict.reasoning}")
     print(f"  Policy: {verdict.policy_name}")
 
@@ -240,9 +203,7 @@ async def main():
     # For this demo, we'll just show the API patterns.
 
     print("\nNote: This demo shows the API patterns.")
-    print(
-        "To run with real policy servers, start them first:"
-    )
+    print("To run with real policy servers, start them first:")
     print("  python examples/pii_filter.py")
     print("  python examples/budget_limiter.py")
     print("  python examples/confirm_destructive.py")
@@ -257,7 +218,7 @@ async def main():
     print("Inline Policy Example (no external server)")
     print("=" * 60)
 
-    from apl import PolicyEvent, PolicyServer, Verdict
+    from apl import PolicyEvent, PolicyServer
 
     # You can also create policies inline for testing
     server = PolicyServer("inline-test")
@@ -272,11 +233,7 @@ async def main():
     ) -> Verdict:
         return Verdict.observe(
             reasoning="This is just a test observation",
-            trace={
-                "output_length": len(
-                    event.payload.output_text or ""
-                )
-            },
+            trace={"output_length": len(event.payload.output_text or "")},
         )
 
     # Create a test event
@@ -299,9 +256,7 @@ async def main():
                 content="Hello, world!",
             )
         ],
-        payload=EventPayload(
-            output_text="Hello, world!"
-        ),
+        payload=EventPayload(output_text="Hello, world!"),
         metadata=SessionMetadata(session_id="test"),
     )
 
@@ -311,9 +266,7 @@ async def main():
         print(f"\nVerdict from '{v.policy_name}':")
         print(f"  Decision: {v.decision.value}")
         print(f"  Reasoning: {v.reasoning}")
-        print(
-            f"  Evaluation time: {v.evaluation_ms:.2f}ms"
-        )
+        print(f"  Evaluation time: {v.evaluation_ms:.2f}ms")
 
 
 if __name__ == "__main__":

@@ -49,6 +49,9 @@ dev = [
     "pytest-asyncio>=0.21",
     "black>=23.0",
     "isort>=5.12",
+    "ruff>=0.6",
+    "mypy>=1.10",
+    "docformatter>=1.7",
     "types-PyYAML",
 ]
 langgraph = [
@@ -72,3 +75,42 @@ packages = ["apl"]
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+
+[tool.black]
+line-length = 88
+target-version = ["py310", "py311", "py312"]
+
+[tool.isort]
+profile = "black"
+line_length = 88
+
+[tool.docformatter]
+recursive = true
+pre-summary-newline = true
+close-quotes-on-newline = true
+wrap-summaries = 88
+wrap-descriptions = 88
+
+[tool.ruff]
+line-length = 88
+target-version = "py310"
+
+[tool.ruff.lint]
+# Conservative, green-on-current-code set. Bugbear (B) and pyupgrade (UP)
+select = ["E", "F", "W", "I"]
+ignore = ["E501"]  # line length is owned by black
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]                                # intentional re-exports
+# The following are pre-existing logic issues deferred to the WP that rewrites
+# that code, so the WP-0 formatting gate stays green without touching logic:
+"apl/instrumentation/providers/*.py" = ["F401", "E731"] # availability-probe imports + applier lambdas -> WP-6
+"apl/instrumentation/state.py" = ["E741"]               # background-loop arg rename -> WP-6
+"apl/templates.py" = ["W291", "W293"]                   # whitespace inside literal file templates
+
+[tool.mypy]
+python_version = "3.10"
+warn_redundant_casts = true
+warn_unused_ignores = true
+no_implicit_optional = true
+ignore_missing_imports = true

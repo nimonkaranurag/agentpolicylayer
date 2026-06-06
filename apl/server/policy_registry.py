@@ -23,81 +23,50 @@ logger = get_logger("server")
 class PolicyRegistry:
 
     def __init__(self) -> None:
-        self._policies: dict[str, RegisteredPolicy] = (
-            {}
-        )
-        self._handlers_by_event: dict[
-            EventType, list[RegisteredPolicy]
-        ] = {}
+        self._policies: dict[str, RegisteredPolicy] = {}
+        self._handlers_by_event: dict[EventType, list[RegisteredPolicy]] = {}
 
-    def register(
-        self, policy: RegisteredPolicy
-    ) -> None:
+    def register(self, policy: RegisteredPolicy) -> None:
         self._policies[policy.name] = policy
 
         for event_type in policy.events:
-            if (
-                event_type
-                not in self._handlers_by_event
-            ):
-                self._handlers_by_event[event_type] = (
-                    []
-                )
-            self._handlers_by_event[event_type].append(
-                policy
-            )
+            if event_type not in self._handlers_by_event:
+                self._handlers_by_event[event_type] = []
+            self._handlers_by_event[event_type].append(policy)
 
         logger.info(
             f"Registered policy: {policy.name} for events: "
             f"{[e.value for e in policy.events]}"
         )
 
-    def get_policy_by_name(
-        self, name: str
-    ) -> RegisteredPolicy | None:
+    def get_policy_by_name(self, name: str) -> RegisteredPolicy | None:
         return self._policies.get(name)
 
     def get_handlers_for_event_type(
         self, event_type: EventType
     ) -> list[RegisteredPolicy]:
-        return self._handlers_by_event.get(
-            event_type, []
-        )
+        return self._handlers_by_event.get(event_type, [])
 
     def all_policies(self) -> list[RegisteredPolicy]:
         return list(self._policies.values())
 
-    async def evaluate_event(
-        self, event: PolicyEvent
-    ) -> list[Verdict]:
-        handlers = self.get_handlers_for_event_type(
-            event.type
-        )
+    async def evaluate_event(self, event: PolicyEvent) -> list[Verdict]:
+        handlers = self.get_handlers_for_event_type(event.type)
 
         if not handlers:
-            return [
-                Verdict.allow(
-                    reasoning="No policies registered for this event"
-                )
-            ]
+            return [Verdict.allow(reasoning="No policies registered for this event")]
 
         verdicts: list[Verdict] = []
         current_event = event
 
         for policy in handlers:
-            verdict = await invoke_policy_handler(
-                policy, current_event
-            )
+            verdict = await invoke_policy_handler(policy, current_event)
             verdicts.append(verdict)
 
             if verdict.decision == Decision.MODIFY:
-                for (
-                    modification
-                ) in verdict.modifications:
-                    current_event = (
-                        self._apply_modification(
-                            current_event, modification
-                        )
+                for modification in verdict.modifications:
+                    current_event = self._apply_modification(
+                        current_event, modification
                     )
 
         return verdicts
@@ -130,30 +99,22 @@ class PolicyRegistry:
 
         if target == "output":
             if payload.tool_result is not None:
-                new_payload_kwargs["tool_result"] = (
-                    value
-                )
+                new_payload_kwargs["tool_result"] = value
             elif payload.output_text is not None:
-                new_payload_kwargs["output_text"] = (
-                    value
-                )
+                new_payload_kwargs["output_text"] = value
             else:
-                new_payload_kwargs["output_text"] = (
-                    value
-                )
+                new_payload_kwargs["output_text"] = value
         elif target == "input":
             logger.warning(
-                f"Modification target 'input' is not supported during sequential evaluation; "
-                f"use instrumentation-level events for input modifications"
+                "Modification target 'input' is not supported during sequential evaluation; "
+                "use instrumentation-level events for input modifications"
             )
         elif target == "tool_args":
             new_payload_kwargs["tool_args"] = value
         elif target == "llm_prompt":
             new_payload_kwargs["llm_prompt"] = value
 
-        new_payload = EventPayload(
-            **new_payload_kwargs
-        )
+        new_payload = EventPayload(**new_payload_kwargs)
 
         return PolicyEvent(
             id=event.id,

@@ -29,22 +29,16 @@ class AnthropicProvider(BaseProvider):
         self.method_patcher.register_patch(
             Messages,
             "create",
-            self._create_instance_method_sync_wrapper(
-                patch_target_index=0
-            ),
+            self._create_instance_method_sync_wrapper(patch_target_index=0),
         )
         self.method_patcher.register_patch(
             AsyncMessages,
             "create",
-            self._create_instance_method_async_wrapper(
-                patch_target_index=1
-            ),
+            self._create_instance_method_async_wrapper(patch_target_index=1),
         )
         self.method_patcher.apply_all_patches()
 
-    def extract_text_from_response(
-        self, response: Any
-    ) -> str:
+    def extract_text_from_response(self, response: Any) -> str:
         try:
             for block in response.content:
                 if hasattr(block, "text"):

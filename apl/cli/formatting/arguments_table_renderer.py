@@ -11,11 +11,7 @@ class ArgumentsTableRenderer:
         self._console = console
 
     def render(self, params):
-        args = [
-            p
-            for p in params
-            if isinstance(p, click.Argument)
-        ]
+        args = [p for p in params if isinstance(p, click.Argument)]
         if not args:
             return
 
@@ -30,9 +26,7 @@ class ArgumentsTableRenderer:
         table.add_column("Description", style="white")
 
         for arg in args:
-            required_marker = (
-                "[red]*[/red]" if arg.required else ""
-            )
+            required_marker = "[red]*[/red]" if arg.required else ""
             help_text = getattr(arg, "help", "") or ""
             table.add_row(
                 f"{arg.name.upper()} {required_marker}",

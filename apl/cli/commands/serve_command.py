@@ -75,19 +75,11 @@ def serve(
         _banner.render("small")
         console.print()
 
-    log_level = (
-        "DEBUG"
-        if verbose
-        else "INFO" if not quiet else "WARNING"
-    )
-    logger = setup_logging(
-        level=log_level, rich_output=not stdio
-    )
+    log_level = "DEBUG" if verbose else "INFO" if not quiet else "WARNING"
+    logger = setup_logging(level=log_level, rich_output=not stdio)
 
     path_obj = Path(path)
-    if not _loader_registry.find_loader_for_path(
-        path_obj
-    ):
+    if not _loader_registry.find_loader_for_path(path_obj):
         _status.print(
             f"Unsupported file type: {path_obj.suffix}",
             "error",
@@ -95,35 +87,26 @@ def serve(
         sys.exit(1)
 
     if not quiet:
-        _status.print(
-            f"Loading: [cyan]{path}[/cyan]", "loading"
-        )
+        _status.print(f"Loading: [cyan]{path}[/cyan]", "loading")
 
     server = _loader_registry.load(path_obj, logger)
     if server is None:
-        _status.print(
-            "Failed to load policy server", "error"
-        )
+        _status.print("Failed to load policy server", "error")
         sys.exit(1)
 
     if not quiet:
         PolicyTreeRenderer(console).render(server)
 
     if http_port:
-        _serve_over_http(
-            server, host, http_port, logger, quiet
-        )
+        _serve_over_http(server, host, http_port, logger, quiet)
     else:
         _serve_over_stdio(server, quiet)
 
 
-def _serve_over_http(
-    server, host, port, logger, quiet
-):
+def _serve_over_http(server, host, port, logger, quiet):
     if not quiet:
         _status.print(
-            f"Starting HTTP server on"
-            f" [cyan]http://{host}:{port}[/cyan]",
+            f"Starting HTTP server on" f" [cyan]http://{host}:{port}[/cyan]",
             "security",
         )
         ServerPanelRenderer(console).render(host, port)
@@ -138,15 +121,9 @@ def _serve_over_http(
 
 def _serve_over_stdio(server, quiet):
     if not quiet:
-        _status.print(
-            "Starting stdio transport", "security"
-        )
+        _status.print("Starting stdio transport", "security")
         console.print()
-        console.print(
-            "  [dim]Waiting for events on stdin...[/dim]"
-        )
-        console.print(
-            "  [dim]Press Ctrl+C to stop[/dim]"
-        )
+        console.print("  [dim]Waiting for events on stdin...[/dim]")
+        console.print("  [dim]Press Ctrl+C to stop[/dim]")
         console.print()
     server.run(transport="stdio")

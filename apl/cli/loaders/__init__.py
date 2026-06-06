@@ -22,17 +22,13 @@ class PolicyLoaderRegistry:
             YamlPolicyLoader(),
         ]
 
-    def find_loader_for_path(
-        self, path: Path
-    ) -> Optional[BasePolicyLoader]:
+    def find_loader_for_path(self, path: Path) -> Optional[BasePolicyLoader]:
         for loader in self._loaders:
             if loader.can_load(path):
                 return loader
         return None
 
-    def load(
-        self, path: Path, logger
-    ) -> Optional[PolicyServer]:
+    def load(self, path: Path, logger) -> Optional[PolicyServer]:
         loader = self.find_loader_for_path(path)
         if loader is None:
             return None

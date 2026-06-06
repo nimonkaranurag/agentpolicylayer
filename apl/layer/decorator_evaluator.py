@@ -11,7 +11,6 @@ from typing import (
 from apl.types import (
     Decision,
     EventPayload,
-    Modification,
 )
 
 from .exceptions import PolicyDenied, PolicyEscalation
@@ -22,17 +21,13 @@ if TYPE_CHECKING:
 
 class PolicyDecoratorFactory:
 
-    def __init__(
-        self, policy_layer: PolicyLayer
-    ) -> None:
+    def __init__(self, policy_layer: PolicyLayer) -> None:
         self._policy_layer: PolicyLayer = policy_layer
 
     def create_event_decorator(
         self,
         event_type: str,
-        messages_from: (
-            Callable[[], list] | None
-        ) = None,
+        messages_from: Callable[[], list] | None = None,
     ) -> Callable:
 
         def decorator(
@@ -40,26 +35,16 @@ class PolicyDecoratorFactory:
         ) -> Callable[..., Coroutine]:
 
             @wraps(func)
-            async def wrapper(
-                *args: Any, **kwargs: Any
-            ) -> Any:
-                payload: EventPayload = (
-                    self._extract_payload_from_call_args(
-                        args, kwargs
-                    )
+            async def wrapper(*args: Any, **kwargs: Any) -> Any:
+                payload: EventPayload = self._extract_payload_from_call_args(
+                    args, kwargs
                 )
-                messages: list = (
-                    messages_from()
-                    if messages_from
-                    else []
-                )
+                messages: list = messages_from() if messages_from else []
 
-                verdict = (
-                    await self._policy_layer.evaluate(
-                        event_type=event_type,
-                        messages=messages,
-                        payload=payload,
-                    )
+                verdict = await self._policy_layer.evaluate(
+                    event_type=event_type,
+                    messages=messages,
+                    payload=payload,
                 )
 
                 self._enforce_verdict(verdict, kwargs)
@@ -77,13 +62,9 @@ class PolicyDecoratorFactory:
         payload: EventPayload = EventPayload()
 
         if "tool_name" in keyword_args:
-            payload.tool_name = keyword_args[
-                "tool_name"
-            ]
+            payload.tool_name = keyword_args["tool_name"]
         if "tool_args" in keyword_args:
-            payload.tool_args = keyword_args[
-                "tool_args"
-            ]
+            payload.tool_args = keyword_args["tool_args"]
         if len(positional_args) >= 1:
             payload.tool_name = positional_args[0]
         if len(positional_args) >= 2:
@@ -92,9 +73,7 @@ class PolicyDecoratorFactory:
         return payload
 
     @staticmethod
-    def _enforce_verdict(
-        verdict: Any, keyword_args: dict[str, Any]
-    ) -> None:
+    def _enforce_verdict(verdict: Any, keyword_args: dict[str, Any]) -> None:
         if verdict.decision == Decision.DENY:
             raise PolicyDenied(verdict)
 
@@ -105,12 +84,9 @@ class PolicyDecoratorFactory:
             for modification in verdict.modifications:
                 if (
                     modification.target == "tool_args"
-                    and modification.operation
-                    == "replace"
+                    and modification.operation == "replace"
                 ):
-                    keyword_args["tool_args"] = (
-                        modification.value
-                    )
+                    keyword_args["tool_args"] = modification.value
                 else:
                     raise NotImplementedError(
                         f"Unsupported modification: target={modification.target}, "

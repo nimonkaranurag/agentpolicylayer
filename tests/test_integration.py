@@ -30,9 +30,7 @@ from apl.types import (
 class TestEndToEndPolicyEvaluation:
 
     @pytest.mark.asyncio
-    async def test_full_server_evaluation_flow(
-        self, make_event
-    ):
+    async def test_full_server_evaluation_flow(self, make_event):
         server = PolicyServer("integration-test")
 
         @server.policy(
@@ -42,9 +40,7 @@ class TestEndToEndPolicyEvaluation:
         async def pii_filter(event):
             text = event.payload.output_text or ""
             if "SSN" in text or "password" in text:
-                return Verdict.deny(
-                    "PII detected in output"
-                )
+                return Verdict.deny("PII detected in output")
             return Verdict.allow()
 
         @server.policy(
@@ -64,69 +60,44 @@ class TestEndToEndPolicyEvaluation:
 
         safe_event = make_event(
             event_type=EventType.OUTPUT_PRE_SEND,
-            payload=EventPayload(
-                output_text="Hello, this is safe."
-            ),
+            payload=EventPayload(output_text="Hello, this is safe."),
         )
         verdicts = await server.evaluate(safe_event)
         assert len(verdicts) == 2
-        assert all(
-            v.decision == Decision.ALLOW
-            for v in verdicts
-        )
+        assert all(v.decision == Decision.ALLOW for v in verdicts)
 
         unsafe_event = make_event(
             event_type=EventType.OUTPUT_PRE_SEND,
-            payload=EventPayload(
-                output_text="Your SSN is 123-45-6789"
-            ),
+            payload=EventPayload(output_text="Your SSN is 123-45-6789"),
         )
         verdicts = await server.evaluate(unsafe_event)
-        deny_verdicts = [
-            v
-            for v in verdicts
-            if v.decision == Decision.DENY
-        ]
+        deny_verdicts = [v for v in verdicts if v.decision == Decision.DENY]
         assert len(deny_verdicts) == 1
         assert "PII" in deny_verdicts[0].reasoning
 
     @pytest.mark.asyncio
-    async def test_composition_after_evaluation(
-        self, make_event
-    ):
+    async def test_composition_after_evaluation(self, make_event):
         server = PolicyServer("composition-test")
 
-        @server.policy(
-            name="strict", events=["input.received"]
-        )
+        @server.policy(name="strict", events=["input.received"])
         async def strict(event):
             return Verdict.deny("always deny")
 
-        @server.policy(
-            name="lenient", events=["input.received"]
-        )
+        @server.policy(name="lenient", events=["input.received"])
         async def lenient(event):
-            return Verdict.allow(
-                reasoning="always allow"
-            )
+            return Verdict.allow(reasoning="always allow")
 
-        event = make_event(
-            event_type=EventType.INPUT_RECEIVED
-        )
+        event = make_event(event_type=EventType.INPUT_RECEIVED)
         verdicts = await server.evaluate(event)
 
         deny_composer = VerdictComposer(
-            CompositionConfig(
-                mode=CompositionMode.DENY_OVERRIDES
-            )
+            CompositionConfig(mode=CompositionMode.DENY_OVERRIDES)
         )
         result = deny_composer.compose(verdicts)
         assert result.decision == Decision.DENY
 
         allow_composer = VerdictComposer(
-            CompositionConfig(
-                mode=CompositionMode.ALLOW_OVERRIDES
-            )
+            CompositionConfig(mode=CompositionMode.ALLOW_OVERRIDES)
         )
         result = allow_composer.compose(verdicts)
         assert result.decision == Decision.ALLOW
@@ -167,9 +138,7 @@ class TestEndToEndSerialization:
         data = serializer.serialize(event)
         restored = serializer.deserialize(data)
 
-        assert (
-            restored.type == EventType.LLM_PRE_REQUEST
-        )
+        assert restored.type == EventType.LLM_PRE_REQUEST
         assert len(restored.messages) == 2
         assert restored.messages[0].role == "system"
         assert restored.payload.llm_model == "gpt-4"
@@ -187,16 +156,12 @@ class TestEndToEndSerialization:
                 operation="replace",
                 value="x",
             ),
-            Verdict.escalate(
-                type="human_confirm", prompt="check"
-            ),
+            Verdict.escalate(type="human_confirm", prompt="check"),
             Verdict.observe(trace={"key": "val"}),
         ]:
             data = serializer.serialize(verdict)
             restored = serializer.deserialize(data)
-            assert (
-                restored.decision == verdict.decision
-            )
+            assert restored.decision == verdict.decision
 
 
 class TestEndToEndDeclarativeRules:
@@ -210,11 +175,7 @@ class TestEndToEndDeclarativeRules:
 
         rules = [
             YAMLRule(
-                when={
-                    "payload.output_text": {
-                        "contains": "SECRET"
-                    }
-                },
+                when={"payload.output_text": {"contains": "SECRET"}},
                 then={
                     "decision": "deny",
                     "reasoning": "secret detected",
@@ -240,20 +201,12 @@ class TestEndToEndDeclarativeRules:
 
         event = builder.build_from_evaluation_args(
             event_type=EventType.OUTPUT_PRE_SEND,
-            payload=EventPayload(
-                output_text="This has SECRET data"
-            ),
-            metadata=SessionMetadata(
-                session_id="s1", user_region="EU"
-            ),
+            payload=EventPayload(output_text="This has SECRET data"),
+            metadata=SessionMetadata(session_id="s1", user_region="EU"),
         )
 
         for rule in rules:
-            result = (
-                evaluator.evaluate_rule_against_event(
-                    rule, event
-                )
-            )
+            result = evaluator.evaluate_rule_against_event(rule, event)
             if result is not None:
                 assert result.decision == Decision.DENY
                 break
@@ -263,31 +216,11 @@ class TestEndToEndDeclarativeRules:
 
         evaluator.register_condition(
             "between",
-            lambda val, bounds: bounds[0]
-            <= val
-            <= bounds[1],
+            lambda val, bounds: bounds[0] <= val <= bounds[1],
         )
 
-        assert (
-            evaluator.evaluate(5, {"between": [1, 10]})
-            is True
-        )
-        assert (
-            evaluator.evaluate(
-                15, {"between": [1, 10]}
-            )
-            is False
-        )
+        assert evaluator.evaluate(5, {"between": [1, 10]}) is True
+        assert evaluator.evaluate(15, {"between": [1, 10]}) is False
 
-        assert (
-            evaluator.evaluate(
-                5, {"all": [{"gt": 0}, {"lt": 10}]}
-            )
-            is True
-        )
-        assert (
-            evaluator.evaluate(
-                5, {"any": [{"lt": 3}, {"gt": 4}]}
-            )
-            is True
-        )
+        assert evaluator.evaluate(5, {"all": [{"gt": 0}, {"lt": 10}]}) is True
+        assert evaluator.evaluate(5, {"any": [{"lt": 3}, {"gt": 4}]}) is True

@@ -16,46 +16,31 @@ class StdioClientTransport(BaseClientTransport):
 
     def __init__(self, uri: str) -> None:
         self._raw_command: str = uri[len("stdio://") :]
-        self._process: (
-            asyncio.subprocess.Process | None
-        ) = None
+        self._process: asyncio.subprocess.Process | None = None
 
     async def connect(self) -> dict | None:
         args: list[str] = self._build_spawn_args()
         logger.info(f"Spawning policy server: {args}")
 
-        self._process = (
-            await asyncio.create_subprocess_exec(
-                *args,
-                stdin=subprocess.PIPE,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-            )
+        self._process = await asyncio.create_subprocess_exec(
+            *args,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
         )
 
-        first_line: bytes = (
-            await self._process.stdout.readline()
-        )
+        first_line: bytes = await self._process.stdout.readline()
         if not first_line:
             return None
 
-        message: dict[str, Any] = json.loads(
-            first_line.decode()
-        )
+        message: dict[str, Any] = json.loads(first_line.decode())
         if message.get("type") == "manifest":
             return message.get("manifest", {})
         return None
 
-    async def evaluate(
-        self, serialized_event: dict
-    ) -> list[dict]:
-        if (
-            self._process is None
-            or self._process.stdin is None
-        ):
-            raise ConnectionError(
-                "Policy server subprocess is not running"
-            )
+    async def evaluate(self, serialized_event: dict) -> list[dict]:
+        if self._process is None or self._process.stdin is None:
+            raise ConnectionError("Policy server subprocess is not running")
 
         wire_message: dict[str, Any] = {
             "type": "evaluate",
@@ -66,23 +51,15 @@ class StdioClientTransport(BaseClientTransport):
         self._process.stdin.write(line.encode())
         await self._process.stdin.drain()
 
-        response_line: bytes = (
-            await self._process.stdout.readline()
-        )
+        response_line: bytes = await self._process.stdout.readline()
         if not response_line:
-            raise ConnectionError(
-                "Policy server subprocess returned no response"
-            )
+            raise ConnectionError("Policy server subprocess returned no response")
 
-        response: dict[str, Any] = json.loads(
-            response_line.decode()
-        )
+        response: dict[str, Any] = json.loads(response_line.decode())
         if response.get("type") == "verdicts":
             return response.get("verdicts", [])
 
-        logger.warning(
-            f"Unexpected response type: {response.get('type')}"
-        )
+        logger.warning(f"Unexpected response type: {response.get('type')}")
         return []
 
     async def close(self) -> None:

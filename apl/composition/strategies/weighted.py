@@ -7,42 +7,24 @@ from .base_strategy import BaseCompositionStrategy
 
 class WeightedStrategy(BaseCompositionStrategy):
 
-    def compose(
-        self, verdicts: list[Verdict]
-    ) -> Verdict:
+    def compose(self, verdicts: list[Verdict]) -> Verdict:
         guard = self._guard_empty_verdicts(verdicts)
         if guard is not None:
             return guard
 
-        all_mods = self._collect_all_modifications(
-            verdicts
-        )
+        all_mods = self._collect_all_modifications(verdicts)
 
-        escalate = (
-            self._find_first_verdict_with_decision(
-                verdicts, Decision.ESCALATE
-            )
-        )
+        escalate = self._find_first_verdict_with_decision(verdicts, Decision.ESCALATE)
         if escalate is not None:
             return escalate
 
         allow_score = sum(
-            v.confidence
-            for v in verdicts
-            if v.decision == Decision.ALLOW
+            v.confidence for v in verdicts if v.decision == Decision.ALLOW
         )
-        deny_score = sum(
-            v.confidence
-            for v in verdicts
-            if v.decision == Decision.DENY
-        )
+        deny_score = sum(v.confidence for v in verdicts if v.decision == Decision.DENY)
 
         if deny_score > allow_score:
-            deny = (
-                self._find_first_verdict_with_decision(
-                    verdicts, Decision.DENY
-                )
-            )
+            deny = self._find_first_verdict_with_decision(verdicts, Decision.DENY)
             if deny is not None:
                 return deny
             return Verdict.deny(

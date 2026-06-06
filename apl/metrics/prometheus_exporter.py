@@ -34,9 +34,7 @@ def export_metrics_to_prometheus(
             event_type,
             count,
         ) in metrics.requests_by_event_type.items():
-            lines.append(
-                f'apl_requests_by_event_total{{event="{event_type}"}} {count}'
-            )
+            lines.append(f'apl_requests_by_event_total{{event="{event_type}"}} {count}')
 
     if metrics.verdicts_by_decision:
         lines.extend(
