@@ -2,7 +2,6 @@ from __future__ import annotations
 
 
 class TestCoreImports:
-
     def test_top_level_package(self):
         import apl
 
@@ -13,7 +12,6 @@ class TestCoreImports:
 
 
 class TestLayerImports:
-
     def test_layer_package(self):
         pass
 
@@ -25,7 +23,6 @@ class TestLayerImports:
 
 
 class TestDeclarativeEngineImports:
-
     def test_declarative_engine_package(self):
         pass
 
@@ -34,7 +31,6 @@ class TestDeclarativeEngineImports:
 
 
 class TestServerImports:
-
     def test_server_package(self):
         pass
 
@@ -43,7 +39,6 @@ class TestServerImports:
 
 
 class TestCompositionImports:
-
     def test_composition_package(self):
         pass
 
@@ -52,7 +47,6 @@ class TestCompositionImports:
 
 
 class TestSerializationImports:
-
     def test_serialization_package(self):
         pass
 
@@ -61,7 +55,6 @@ class TestSerializationImports:
 
 
 class TestInstrumentationImports:
-
     def test_instrumentation_package(self):
         pass
 
@@ -82,7 +75,6 @@ class TestInstrumentationImports:
 
 
 class TestAdapterImports:
-
     def test_adapters_package(self):
         pass
 
@@ -91,7 +83,6 @@ class TestAdapterImports:
 
 
 class TestCLIImports:
-
     def test_cli_package(self):
         pass
 
@@ -100,7 +91,6 @@ class TestCLIImports:
 
 
 class TestTransportImports:
-
     def test_transports_package(self):
         pass
 
@@ -112,6 +102,5 @@ class TestTransportImports:
 
 
 class TestMetricsImports:
-
     def test_metrics(self):
         pass

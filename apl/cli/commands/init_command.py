@@ -36,14 +36,14 @@ def init(name: str, template: str):
     from ...templates import create_policy_project
 
     _status.print(
-        f"Creating policy project:" f" [cyan]{name}[/cyan]",
+        f"Creating policy project: [cyan]{name}[/cyan]",
         "loading",
     )
 
     try:
         project_path = create_policy_project(name, template)
         _status.print(
-            f"Created project at:" f" [cyan]{project_path}[/cyan]",
+            f"Created project at: [cyan]{project_path}[/cyan]",
             "success",
         )
 

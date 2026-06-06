@@ -7,14 +7,12 @@ if TYPE_CHECKING:
 
 
 class PolicyDenied(Exception):
-
     def __init__(self, verdict: Verdict) -> None:
         self.verdict: Verdict = verdict
         super().__init__(verdict.reasoning or "Policy denied")
 
 
 class PolicyEscalation(Exception):
-
     def __init__(self, verdict: Verdict) -> None:
         self.verdict: Verdict = verdict
         escalation_prompt: str = (

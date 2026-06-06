@@ -20,7 +20,6 @@ if TYPE_CHECKING:
 
 
 class PolicyDecoratorFactory:
-
     def __init__(self, policy_layer: PolicyLayer) -> None:
         self._policy_layer: PolicyLayer = policy_layer
 

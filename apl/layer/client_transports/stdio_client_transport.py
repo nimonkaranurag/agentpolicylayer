@@ -13,7 +13,6 @@ logger: logging.Logger = logging.getLogger("apl")
 
 
 class StdioClientTransport(BaseClientTransport):
-
     def __init__(self, uri: str) -> None:
         self._raw_command: str = uri[len("stdio://") :]
         self._process: asyncio.subprocess.Process | None = None

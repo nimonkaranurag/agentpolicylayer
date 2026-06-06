@@ -7,7 +7,6 @@ from apl.types import Message
 
 
 class BaseMessageAdapter(ABC):
-
     @abstractmethod
     def to_apl_messages(self, raw_messages: Any) -> list[Message]: ...
 

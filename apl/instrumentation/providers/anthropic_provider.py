@@ -6,7 +6,6 @@ from .base_provider import BaseProvider
 
 
 class AnthropicProvider(BaseProvider):
-
     @property
     def provider_name(self) -> str:
         return "anthropic"

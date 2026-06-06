@@ -17,7 +17,6 @@ from .registered_policy import PolicyHandler
 
 
 class PolicyServer:
-
     def __init__(
         self,
         name: str,

@@ -14,7 +14,7 @@ class PolicyTreeRenderer:
         self._console.print()
 
         tree = Tree(
-            f"[bold cyan]🛡️  {server.name}[/bold cyan]" f" [dim]v{server.version}[/dim]"
+            f"[bold cyan]🛡️  {server.name}[/bold cyan] [dim]v{server.version}[/dim]"
         )
 
         for policy in server.registry.all_policies():

@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-import logging
 from typing import Any
 
-from .base_client_transport import BaseClientTransport
+from apl.types import PolicyUnavailableError
 
-logger: logging.Logger = logging.getLogger("apl")
+from .base_client_transport import BaseClientTransport
 
 try:
     import aiohttp
@@ -16,7 +15,6 @@ except ImportError:
 
 
 class HttpClientTransport(BaseClientTransport):
-
     def __init__(self, base_url: str) -> None:
         self._base_url: str = base_url.rstrip("/")
         self._session: aiohttp.ClientSession | None = None
@@ -45,17 +43,33 @@ class HttpClientTransport(BaseClientTransport):
 
     async def evaluate(self, serialized_event: dict) -> list[dict]:
         if self._session is None:
-            return []
+            raise PolicyUnavailableError(
+                f"HTTP transport for {self._base_url} is not connected"
+            )
 
         evaluate_url: str = f"{self._base_url}/evaluate"
 
-        async with self._session.post(evaluate_url, json=serialized_event) as response:
-            if response.status != 200:
-                logger.error(f"Policy evaluation failed: HTTP {response.status}")
-                return []
+        try:
+            async with self._session.post(
+                evaluate_url, json=serialized_event
+            ) as response:
+                if response.status != 200:
+                    raise PolicyUnavailableError(
+                        f"Policy server {self._base_url} returned HTTP "
+                        f"{response.status}"
+                    )
 
-            data: dict[str, Any] = await response.json()
-            return data.get("verdicts", [])
+                data: dict[str, Any] = await response.json()
+                return data.get("verdicts", [])
+        except PolicyUnavailableError:
+            raise
+        except Exception as exc:
+            # Any failure to obtain verdicts (network error, malformed body, …)
+            # is an availability failure; surface it so the caller can fail
+            # closed instead of silently allowing the action.
+            raise PolicyUnavailableError(
+                f"HTTP transport error talking to {self._base_url}: {exc}"
+            ) from exc
 
     async def close(self) -> None:
         if self._session is not None:

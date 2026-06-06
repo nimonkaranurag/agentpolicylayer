@@ -6,7 +6,6 @@ from .base_executor import BaseLifecycleExecutor
 
 
 class AsyncLifecycleExecutor(BaseLifecycleExecutor):
-
     async def execute_sequence(
         self,
         sequence: EventSequence,

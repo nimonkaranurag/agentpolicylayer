@@ -7,6 +7,7 @@ from apl.types import (
     Decision,
     EventPayload,
     EventType,
+    FailMode,
     FunctionCall,
     Message,
     PolicyDefinition,
@@ -18,7 +19,6 @@ from apl.types import (
 
 
 class TestEventType:
-
     def test_all_lifecycle_events_have_dotted_values(
         self,
     ):
@@ -34,7 +34,6 @@ class TestEventType:
 
 
 class TestDecision:
-
     def test_all_decisions_are_lowercase_strings(self):
         for member in Decision:
             assert member.value == member.value.lower()
@@ -52,7 +51,6 @@ class TestDecision:
 
 
 class TestMessage:
-
     def test_minimal_message(self):
         msg = Message(role="user", content="hi")
         assert msg.role == "user"
@@ -69,7 +67,6 @@ class TestMessage:
 
 
 class TestEventPayload:
-
     def test_empty_payload(self):
         p = EventPayload()
         assert p.tool_name is None
@@ -83,7 +80,6 @@ class TestEventPayload:
 
 
 class TestSessionMetadata:
-
     def test_defaults(self):
         m = SessionMetadata(session_id="s1")
         assert m.user_id is None
@@ -93,7 +89,6 @@ class TestSessionMetadata:
 
 
 class TestVerdictFactories:
-
     def test_allow_default(self):
         v = Verdict.allow()
         assert v.decision == Decision.ALLOW
@@ -158,9 +153,37 @@ class TestVerdictFactories:
         v = Verdict.allow(confidence=0.7)
         assert v.confidence == 0.7
 
+    def test_unavailable_fail_closed_denies(self):
+        v = Verdict.unavailable(FailMode.CLOSED, "server down")
+        assert v.decision == Decision.DENY
+        assert v.reasoning == "server down"
+        assert v.confidence == 1.0
+
+    def test_unavailable_fail_open_allows(self):
+        v = Verdict.unavailable(FailMode.OPEN, "server down")
+        assert v.decision == Decision.ALLOW
+
+    def test_unavailable_carries_metadata(self):
+        v = Verdict.unavailable(
+            FailMode.CLOSED,
+            "boom",
+            policy_name="p1",
+            evaluation_ms=12.5,
+        )
+        assert v.policy_name == "p1"
+        assert v.evaluation_ms == 12.5
+
+
+class TestFailMode:
+    def test_two_modes_exist(self):
+        assert set(FailMode) == {FailMode.CLOSED, FailMode.OPEN}
+
+    def test_default_is_closed(self):
+        # The guardrails-safe default must be CLOSED everywhere it is consumed.
+        assert CompositionConfig().fail_mode is FailMode.CLOSED
+
 
 class TestPolicyDefinition:
-
     def test_definition_defaults(self):
         d = PolicyDefinition(
             name="test",
@@ -183,7 +206,6 @@ class TestPolicyDefinition:
 
 
 class TestPolicyManifest:
-
     def test_manifest_defaults(self):
         m = PolicyManifest(
             server_name="test-server",
@@ -208,12 +230,13 @@ class TestPolicyManifest:
 
 
 class TestComposition:
-
     def test_composition_config_defaults(self):
         c = CompositionConfig()
         assert c.mode == CompositionMode.DENY_OVERRIDES
         assert c.parallel is True
-        assert c.on_timeout == Decision.ALLOW
+        # Defaults must be fail-closed for a guardrails product.
+        assert c.fail_mode is FailMode.CLOSED
+        assert c.on_timeout == Decision.DENY
 
     def test_all_composition_modes(self):
         assert len(CompositionMode) == 5

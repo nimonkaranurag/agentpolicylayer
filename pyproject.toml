@@ -47,8 +47,7 @@ dependencies = [
 dev = [
     "pytest>=7.0",
     "pytest-asyncio>=0.21",
-    "black>=23.0",
-    "isort>=5.12",
+    "pytest-cov>=4.0",
     "ruff>=0.6",
     "mypy>=1.10",
     "docformatter>=1.7",
@@ -76,29 +75,26 @@ packages = ["apl"]
 asyncio_mode = "auto"
 testpaths = ["tests"]
 
-[tool.black]
-line-length = 88
-target-version = ["py310", "py311", "py312"]
-
-[tool.isort]
-profile = "black"
-line_length = 88
-
 [tool.docformatter]
 recursive = true
 pre-summary-newline = true
 close-quotes-on-newline = true
 wrap-summaries = 88
 wrap-descriptions = 88
+# templates.py holds triple-quoted *template strings* (not docstrings) that
+# docformatter would rewrite into invalid Python; keep it out of scope.
+exclude = ["templates.py"]
 
 [tool.ruff]
 line-length = 88
 target-version = "py310"
 
+# `ruff format` replaces black; `ruff check` (with the `I` rule) replaces isort.
 [tool.ruff.lint]
 # Conservative, green-on-current-code set. Bugbear (B) and pyupgrade (UP)
+# are intentionally not enabled yet (turned on by their owning WPs).
 select = ["E", "F", "W", "I"]
-ignore = ["E501"]  # line length is owned by black
+ignore = ["E501"]  # line length is owned by the formatter (ruff format)
 
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401"]                                # intentional re-exports

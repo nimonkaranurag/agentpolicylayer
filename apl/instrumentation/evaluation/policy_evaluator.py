@@ -2,7 +2,7 @@ from typing import TYPE_CHECKING
 
 from apl.layer import PolicyDenied, PolicyEscalation
 from apl.logging import get_logger
-from apl.types import Verdict
+from apl.types import FailMode, Verdict
 
 from ..events.base_event import BaseEvent
 from ..lifecycle.context import LifecycleContext
@@ -38,9 +38,20 @@ class PolicyEvaluator:
                 f"Policy evaluation failed for {event.event_type.value}: {exc}",
                 exc_info=True,
             )
-            return Verdict.allow(reasoning="Policy error (fail-open)")
+            return Verdict.unavailable(
+                self._fail_mode,
+                reasoning=f"Policy evaluation failed: {exc}",
+            )
         finally:
             self.state.mark_policy_evaluation_finished()
+
+    @property
+    def _fail_mode(self) -> FailMode:
+        # Honour the fail mode configured on the policy layer (set via
+        # auto_instrument / CompositionConfig); default to fail-closed if it is
+        # not available. WP-8 could expose this as a public PolicyLayer property.
+        composition = getattr(self.state.policy_layer, "_composition", None)
+        return getattr(composition, "fail_mode", FailMode.CLOSED)
 
     def evaluate_event_sync(
         self,

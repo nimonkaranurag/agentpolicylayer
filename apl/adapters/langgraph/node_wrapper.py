@@ -10,7 +10,6 @@ if TYPE_CHECKING:
 
 
 class NodeWrapper:
-
     def __init__(
         self,
         policy_layer: "PolicyLayer",

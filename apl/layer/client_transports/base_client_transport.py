@@ -10,7 +10,6 @@ if TYPE_CHECKING:
 
 
 class BaseClientTransport(abc.ABC):
-
     @abc.abstractmethod
     async def connect(
         self,

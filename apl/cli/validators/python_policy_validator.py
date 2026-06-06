@@ -39,5 +39,5 @@ class PythonPolicyValidator(BasePolicyValidator):
         if server is None:
             return ["No PolicyServer instance found"]
         if not server.registry.all_policies():
-            return ["PolicyServer has no" " registered policies"]
+            return ["PolicyServer has no registered policies"]
         return []

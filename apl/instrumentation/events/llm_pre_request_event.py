@@ -11,7 +11,6 @@ if TYPE_CHECKING:
 
 
 class LLMPreRequestEvent(BaseEvent):
-
     @property
     def event_type(self) -> EventType:
         return EventType.LLM_PRE_REQUEST

@@ -30,7 +30,6 @@ from apl.types import (
 
 
 class TestConditionEvaluator:
-
     def setup_method(self):
         self.evaluator = ConditionEvaluator()
 
@@ -110,7 +109,6 @@ class TestConditionEvaluator:
 
 
 class TestObjectTraversal:
-
     def test_dict_traversal(self):
         obj = {"a": {"b": {"c": 42}}}
         assert get_nested_value_by_dot_path(obj, "a.b.c") == 42
@@ -143,7 +141,6 @@ class TestObjectTraversal:
 
 
 class TestTemplateRenderer:
-
     def setup_method(self):
         self.renderer = TemplateRenderer()
 
@@ -177,7 +174,6 @@ class TestTemplateRenderer:
 
 
 class TestRuleEvaluator:
-
     def setup_method(self):
         self.evaluator = RuleEvaluator()
 
@@ -283,7 +279,6 @@ class TestRuleEvaluator:
 
 
 class TestYAMLSchema:
-
     def test_yaml_rule_dataclass(self):
         rule = YAMLRule(when={"x": 1}, then={"decision": "allow"})
         assert rule.when == {"x": 1}

@@ -8,7 +8,6 @@ from apl.types import Message, SessionMetadata
 
 
 class LangGraphStateExtractor:
-
     def __init__(self):
         self._message_adapter = LangChainMessageAdapter()
 

@@ -9,7 +9,6 @@ from apl.types import (
 
 
 class VerdictSerializer:
-
     def serialize(self, verdict: Verdict) -> dict[str, Any]:
         result = {
             "decision": verdict.decision.value,

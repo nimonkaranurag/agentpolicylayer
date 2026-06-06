@@ -6,7 +6,6 @@ from .base_event import BaseEvent
 
 
 class SessionStartEvent(BaseEvent):
-
     @property
     def event_type(self) -> EventType:
         return EventType.SESSION_START

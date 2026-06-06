@@ -6,7 +6,6 @@ from .base_provider import BaseProvider
 
 
 class LangChainProvider(BaseProvider):
-
     @property
     def provider_name(self) -> str:
         return "langchain"

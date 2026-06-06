@@ -7,7 +7,6 @@ from .base_provider import BaseProvider
 
 
 class OpenAIProvider(BaseProvider):
-
     @property
     def provider_name(self) -> str:
         return "openai"

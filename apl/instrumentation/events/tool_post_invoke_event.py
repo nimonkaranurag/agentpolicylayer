@@ -11,7 +11,6 @@ if TYPE_CHECKING:
 
 
 class ToolPostInvokeEvent(BaseEvent):
-
     @property
     def event_type(self) -> EventType:
         return EventType.TOOL_POST_INVOKE

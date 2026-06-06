@@ -6,7 +6,6 @@ from .base_adapter import BaseMessageAdapter
 
 
 class ChatCompletionsMessageAdapter(BaseMessageAdapter):
-
     def to_apl_messages(self, raw_messages: Any) -> List[Message]:
         if not isinstance(raw_messages, list):
             return []

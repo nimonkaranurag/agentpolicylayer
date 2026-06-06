@@ -13,7 +13,6 @@ from apl.types import (
 
 
 class PolicyEventBuilder:
-
     def build_from_evaluation_args(
         self,
         event_type: EventType | str,

@@ -26,7 +26,6 @@ DEFAULT_CHECKPOINTS = [
 
 
 class APLGraphWrapper:
-
     def __init__(self, policy_layer: PolicyLayer | None = None):
         self._layer = policy_layer or PolicyLayer()
         self._checkpoints: list[PolicyCheckpoint] = []

@@ -9,7 +9,6 @@ from apl.types import Decision, EventType
 
 
 class YamlPolicyValidator:
-
     def __init__(self) -> None:
         self._valid_event_type_values: frozenset[str] = frozenset(
             event_type.value for event_type in EventType
@@ -135,6 +134,5 @@ class YamlPolicyValidator:
             decision_value: str | None = rule["then"].get("decision")
             if decision_value and decision_value not in self._valid_decision_values:
                 errors.append(
-                    f"{rule_prefix}.then.decision: "
-                    f"Invalid decision '{decision_value}'"
+                    f"{rule_prefix}.then.decision: Invalid decision '{decision_value}'"
                 )

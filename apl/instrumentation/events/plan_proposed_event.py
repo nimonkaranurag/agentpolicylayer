@@ -11,7 +11,6 @@ if TYPE_CHECKING:
 
 
 class PlanProposedEvent(BaseEvent):
-
     @property
     def event_type(self) -> EventType:
         return EventType.PLAN_PROPOSED

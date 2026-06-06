@@ -28,7 +28,6 @@ from apl.types import (
 
 
 class TestEndToEndPolicyEvaluation:
-
     @pytest.mark.asyncio
     async def test_full_server_evaluation_flow(self, make_event):
         server = PolicyServer("integration-test")
@@ -104,7 +103,6 @@ class TestEndToEndPolicyEvaluation:
 
 
 class TestEndToEndSerialization:
-
     def test_event_serialize_deserialize_with_full_data(
         self,
     ):
@@ -165,7 +163,6 @@ class TestEndToEndSerialization:
 
 
 class TestEndToEndDeclarativeRules:
-
     def test_multi_rule_first_match_wins(self):
         evaluator = RuleEvaluator()
         builder = __import__(

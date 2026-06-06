@@ -19,7 +19,6 @@ logger = get_logger("adapter.langgraph")
 
 
 class CheckpointEvaluator:
-
     def __init__(self, policy_layer: "PolicyLayer"):
         self._policy_layer = policy_layer
         self._state_extractor = LangGraphStateExtractor()

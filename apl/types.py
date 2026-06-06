@@ -10,10 +10,46 @@ Design Philosophy:
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 from typing import Any, Literal, Optional
+
+logger = logging.getLogger("apl")
+
+
+# =============================================================================
+# FAILURE HANDLING - what to do when a policy cannot be evaluated
+# =============================================================================
+
+
+class PolicyUnavailableError(Exception):
+    """
+    Raised when a policy cannot be evaluated, so no verdict can be obtained.
+
+    Transports raise this on connection failure, timeout, or a non-success response.
+    Callers translate it into the configured :class:`FailMode` instead of silently
+    treating the failure as an allow.
+    """
+
+
+class FailMode(str, Enum):
+    """
+    What to do when a policy is unavailable.
+
+    A policy is "unavailable" when it times out, raises, returns something that
+    is not a :class:`Verdict`, or its server cannot be reached. Because APL is a
+    guardrails layer, the default must be safe:
+
+    - ``CLOSED`` (default): an unavailable policy DENIES the action.
+    - ``OPEN``: an unavailable policy ALLOWS the action. This disables
+      enforcement on failure and must be opted into explicitly.
+    """
+
+    CLOSED = "closed"
+    OPEN = "open"
+
 
 # =============================================================================
 # EVENT TYPES - Standardized moments in the agent lifecycle
@@ -323,6 +359,32 @@ class Verdict:
             trace=trace,
         )
 
+    @classmethod
+    def unavailable(
+        cls,
+        fail_mode: FailMode,
+        reasoning: str,
+        *,
+        policy_name: Optional[str] = None,
+        evaluation_ms: Optional[float] = None,
+    ) -> Verdict:
+        """
+        Build the verdict to use when a policy could not be evaluated.
+
+        For a guardrails product the safe default is to treat an unavailable policy as a
+        denial (``FailMode.CLOSED``); ``FailMode.OPEN`` — which must be opted into
+        explicitly — downgrades it to an allow. Either way the reasoning records that
+        this was an availability failure rather than a deliberate policy decision.
+        """
+        decision = Decision.ALLOW if fail_mode is FailMode.OPEN else Decision.DENY
+        return cls(
+            decision=decision,
+            confidence=1.0,
+            reasoning=reasoning,
+            policy_name=policy_name,
+            evaluation_ms=evaluation_ms,
+        )
+
 
 # =============================================================================
 # CONTEXT CONTRACTS - What policies declare they need
@@ -417,10 +479,26 @@ class CompositionConfig:
     # Execution settings
     parallel: bool = True  # Evaluate policies in parallel
     timeout_ms: int = 500  # Total timeout for all policies
-    on_timeout: Decision = Decision.ALLOW  # Fail-open or fail-closed
+
+    # What happens when a policy is unavailable (error/timeout/unreachable).
+    # CLOSED (default) denies; OPEN allows. This is the single source of truth
+    # for fail behaviour and is consumed by the client and instrumentation paths.
+    fail_mode: FailMode = FailMode.CLOSED
+
+    # Decision applied when the layer-level timeout fires. Defaults to deny so
+    # the default is fail-closed; the layer timeout itself is wired in WP-2.
+    on_timeout: Decision = Decision.DENY
 
     # Priority ordering (policy names, first = highest priority)
     priority: list[str] = field(default_factory=list)
 
     # For weighted mode
     weights: dict[str, float] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        if self.fail_mode is FailMode.OPEN:
+            logger.warning(
+                "APL is configured FAIL-OPEN: policy errors, timeouts, and "
+                "unreachable servers will ALLOW the action instead of denying "
+                "it. Enforcement is disabled whenever a policy is unavailable."
+            )

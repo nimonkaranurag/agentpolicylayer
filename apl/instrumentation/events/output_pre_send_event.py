@@ -11,7 +11,6 @@ if TYPE_CHECKING:
 
 
 class OutputPreSendEvent(BaseEvent):
-
     @property
     def event_type(self) -> EventType:
         return EventType.OUTPUT_PRE_SEND

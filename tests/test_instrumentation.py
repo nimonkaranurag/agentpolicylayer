@@ -1,5 +1,10 @@
 from __future__ import annotations
 
+import asyncio
+
+from apl.instrumentation.evaluation.policy_evaluator import (
+    PolicyEvaluator,
+)
 from apl.instrumentation.events import (
     EVENT_REGISTRY,
     get_event,
@@ -52,16 +57,24 @@ from apl.instrumentation.execution import (
     StreamingLifecycleExecutor,
     SyncLifecycleExecutor,
 )
+from apl.instrumentation.lifecycle.context import (
+    LifecycleContext,
+)
+from apl.instrumentation.state import (
+    InstrumentationState,
+)
+from apl.layer import PolicyLayer
 from apl.types import (
+    CompositionConfig,
     Decision,
     EventPayload,
     EventType,
+    FailMode,
     Verdict,
 )
 
 
 class TestEventRegistry:
-
     def test_all_thirteen_events_registered(self):
         assert len(EVENT_REGISTRY) == 13
 
@@ -92,7 +105,6 @@ class TestEventRegistry:
 
 
 class TestEventTypes:
-
     def test_session_start_event_type(self):
         assert SessionStartEvent().event_type == EventType.SESSION_START
 
@@ -134,7 +146,6 @@ class TestEventTypes:
 
 
 class TestDefaultBuildPayload:
-
     def test_session_start_returns_empty_payload(self):
         ctx = type("ctx", (), {"proposed_plan": None})()
         payload = SessionStartEvent().build_payload(ctx)
@@ -148,7 +159,6 @@ class TestDefaultBuildPayload:
 
 
 class TestApplyVerdictModifications:
-
     def test_non_modify_verdict_is_noop(self):
         event = SessionStartEvent()
         verdict = Verdict.allow()
@@ -163,7 +173,6 @@ class TestApplyVerdictModifications:
 
 
 class TestExecutorInheritance:
-
     def test_sync_executor_inherits_evaluator(self):
         assert issubclass(
             SyncLifecycleExecutor,
@@ -183,3 +192,37 @@ class TestExecutorInheritance:
             StreamingLifecycleExecutor,
             BaseLifecycleExecutor,
         )
+
+
+class _BoomEvent(BaseEvent):
+    @property
+    def event_type(self) -> EventType:
+        return EventType.OUTPUT_PRE_SEND
+
+
+def _evaluator_with_failing_layer(fail_mode: FailMode) -> PolicyEvaluator:
+    layer = PolicyLayer(composition=CompositionConfig(fail_mode=fail_mode))
+
+    async def _raise(*args, **kwargs):
+        raise RuntimeError("evaluate blew up")
+
+    # Force the evaluator's failure path without standing up a server.
+    layer.evaluate = _raise
+    state = InstrumentationState(policy_layer=layer)
+    return PolicyEvaluator(state)
+
+
+class TestEvaluatorFailClosed:
+    def test_evaluation_error_denies_by_default(self):
+        evaluator = _evaluator_with_failing_layer(FailMode.CLOSED)
+        verdict = asyncio.run(
+            evaluator.evaluate_event_async(_BoomEvent(), LifecycleContext())
+        )
+        assert verdict.decision == Decision.DENY
+
+    def test_evaluation_error_allows_when_fail_open(self):
+        evaluator = _evaluator_with_failing_layer(FailMode.OPEN)
+        verdict = asyncio.run(
+            evaluator.evaluate_event_async(_BoomEvent(), LifecycleContext())
+        )
+        assert verdict.decision == Decision.ALLOW
