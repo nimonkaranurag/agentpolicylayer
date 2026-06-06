@@ -11,7 +11,6 @@ if TYPE_CHECKING:
 
 
 class AgentPreHandoffEvent(BaseEvent):
-
     @property
     def event_type(self) -> EventType:
         return EventType.AGENT_PRE_HANDOFF

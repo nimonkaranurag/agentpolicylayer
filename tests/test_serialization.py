@@ -13,7 +13,6 @@ from apl.types import (
 
 
 class TestVerdictSerializer:
-
     def setup_method(self):
         self.serializer = VerdictSerializer()
 
@@ -103,7 +102,6 @@ class TestVerdictSerializer:
 
 
 class TestEventSerializer:
-
     def setup_method(self):
         self.serializer = EventSerializer()
 

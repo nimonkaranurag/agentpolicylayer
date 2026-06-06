@@ -15,7 +15,6 @@ except ImportError:
 
 
 class HttpClientTransport(BaseClientTransport):
-
     def __init__(self, base_url: str) -> None:
         self._base_url: str = base_url.rstrip("/")
         self._session: aiohttp.ClientSession | None = None

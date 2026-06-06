@@ -106,7 +106,7 @@ def serve(
 def _serve_over_http(server, host, port, logger, quiet):
     if not quiet:
         _status.print(
-            f"Starting HTTP server on" f" [cyan]http://{host}:{port}[/cyan]",
+            f"Starting HTTP server on [cyan]http://{host}:{port}[/cyan]",
             "security",
         )
         ServerPanelRenderer(console).render(host, port)

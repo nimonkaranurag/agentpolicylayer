@@ -75,7 +75,6 @@ from apl.types import (
 
 
 class TestEventRegistry:
-
     def test_all_thirteen_events_registered(self):
         assert len(EVENT_REGISTRY) == 13
 
@@ -106,7 +105,6 @@ class TestEventRegistry:
 
 
 class TestEventTypes:
-
     def test_session_start_event_type(self):
         assert SessionStartEvent().event_type == EventType.SESSION_START
 
@@ -148,7 +146,6 @@ class TestEventTypes:
 
 
 class TestDefaultBuildPayload:
-
     def test_session_start_returns_empty_payload(self):
         ctx = type("ctx", (), {"proposed_plan": None})()
         payload = SessionStartEvent().build_payload(ctx)
@@ -162,7 +159,6 @@ class TestDefaultBuildPayload:
 
 
 class TestApplyVerdictModifications:
-
     def test_non_modify_verdict_is_noop(self):
         event = SessionStartEvent()
         verdict = Verdict.allow()
@@ -177,7 +173,6 @@ class TestApplyVerdictModifications:
 
 
 class TestExecutorInheritance:
-
     def test_sync_executor_inherits_evaluator(self):
         assert issubclass(
             SyncLifecycleExecutor,
@@ -218,7 +213,6 @@ def _evaluator_with_failing_layer(fail_mode: FailMode) -> PolicyEvaluator:
 
 
 class TestEvaluatorFailClosed:
-
     def test_evaluation_error_denies_by_default(self):
         evaluator = _evaluator_with_failing_layer(FailMode.CLOSED)
         verdict = asyncio.run(

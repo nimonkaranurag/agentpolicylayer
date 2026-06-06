@@ -20,7 +20,6 @@ if TYPE_CHECKING:
 
 
 class BaseProvider(ABC):
-
     def __init__(self, state: InstrumentationState) -> None:
         self.state: InstrumentationState = state
         self.method_patcher: MethodPatcher = MethodPatcher()

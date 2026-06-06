@@ -6,7 +6,6 @@ from .base_strategy import BaseCompositionStrategy
 
 
 class DenyOverridesStrategy(BaseCompositionStrategy):
-
     def __init__(
         self,
         allow_reasoning: str = "All policies allowed",

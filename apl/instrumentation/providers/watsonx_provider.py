@@ -10,7 +10,6 @@ logger = get_logger("instrumentation.watsonx")
 
 
 class WatsonXProvider(BaseProvider):
-
     @property
     def provider_name(self) -> str:
         return "watsonx"

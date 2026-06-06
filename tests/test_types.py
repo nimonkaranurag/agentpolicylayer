@@ -19,7 +19,6 @@ from apl.types import (
 
 
 class TestEventType:
-
     def test_all_lifecycle_events_have_dotted_values(
         self,
     ):
@@ -35,7 +34,6 @@ class TestEventType:
 
 
 class TestDecision:
-
     def test_all_decisions_are_lowercase_strings(self):
         for member in Decision:
             assert member.value == member.value.lower()
@@ -53,7 +51,6 @@ class TestDecision:
 
 
 class TestMessage:
-
     def test_minimal_message(self):
         msg = Message(role="user", content="hi")
         assert msg.role == "user"
@@ -70,7 +67,6 @@ class TestMessage:
 
 
 class TestEventPayload:
-
     def test_empty_payload(self):
         p = EventPayload()
         assert p.tool_name is None
@@ -84,7 +80,6 @@ class TestEventPayload:
 
 
 class TestSessionMetadata:
-
     def test_defaults(self):
         m = SessionMetadata(session_id="s1")
         assert m.user_id is None
@@ -94,7 +89,6 @@ class TestSessionMetadata:
 
 
 class TestVerdictFactories:
-
     def test_allow_default(self):
         v = Verdict.allow()
         assert v.decision == Decision.ALLOW
@@ -181,7 +175,6 @@ class TestVerdictFactories:
 
 
 class TestFailMode:
-
     def test_two_modes_exist(self):
         assert set(FailMode) == {FailMode.CLOSED, FailMode.OPEN}
 
@@ -191,7 +184,6 @@ class TestFailMode:
 
 
 class TestPolicyDefinition:
-
     def test_definition_defaults(self):
         d = PolicyDefinition(
             name="test",
@@ -214,7 +206,6 @@ class TestPolicyDefinition:
 
 
 class TestPolicyManifest:
-
     def test_manifest_defaults(self):
         m = PolicyManifest(
             server_name="test-server",
@@ -239,7 +230,6 @@ class TestPolicyManifest:
 
 
 class TestComposition:
-
     def test_composition_config_defaults(self):
         c = CompositionConfig()
         assert c.mode == CompositionMode.DENY_OVERRIDES

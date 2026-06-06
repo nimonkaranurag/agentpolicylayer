@@ -33,7 +33,6 @@ from apl.types import (
 
 
 class TestPolicyEventBuilder:
-
     def setup_method(self):
         self.builder = PolicyEventBuilder()
 
@@ -84,7 +83,6 @@ class TestPolicyEventBuilder:
 
 
 class TestTransportResolution:
-
     def test_stdio_transport(self):
         transport = resolve_client_transport_for_uri("stdio://./my_policy.py")
         assert isinstance(transport, StdioClientTransport)
@@ -103,7 +101,6 @@ class TestTransportResolution:
 
 
 class TestPolicyClient:
-
     def test_client_creation(self):
         client = PolicyClient("stdio://./test.py")
         assert client.uri == "stdio://./test.py"
@@ -118,7 +115,6 @@ class TestPolicyClient:
 
 
 class TestExceptions:
-
     def test_policy_denied(self):
         verdict = Verdict.deny("not allowed")
         exc = PolicyDenied(verdict)
@@ -181,7 +177,6 @@ def _client_with(transport, fail_mode=FailMode.CLOSED):
 
 
 class TestPolicyClientFailClosed:
-
     def test_unavailable_denies_by_default(self):
         client = _client_with(_RaisingTransport())
         verdicts = asyncio.run(client.evaluate(_output_event()))
@@ -226,7 +221,6 @@ class _FakeSession:
 
 
 class TestHttpTransportFailClosed:
-
     def test_non_200_raises_unavailable(self):
         transport = HttpClientTransport("http://x")
         transport._session = _FakeSession(_FakeResponse(500, {}))

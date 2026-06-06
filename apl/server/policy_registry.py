@@ -21,7 +21,6 @@ logger = get_logger("server")
 
 
 class PolicyRegistry:
-
     def __init__(self) -> None:
         self._policies: dict[str, RegisteredPolicy] = {}
         self._handlers_by_event: dict[EventType, list[RegisteredPolicy]] = {}

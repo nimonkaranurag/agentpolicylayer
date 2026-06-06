@@ -20,7 +20,6 @@ from apl.types import (
 
 
 class TestDenyOverridesStrategy:
-
     def setup_method(self):
         self.strategy = DenyOverridesStrategy()
 
@@ -80,7 +79,6 @@ class TestDenyOverridesStrategy:
 
 
 class TestUnanimousStrategy:
-
     def setup_method(self):
         self.strategy = UnanimousStrategy()
 
@@ -100,7 +98,6 @@ class TestUnanimousStrategy:
 
 
 class TestAllowOverridesStrategy:
-
     def setup_method(self):
         self.strategy = AllowOverridesStrategy()
 
@@ -127,7 +124,6 @@ class TestAllowOverridesStrategy:
 
 
 class TestFirstApplicableStrategy:
-
     def setup_method(self):
         self.strategy = FirstApplicableStrategy()
 
@@ -154,7 +150,6 @@ class TestFirstApplicableStrategy:
 
 
 class TestWeightedStrategy:
-
     def setup_method(self):
         self.strategy = WeightedStrategy()
 
@@ -187,7 +182,6 @@ class TestWeightedStrategy:
 
 
 class TestGetStrategy:
-
     def test_all_modes_resolve(self):
         for mode in CompositionMode:
             strategy = get_strategy(mode)
@@ -202,7 +196,6 @@ class TestGetStrategy:
 
 
 class TestVerdictComposer:
-
     def test_default_mode_is_deny_overrides(self):
         composer = VerdictComposer()
         assert composer.config.mode == CompositionMode.DENY_OVERRIDES

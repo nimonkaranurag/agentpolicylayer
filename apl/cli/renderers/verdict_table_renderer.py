@@ -58,7 +58,7 @@ class VerdictTableRenderer:
                 self._console.print()
                 self._console.print(
                     Panel(
-                        f"[bold]Modified ({mod.target}):[/bold]\n" f"{mod.value}",
+                        f"[bold]Modified ({mod.target}):[/bold]\n{mod.value}",
                         title="[yellow]Modification[/yellow]",
                         border_style="yellow",
                     )

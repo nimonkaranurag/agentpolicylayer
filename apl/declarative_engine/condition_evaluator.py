@@ -7,7 +7,6 @@ ConditionHandler = Callable[[Any, Any], bool]
 
 
 class ConditionEvaluator:
-
     def __init__(self) -> None:
         self._handler_registry: dict[str, ConditionHandler] = {
             "equals": self._handle_equals,

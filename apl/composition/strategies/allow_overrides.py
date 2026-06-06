@@ -6,7 +6,6 @@ from .base_strategy import BaseCompositionStrategy
 
 
 class AllowOverridesStrategy(BaseCompositionStrategy):
-
     def compose(self, verdicts: list[Verdict]) -> Verdict:
         if not verdicts:
             return Verdict.deny(reasoning="No policies evaluated")

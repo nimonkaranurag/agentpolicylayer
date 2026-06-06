@@ -11,7 +11,6 @@ if TYPE_CHECKING:
 
 
 class InputValidatedEvent(BaseEvent):
-
     @property
     def event_type(self) -> EventType:
         return EventType.INPUT_VALIDATED

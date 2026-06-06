@@ -58,7 +58,7 @@ async def check_token_budget(
     if ratio >= WARNING_THRESHOLD:
         remaining = token_budget - token_count
         return Verdict.observe(
-            reasoning=f"Token budget warning: {remaining:,} tokens remaining ({(1-ratio)*100:.0f}%)",
+            reasoning=f"Token budget warning: {remaining:,} tokens remaining ({(1 - ratio) * 100:.0f}%)",
             trace={
                 "token_count": token_count,
                 "token_budget": token_budget,
@@ -138,7 +138,7 @@ async def expensive_model_guard(
         # Suggest switching to a cheaper model
         return Verdict.escalate(
             type="human_confirm",
-            prompt=f"💰 Budget is at {ratio*100:.0f}%. Continue with expensive model '{model}' or switch to a cheaper alternative?",
+            prompt=f"💰 Budget is at {ratio * 100:.0f}%. Continue with expensive model '{model}' or switch to a cheaper alternative?",
             reasoning="Expensive model requested with limited budget remaining",
             options=["Continue", "Use cheaper model"],
             fallback_action="use_cheaper_model",

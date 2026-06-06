@@ -6,7 +6,6 @@ from .base_strategy import BaseCompositionStrategy
 
 
 class WeightedStrategy(BaseCompositionStrategy):
-
     def compose(self, verdicts: list[Verdict]) -> Verdict:
         guard = self._guard_empty_verdicts(verdicts)
         if guard is not None:

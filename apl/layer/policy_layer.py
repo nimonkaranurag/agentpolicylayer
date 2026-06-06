@@ -23,7 +23,6 @@ logger: logging.Logger = logging.getLogger("apl")
 
 
 class PolicyLayer:
-
     def __init__(
         self,
         composition: CompositionConfig | None = None,

@@ -11,7 +11,6 @@ from .object_traversal import (
 
 
 class TemplateRenderer:
-
     TEMPLATE_VARIABLE_PATTERN: re.Pattern[str] = re.compile(r"\{\{(.+?)\}\}")
 
     def render(self, template: str, event: PolicyEvent) -> str:

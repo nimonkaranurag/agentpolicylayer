@@ -17,7 +17,6 @@ from .schema import (
 
 
 class YamlPolicyLoader:
-
     def __init__(self) -> None:
         self._rule_evaluator: RuleEvaluator = RuleEvaluator()
 

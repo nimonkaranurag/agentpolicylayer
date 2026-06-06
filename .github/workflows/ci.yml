@@ -23,20 +23,18 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+          cache: pip
 
-      - run: pip install black isort ruff docformatter
+      - run: pip install -e ".[dev]"
 
       - name: Check formatting
-        run: black --check .
-
-      - name: Check import sorting
-        run: isort --check-only .
+        run: ruff format --check .
 
       - name: Lint
         run: ruff check .
 
       - name: Check docstrings
-        run: docformatter --check --diff .
+        run: docformatter --check --diff -r apl tests examples
 
   typecheck:
     name: Type Check

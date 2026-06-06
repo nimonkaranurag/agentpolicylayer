@@ -15,7 +15,6 @@ if TYPE_CHECKING:
 
 
 class BaseLifecycleExecutor(ABC):
-
     def __init__(self, state: InstrumentationState) -> None:
         self.state: InstrumentationState = state
         self.policy_evaluator: PolicyEvaluator = PolicyEvaluator(state)

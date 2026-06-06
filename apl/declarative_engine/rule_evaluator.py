@@ -19,7 +19,6 @@ from .template_renderer import TemplateRenderer
 
 
 class RuleEvaluator:
-
     def __init__(self) -> None:
         self._condition_evaluator = ConditionEvaluator()
         self._template_renderer = TemplateRenderer()

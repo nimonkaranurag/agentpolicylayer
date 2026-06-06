@@ -13,7 +13,6 @@ from apl.types import Message
 
 
 class TestChatCompletionsAdapter:
-
     def setup_method(self):
         self.adapter = ChatCompletionsMessageAdapter()
 
@@ -65,7 +64,6 @@ class TestChatCompletionsAdapter:
 
 
 class TestLangChainAdapter:
-
     def setup_method(self):
         self.adapter = LangChainMessageAdapter()
 
@@ -105,7 +103,6 @@ class TestLangChainAdapter:
 
 
 class TestGetMessageAdapter:
-
     def test_openai_adapter(self):
         adapter = get_message_adapter("openai")
         assert isinstance(adapter, ChatCompletionsMessageAdapter)

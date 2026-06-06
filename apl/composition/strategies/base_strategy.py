@@ -6,12 +6,10 @@ from apl.types import Decision, Modification, Verdict
 
 
 class CompositionStrategy(Protocol):
-
     def compose(self, verdicts: list[Verdict]) -> Verdict: ...
 
 
 class BaseCompositionStrategy:
-
     @staticmethod
     def _find_first_verdict_with_decision(
         verdicts: list[Verdict],

@@ -34,7 +34,6 @@ def _registered(handler, *, name: str = "p", timeout_ms: int = 5000):
 
 
 class TestPolicyServer:
-
     def test_create_server(self):
         server = PolicyServer(
             "test-server",
@@ -155,7 +154,6 @@ class TestPolicyServer:
 
 
 class TestPolicyRegistry:
-
     def _make_registered_policy(self, name="test", events=None):
         return RegisteredPolicy(
             name=name,
@@ -195,7 +193,6 @@ class TestPolicyRegistry:
 
 
 class TestHandlerInvoker:
-
     @pytest.mark.asyncio
     async def test_async_handler(self, make_event):
         async def handler(event):

@@ -15,7 +15,6 @@ if TYPE_CHECKING:
 
 
 class BaseEvent(ABC):
-
     @property
     @abstractmethod
     def event_type(self) -> EventType: ...

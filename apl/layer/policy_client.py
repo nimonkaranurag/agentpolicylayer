@@ -25,7 +25,6 @@ logger: logging.Logger = logging.getLogger("apl")
 
 
 class PolicyClient:
-
     def __init__(self, uri: str, fail_mode: FailMode = FailMode.CLOSED) -> None:
         self.uri: str = uri
         self._fail_mode: FailMode = fail_mode

@@ -12,7 +12,6 @@ from apl.metrics.server_metrics import ServerMetrics
 
 
 class TestServerMetrics:
-
     def test_initial_state(self):
         m = ServerMetrics()
         assert m.requests_total == 0
@@ -34,7 +33,6 @@ class TestServerMetrics:
 
 
 class TestPrometheusExporter:
-
     def test_export_format(self):
         m = ServerMetrics()
         m.record_request(
@@ -49,7 +47,6 @@ class TestPrometheusExporter:
 
 
 class TestLogging:
-
     def test_get_logger_returns_apl_logger(self):
         logger = get_logger("test.module")
         assert isinstance(logger, APLLogger)
