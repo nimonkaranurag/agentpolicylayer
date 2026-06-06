@@ -96,12 +96,14 @@ from .types import (  # Events; Context (chat/completions compatible); Verdicts;
     Escalation,
     EventPayload,
     EventType,
+    FailMode,
     FunctionCall,
     Message,
     Modification,
     PolicyDefinition,
     PolicyEvent,
     PolicyManifest,
+    PolicyUnavailableError,
     SessionMetadata,
     ToolCall,
     Verdict,
@@ -136,9 +138,12 @@ __all__ = [
     "CompositionMode",
     "CompositionConfig",
     "VerdictComposer",
+    # Failure handling
+    "FailMode",
     # Exceptions
     "PolicyDenied",
     "PolicyEscalation",
+    "PolicyUnavailableError",
     # Declarative
     "load_yaml_policy",
     "validate_yaml_policy",

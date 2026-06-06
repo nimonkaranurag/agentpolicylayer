@@ -7,6 +7,7 @@ from apl.types import (
     Decision,
     EventPayload,
     EventType,
+    FailMode,
     FunctionCall,
     Message,
     PolicyDefinition,
@@ -158,6 +159,36 @@ class TestVerdictFactories:
         v = Verdict.allow(confidence=0.7)
         assert v.confidence == 0.7
 
+    def test_unavailable_fail_closed_denies(self):
+        v = Verdict.unavailable(FailMode.CLOSED, "server down")
+        assert v.decision == Decision.DENY
+        assert v.reasoning == "server down"
+        assert v.confidence == 1.0
+
+    def test_unavailable_fail_open_allows(self):
+        v = Verdict.unavailable(FailMode.OPEN, "server down")
+        assert v.decision == Decision.ALLOW
+
+    def test_unavailable_carries_metadata(self):
+        v = Verdict.unavailable(
+            FailMode.CLOSED,
+            "boom",
+            policy_name="p1",
+            evaluation_ms=12.5,
+        )
+        assert v.policy_name == "p1"
+        assert v.evaluation_ms == 12.5
+
+
+class TestFailMode:
+
+    def test_two_modes_exist(self):
+        assert set(FailMode) == {FailMode.CLOSED, FailMode.OPEN}
+
+    def test_default_is_closed(self):
+        # The guardrails-safe default must be CLOSED everywhere it is consumed.
+        assert CompositionConfig().fail_mode is FailMode.CLOSED
+
 
 class TestPolicyDefinition:
 
@@ -213,7 +244,9 @@ class TestComposition:
         c = CompositionConfig()
         assert c.mode == CompositionMode.DENY_OVERRIDES
         assert c.parallel is True
-        assert c.on_timeout == Decision.ALLOW
+        # Defaults must be fail-closed for a guardrails product.
+        assert c.fail_mode is FailMode.CLOSED
+        assert c.on_timeout == Decision.DENY
 
     def test_all_composition_modes(self):
         assert len(CompositionMode) == 5

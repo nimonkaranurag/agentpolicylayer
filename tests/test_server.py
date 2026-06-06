@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import asyncio
+import time
+
 import pytest
 
 from apl.server import PolicyServer
@@ -13,8 +16,21 @@ from apl.server.registered_policy import (
 from apl.types import (
     Decision,
     EventType,
+    FailMode,
     Verdict,
 )
+
+
+def _registered(handler, *, name: str = "p", timeout_ms: int = 5000):
+    return RegisteredPolicy(
+        name=name,
+        version="1.0",
+        handler=handler,
+        events=[EventType.OUTPUT_PRE_SEND],
+        context_requirements=[],
+        blocking=True,
+        timeout_ms=timeout_ms,
+    )
 
 
 class TestPolicyServer:
@@ -219,39 +235,55 @@ class TestHandlerInvoker:
         assert result.decision == Decision.ALLOW
         assert result.policy_name == "sync-test"
 
-    @pytest.mark.asyncio
-    async def test_handler_exception_returns_allow(self, make_event):
+    # The following are sync (asyncio.run) so they execute even without
+    # pytest-asyncio (WP-11), proving the fail-closed behaviour now.
+
+    def test_handler_exception_denies_fail_closed(self, make_event):
         async def handler(event):
             raise RuntimeError("boom")
 
-        policy = RegisteredPolicy(
-            name="crash",
-            version="1.0",
-            handler=handler,
-            events=[EventType.OUTPUT_PRE_SEND],
-            context_requirements=[],
-            blocking=True,
-            timeout_ms=5000,
-        )
-        event = make_event()
-        result = await invoke_policy_handler(policy, event)
-        assert result.decision == Decision.ALLOW
+        policy = _registered(handler, name="crash")
+        result = asyncio.run(invoke_policy_handler(policy, make_event()))
+        assert result.decision == Decision.DENY
+        assert result.policy_name == "crash"
         assert "error" in result.reasoning.lower()
 
-    @pytest.mark.asyncio
-    async def test_handler_non_verdict_returns_allow(self, make_event):
+    def test_handler_non_verdict_denies_fail_closed(self, make_event):
         async def handler(event):
             return "not a verdict"
 
-        policy = RegisteredPolicy(
-            name="bad-return",
-            version="1.0",
-            handler=handler,
-            events=[EventType.OUTPUT_PRE_SEND],
-            context_requirements=[],
-            blocking=True,
-            timeout_ms=5000,
+        policy = _registered(handler, name="bad-return")
+        result = asyncio.run(invoke_policy_handler(policy, make_event()))
+        assert result.decision == Decision.DENY
+
+    def test_async_handler_timeout_denies_fail_closed(self, make_event):
+        async def handler(event):
+            await asyncio.sleep(0.3)
+            return Verdict.allow()
+
+        policy = _registered(handler, name="slow-async", timeout_ms=20)
+        result = asyncio.run(invoke_policy_handler(policy, make_event()))
+        assert result.decision == Decision.DENY
+        assert "timed out" in result.reasoning.lower()
+
+    def test_sync_handler_timeout_denies_fail_closed(self, make_event):
+        # Review §3.13: a blocking sync handler previously had no timeout and
+        # could hang the server forever. It must now be time-bounded too.
+        def handler(event):
+            time.sleep(0.3)
+            return Verdict.allow()
+
+        policy = _registered(handler, name="slow-sync", timeout_ms=20)
+        result = asyncio.run(invoke_policy_handler(policy, make_event()))
+        assert result.decision == Decision.DENY
+        assert "timed out" in result.reasoning.lower()
+
+    def test_handler_failure_allows_when_fail_open(self, make_event):
+        async def handler(event):
+            raise RuntimeError("boom")
+
+        policy = _registered(handler, name="crash")
+        result = asyncio.run(
+            invoke_policy_handler(policy, make_event(), fail_mode=FailMode.OPEN)
         )
-        event = make_event()
-        result = await invoke_policy_handler(policy, event)
         assert result.decision == Decision.ALLOW

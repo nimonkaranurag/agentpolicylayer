@@ -9,8 +9,10 @@ from apl.serialization import (
     VerdictSerializer,
 )
 from apl.types import (
+    FailMode,
     PolicyEvent,
     PolicyManifest,
+    PolicyUnavailableError,
     Verdict,
 )
 
@@ -24,8 +26,9 @@ logger: logging.Logger = logging.getLogger("apl")
 
 class PolicyClient:
 
-    def __init__(self, uri: str) -> None:
+    def __init__(self, uri: str, fail_mode: FailMode = FailMode.CLOSED) -> None:
         self.uri: str = uri
+        self._fail_mode: FailMode = fail_mode
         self.manifest: PolicyManifest | None = None
         self._transport: BaseClientTransport = resolve_client_transport_for_uri(uri)
         self._event_serializer: EventSerializer = EventSerializer()
@@ -51,13 +54,24 @@ class PolicyClient:
             await self.connect()
 
         serialized_event: dict[str, Any] = self._event_serializer.serialize(event)
-        raw_verdicts: list[dict[str, Any]] = await self._transport.evaluate(
-            serialized_event
-        )
 
-        if not raw_verdicts:
-            return [Verdict.allow(reasoning="No response from policy server")]
+        try:
+            raw_verdicts: list[dict[str, Any]] = await self._transport.evaluate(
+                serialized_event
+            )
+        except PolicyUnavailableError as exc:
+            logger.error(f"Policy server unavailable ({self.uri}): {exc}")
+            return [
+                Verdict.unavailable(
+                    self._fail_mode,
+                    reasoning=f"Policy server unavailable: {exc}",
+                )
+            ]
 
+        # An empty list here means the server responded but no policy produced a
+        # verdict (it has no opinion) — that is distinct from being unavailable,
+        # which raises above. How a globally-empty verdict set composes is the
+        # composer's concern (WP-2's empty-input semantics), not the client's.
         return [
             self._verdict_serializer.deserialize(raw_verdict)
             for raw_verdict in raw_verdicts

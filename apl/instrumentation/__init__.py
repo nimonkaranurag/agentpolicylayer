@@ -2,6 +2,7 @@ from typing import List, Optional
 
 from apl.layer import PolicyLayer
 from apl.logging import console
+from apl.types import CompositionConfig, FailMode
 
 from .providers import PROVIDER_REGISTRY
 from .state import InstrumentationState
@@ -13,10 +14,14 @@ def auto_instrument(
     user_id: Optional[str] = None,
     custom_metadata: Optional[dict] = None,
     enabled_providers: Optional[List[str]] = None,
+    fail_mode: FailMode = FailMode.CLOSED,
 ) -> InstrumentationState:
     console.print("\n[bold cyan]🛡️  APL Auto-Instrumentation[/bold cyan]\n")
 
-    policy_layer = PolicyLayer()
+    # fail_mode flows onto the layer's composition config; CompositionConfig
+    # emits a startup warning if fail-open is chosen. The evaluator reads it back
+    # so policy errors fail closed (deny) by default.
+    policy_layer = PolicyLayer(composition=CompositionConfig(fail_mode=fail_mode))
     for server_uri in policy_servers:
         policy_layer.add_server(server_uri)
         console.print(f"  [green]✓[/green] Connected: [cyan]{server_uri}[/cyan]")
