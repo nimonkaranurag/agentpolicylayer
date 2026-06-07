@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import dataclasses
 from typing import TYPE_CHECKING, Optional
 
 from apl.logging import get_logger
@@ -82,8 +81,8 @@ class PolicyRegistry:
 
         The modification's ``operation`` (replace/redact/append/prepend/patch) is
         honoured via the shared dispatcher; the payload is rebuilt with
-        :func:`dataclasses.replace`, so untouched fields are preserved and the original
-        event is never mutated.
+        :meth:`~pydantic.BaseModel.model_copy`, so untouched fields are preserved and
+        the original event is never mutated.
         """
         field_name = self._payload_field_for_target(event.payload, modification.target)
         if field_name is None:
@@ -91,8 +90,8 @@ class PolicyRegistry:
 
         current = getattr(event.payload, field_name)
         new_value = apply_operation(current, modification)
-        new_payload = dataclasses.replace(event.payload, **{field_name: new_value})
-        return dataclasses.replace(event, payload=new_payload)
+        new_payload = event.payload.model_copy(update={field_name: new_value})
+        return event.model_copy(update={"payload": new_payload})
 
     @staticmethod
     def _payload_field_for_target(payload: EventPayload, target: str) -> Optional[str]:

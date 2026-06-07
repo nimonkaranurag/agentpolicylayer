@@ -1,14 +1,17 @@
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import Any, Optional
+
+from pydantic import ValidationError
 
 from apl.serialization import (
-    EventSerializer,
-    ManifestSerializer,
-    VerdictSerializer,
+    manifest_from_wire,
+    to_wire,
+    verdict_from_wire,
 )
 from apl.types import (
+    PROTOCOL_VERSION,
     FailMode,
     PolicyEvent,
     PolicyManifest,
@@ -24,22 +27,68 @@ from .client_transports import (
 logger: logging.Logger = logging.getLogger("apl")
 
 
+def _major(version: str) -> Optional[int]:
+    try:
+        return int(version.split(".", 1)[0])
+    except (AttributeError, ValueError, IndexError):
+        return None
+
+
+def _assert_protocol_compatible(server_version: str, uri: str) -> None:
+    """
+    Reject a server whose protocol *major* version differs from ours.
+
+    A differing major version means incompatible wire semantics, so we fail closed by
+    raising :class:`PolicyUnavailableError` (the caller turns that into a deny). A
+    differing minor/patch — or a version we can't parse — is warned about but allowed
+    through.
+    """
+    if server_version == PROTOCOL_VERSION:
+        return
+
+    server_major = _major(server_version)
+    ours_major = _major(PROTOCOL_VERSION)
+    if server_major is None or ours_major is None:
+        logger.warning(
+            f"Policy server {uri} reports protocol '{server_version}'; this "
+            f"client speaks '{PROTOCOL_VERSION}' and could not compare them."
+        )
+        return
+
+    if server_major != ours_major:
+        raise PolicyUnavailableError(
+            f"incompatible policy protocol: server {uri} speaks "
+            f"'{server_version}', this client requires major version "
+            f"'{ours_major}' (speaks '{PROTOCOL_VERSION}')"
+        )
+
+    logger.warning(
+        f"Policy server {uri} speaks protocol '{server_version}'; this client "
+        f"speaks '{PROTOCOL_VERSION}'. Same major version — proceeding."
+    )
+
+
 class PolicyClient:
     def __init__(self, uri: str, fail_mode: FailMode = FailMode.CLOSED) -> None:
         self.uri: str = uri
         self._fail_mode: FailMode = fail_mode
-        self.manifest: PolicyManifest | None = None
+        self.manifest: Optional[PolicyManifest] = None
         self._transport: BaseClientTransport = resolve_client_transport_for_uri(uri)
-        self._event_serializer: EventSerializer = EventSerializer()
-        self._manifest_serializer: ManifestSerializer = ManifestSerializer()
-        self._verdict_serializer: VerdictSerializer = VerdictSerializer()
         self._is_connected: bool = False
 
     async def connect(self) -> None:
-        raw_manifest: dict[str, Any] | None = await self._transport.connect()
+        raw_manifest: Optional[dict[str, Any]] = await self._transport.connect()
 
         if raw_manifest is not None:
-            self.manifest = self._manifest_serializer.deserialize(raw_manifest)
+            try:
+                self.manifest = manifest_from_wire(raw_manifest)
+            except ValidationError as exc:
+                raise PolicyUnavailableError(
+                    f"invalid manifest from {self.uri}: {exc}"
+                ) from exc
+
+            _assert_protocol_compatible(self.manifest.protocol_version, self.uri)
+
             policy_count: int = len(self.manifest.policies)
             logger.info(
                 f"Connected to '{self.manifest.server_name}' "
@@ -49,16 +98,24 @@ class PolicyClient:
         self._is_connected = True
 
     async def evaluate(self, event: PolicyEvent) -> list[Verdict]:
-        if not self._is_connected:
-            await self.connect()
-
-        serialized_event: dict[str, Any] = self._event_serializer.serialize(event)
+        serialized_event: dict[str, Any] = to_wire(event)
 
         try:
+            if not self._is_connected:
+                await self.connect()
+
             raw_verdicts: list[dict[str, Any]] = await self._transport.evaluate(
                 serialized_event
             )
+            # An empty list here means the server responded but no policy
+            # produced a verdict (it has no opinion) — distinct from being
+            # unavailable, which raises. How a globally-empty verdict set
+            # composes is the composer's concern (WP-2), not the client's.
+            return [verdict_from_wire(raw_verdict) for raw_verdict in raw_verdicts]
         except PolicyUnavailableError as exc:
+            # Covers a failed connect (unreachable server, incompatible protocol,
+            # or a malformed manifest), a transport error during evaluate, and a
+            # malformed verdict payload — all of which must fail closed.
             logger.error(f"Policy server unavailable ({self.uri}): {exc}")
             return [
                 Verdict.unavailable(
@@ -66,15 +123,6 @@ class PolicyClient:
                     reasoning=f"Policy server unavailable: {exc}",
                 )
             ]
-
-        # An empty list here means the server responded but no policy produced a
-        # verdict (it has no opinion) — that is distinct from being unavailable,
-        # which raises above. How a globally-empty verdict set composes is the
-        # composer's concern (WP-2's empty-input semantics), not the client's.
-        return [
-            self._verdict_serializer.deserialize(raw_verdict)
-            for raw_verdict in raw_verdicts
-        ]
 
     async def close(self) -> None:
         await self._transport.close()

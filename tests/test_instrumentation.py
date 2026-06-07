@@ -120,10 +120,13 @@ class TestApplyVerdictModifications:
         get_event("output.pre_send").apply_verdict_modifications(Verdict.allow(), ctx)
         assert ctx.response_text == "unchanged"
 
-    def test_modify_with_no_modifications_is_noop(self):
+    def test_modify_with_unsupported_target_is_noop(self):
+        # A MODIFY whose target this event doesn't support is a no-op. (A MODIFY
+        # with *no* modifications is no longer representable; that invariant is
+        # covered in test_serialization.)
         ctx = LifecycleContext(response_text="unchanged")
         get_event("output.pre_send").apply_verdict_modifications(
-            Verdict(decision=Decision.MODIFY, modifications=[]),
+            Verdict.modify(target="tool_args", operation="replace", value="x"),
             ctx,
         )
         assert ctx.response_text == "unchanged"

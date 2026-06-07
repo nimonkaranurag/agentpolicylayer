@@ -1,19 +1,3 @@
-"""
-WP-4 — one ``Modification.operation`` dispatcher, routed through all appliers.
-
-These tests pin two things the review flagged (ENGINEERING_REVIEW §3.4, ledger §B):
-
-1. The operation dispatcher (:func:`apl.modifications.apply_operation`) implements
-   ``replace``/``append``/``prepend``/``redact``/``patch`` distinctly and fails
-   *closed* (raises) on anything it cannot apply.
-2. All three historical modification-appliers route through that one dispatcher, so
-   ``operation`` is finally honoured everywhere instead of silently meaning
-   ``replace``:
-   - instrumentation events (``BaseEvent.apply_verdict_modifications``)
-   - the server's sequential ``PolicyRegistry._apply_modification``
-   - the decorator's ``PolicyDecoratorFactory._enforce_verdict``
-"""
-
 from __future__ import annotations
 
 import pytest

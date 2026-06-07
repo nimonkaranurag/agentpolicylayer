@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 
 import pytest
+from pydantic import ValidationError
 
 from apl.layer.client_transports import (
     BaseClientTransport,
@@ -109,12 +110,6 @@ class TestPolicyClient:
         assert client.is_connected is False
         assert client.manifest is None
 
-    def test_client_has_serializers(self):
-        client = PolicyClient("http://localhost:8080")
-        assert client._event_serializer is not None
-        assert client._manifest_serializer is not None
-        assert client._verdict_serializer is not None
-
 
 class TestExceptions:
     def test_policy_denied(self):
@@ -137,10 +132,12 @@ class TestExceptions:
         assert exc.verdict is verdict
         assert str(exc) == "Please confirm"
 
-    def test_policy_escalation_no_escalation(self):
-        verdict = Verdict(decision=Decision.ESCALATE)
-        exc = PolicyEscalation(verdict)
-        assert str(exc) == "Escalation required"
+    def test_escalate_without_escalation_is_rejected(self):
+        # WP-5 invariant: an ESCALATE verdict must carry an escalation, so the
+        # "no escalation" state PolicyEscalation defends against can no longer be
+        # constructed.
+        with pytest.raises(ValidationError):
+            Verdict(decision=Decision.ESCALATE)
 
 
 class _RaisingTransport(BaseClientTransport):
