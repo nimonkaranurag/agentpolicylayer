@@ -75,7 +75,5 @@ format is validated, and the over-decomposed structure is consolidated.
 
 ## [0.3.0]
 
-Last release before the engineering revamp.
-
 [Unreleased]: https://github.com/nimonkaranurag/agentpolicylayer/compare/v0.3.0...HEAD
 [0.3.0]: https://github.com/nimonkaranurag/agentpolicylayer/releases/tag/v0.3.0
