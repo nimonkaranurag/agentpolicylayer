@@ -1,28 +1,55 @@
 <div align="center">
 
-# Agent Policy Layer
+<h1>APL🛡️ <br/> Agent Policy Layer</h1>
 
-**Portable, composable, fail-closed guardrails for AI agents.**
-*Like MCP — but for constraints instead of capabilities.*
+<p>
+  <strong>Portable, composable, fail-closed guardrails for AI agents.</strong>
+</p>
 
-[![CI](https://github.com/nimonkaranurag/agentpolicylayer/actions/workflows/ci.yml/badge.svg)](https://github.com/nimonkaranurag/agentpolicylayer/actions/workflows/ci.yml)
-[![CodeQL](https://github.com/nimonkaranurag/agentpolicylayer/actions/workflows/codeql.yml/badge.svg)](https://github.com/nimonkaranurag/agentpolicylayer/actions/workflows/codeql.yml)
-[![codecov](https://codecov.io/gh/nimonkaranurag/agentpolicylayer/branch/main/graph/badge.svg)](https://codecov.io/gh/nimonkaranurag/agentpolicylayer)
-[![PyPI](https://img.shields.io/pypi/v/agent-policy-layer.svg)](https://pypi.org/project/agent-policy-layer/)
-[![Python versions](https://img.shields.io/pypi/pyversions/agent-policy-layer.svg)](https://pypi.org/project/agent-policy-layer/)
-[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
+<p>
+  <em>Like MCP — but for constraints instead of capabilities.</em>
+</p>
+
+<p>
+  <a href="https://github.com/nimonkaranurag/agentpolicylayer/actions/workflows/ci.yml">
+    <img src="https://github.com/nimonkaranurag/agentpolicylayer/actions/workflows/ci.yml/badge.svg" alt="CI">
+  </a>
+  <a href="https://github.com/nimonkaranurag/agentpolicylayer/actions/workflows/codeql.yml">
+    <img src="https://github.com/nimonkaranurag/agentpolicylayer/actions/workflows/codeql.yml/badge.svg" alt="CodeQL">
+  </a>
+  <a href="https://codecov.io/gh/nimonkaranurag/agentpolicylayer">
+    <img src="https://codecov.io/gh/nimonkaranurag/agentpolicylayer/branch/main/graph/badge.svg" alt="codecov">
+  </a>
+  <a href="https://pypi.org/project/agent-policy-layer/">
+    <img src="https://img.shields.io/pypi/v/agent-policy-layer.svg" alt="PyPI">
+  </a>
+  <a href="https://pypi.org/project/agent-policy-layer/">
+    <img src="https://img.shields.io/pypi/pyversions/agent-policy-layer.svg" alt="Python versions">
+  </a>
+  <a href="LICENSE">
+    <img src="https://img.shields.io/badge/License-Apache_2.0-blue.svg" alt="License: Apache 2.0">
+  </a>
+</p>
 
 <br/>
 
 <img src="./_resources/APL.png" alt="APL Mascot" width="780">
-<em>APL restrains your agents - when you need him to! 🚔 </em>
 
-<br/>
+<p>
+  <em>APL restrains your agents — when you need him to! 🚔</em>
+</p>
+
 <br/>
 
 <img src="./_resources/APL_DEMO.gif" alt="An agent drafts a reply containing a customer's SSN and card number. APL intercepts at output.pre_send; the pii-filter policy returns MODIFY, composition lands on MODIFY, and the delivered message is redacted." width="840">
 
-<em>The agent drafts a reply containing PII. APL intercepts at <code>output.pre_send</code>, the policies vote, and the message that actually goes out is redacted — without changing a line of the agent.</em>
+<p>
+  <em>
+    The agent drafts a reply containing PII. APL intercepts at
+    <code>output.pre_send</code>, the policies vote, and the message that
+    actually goes out is redacted — without changing a line of the agent.
+  </em>
+</p>
 
 </div>
 
