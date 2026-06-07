@@ -11,8 +11,6 @@ Commits.
 
 ## [0.4.0](https://github.com/nimonkaranurag/agentpolicylayer/compare/agent-policy-layer-v0.3.0...agent-policy-layer-v0.4.0) (2026-06-07)
 
-The engineering revamp (WP-0 – WP-11): the layer no longer fails open, the wire
-format is validated, and the over-decomposed structure is consolidated.
 
 ### ⚠ BREAKING CHANGES
 
