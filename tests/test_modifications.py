@@ -97,7 +97,9 @@ class TestApplyOperationRedact:
     def test_redact_at_path_is_distinct_from_replace(self):
         current = {"password": "hunter2", "user": "bob"}
         redacted = apply_operation(current, _mod("redact", path="$.password"))
-        replaced = apply_operation(current, _mod("replace", "hunter2", path="$.password"))
+        replaced = apply_operation(
+            current, _mod("replace", "hunter2", path="$.password")
+        )
         # redact masks only the leaf; replace clobbers the whole structure.
         assert redacted == {"password": DEFAULT_REDACTION, "user": "bob"}
         assert replaced == "hunter2"
@@ -110,7 +112,9 @@ class TestApplyOperationPatch:
         assert result == {"a": {"b": 9}}
 
     def test_patch_sets_list_index(self):
-        result = apply_operation({"items": [1, 2, 3]}, _mod("patch", 99, path="$.items[1]"))
+        result = apply_operation(
+            {"items": [1, 2, 3]}, _mod("patch", 99, path="$.items[1]")
+        )
         assert result == {"items": [1, 99, 3]}
 
     def test_patch_can_add_leaf_key(self):
@@ -190,9 +194,7 @@ class TestServerRegistryApplierRoutesThroughDispatcher:
             EventType.OUTPUT_PRE_SEND,
             payload=EventPayload(output_text="hi", tool_name="t"),
         )
-        new_event = PolicyRegistry()._apply_modification(
-            event, _mod("replace", "bye")
-        )
+        new_event = PolicyRegistry()._apply_modification(event, _mod("replace", "bye"))
         assert new_event.payload.output_text == "bye"
         assert new_event.payload.tool_name == "t"  # untouched field preserved
         assert event.payload.output_text == "hi"  # original not mutated

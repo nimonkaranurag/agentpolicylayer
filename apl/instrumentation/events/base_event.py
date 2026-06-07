@@ -46,7 +46,11 @@ class BaseEvent(ABC):
         return EventPayload()
 
     def target_accessors(self) -> dict[str, TargetAccessor]:
-        """Modification targets this event understands. Default: none."""
+        """
+        Modification targets this event understands.
+
+        Default: none.
+        """
         return {}
 
     def apply_verdict_modifications(
