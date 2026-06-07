@@ -1,13 +1,3 @@
-"""
-One executor that runs a lifecycle event sequence against the policy layer.
-
-There used to be three near-identical classes (sync, async, streaming) whose only real
-difference was ``await`` vs. not — and each re-implemented the same evaluate -> raise ->
-apply loop, so a fix to one could silently miss the others (ENGINEERING_REVIEW §4.2,
-duplication ledger §B). The loop lives here once as :meth:`_enforce_event`; the sync and
-async drivers and the streaming buffering all build on it.
-"""
-
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, AsyncIterator, Callable, Iterator, List
