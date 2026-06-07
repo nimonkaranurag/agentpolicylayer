@@ -43,11 +43,16 @@ jobs:
         id: version
         run: |
           BASE="$(hatch version)"
+          # Dev wheels are pre-releases of the NEXT version so they sort ABOVE the
+          # last release: a bare "${BASE}.devN" would be 0.3.0.dev1, which PEP 440
+          # ranks BELOW 0.3.0 — and `hatch version` refuses to set a non-higher
+          # version. Target the next patch instead (0.3.1.devN).
+          NEXT="$(echo "$BASE" | awk -F. '{printf "%d.%d.%d", $1, $2, $3 + 1}')"
           SHORT_SHA="$(git rev-parse --short HEAD)"
-          DEV_VERSION="${BASE}.dev${{ github.run_number }}+g${SHORT_SHA}"
+          DEV_VERSION="${NEXT}.dev${{ github.run_number }}+g${SHORT_SHA}"
           hatch version "${DEV_VERSION}"
           echo "version=${DEV_VERSION}" >> "$GITHUB_OUTPUT"
-          echo "::notice::Building dev version ${DEV_VERSION}"
+          echo "::notice::Building dev version ${DEV_VERSION} (pre-release of ${NEXT})"
 
       - name: Build
         run: python -m build
