@@ -9,71 +9,136 @@ Commits.
 
 ## [Unreleased]
 
+## [0.4.0](https://github.com/nimonkaranurag/agentpolicylayer/compare/agent-policy-layer-v0.3.0...agent-policy-layer-v0.4.0) (2026-06-07)
+
 The engineering revamp (WP-0 – WP-11): the layer no longer fails open, the wire
 format is validated, and the over-decomposed structure is consolidated.
 
+### ⚠ BREAKING CHANGES
+
+- **Fail-closed by default.** Every failure site — policy timeout, exception,
+  non-200 response, missing response, or a non-`Verdict` return — now **denies**
+  instead of allowing. Fail-open must be opted into via `FailMode.OPEN` and warns
+  at startup.
+- The `--stdio` serve flag is removed (stdio is the default, `--http` is the
+  switch).
+- `PolicyLayer.wrap()` raises `TypeError` on unsupported objects instead of
+  silently returning them unwrapped (a no-op wrap = zero enforcement).
+- Domain models are pydantic v2 with stricter validation. `Verdict` invariants
+  are enforced (e.g. `MODIFY` requires ≥1 modification, `ESCALATE` requires
+  escalation, `confidence` must be in `[0, 1]`).
+- `ToolCall.function` is now required.
+- `Message.role` relaxed from a `Literal` to `str` for provider pass-through.
+- `Modification.target` widened to the seven targets the event table applies.
+- HTTP server binds `127.0.0.1` by default (was `0.0.0.0`).
+- CORS is now allow-list only (was unconditional `*`).
+
 ### Security
+
 - **Fail-closed by default.** Every failure site — policy timeout, exception,
   non-200 response, missing response, or a non-`Verdict` return — now **denies**
   instead of allowing. Configurable via `FailMode {OPEN, CLOSED}`; unreachable
   policies raise `PolicyUnavailableError`; fail-open must be opted into and warns
-  at startup. (WP-1)
+  at startup.
 - **Streaming is enforced** — streamed model output is buffered and evaluated
-  instead of bypassing the layer. (WP-6)
+  instead of bypassing the layer.
 - **Transport hardening** — the HTTP policy server binds `127.0.0.1` by default,
   uses a CORS allow-list (never `*`), supports optional bearer-token auth and a
-  request-size limit, and returns a 4xx envelope instead of echoing exceptions. (WP-7, WP-9)
+  request-size limit, and returns a 4xx envelope instead of echoing exceptions.
 - **Protocol-version check on connect** — a major-version mismatch denies rather
-  than risking a silent semantic divergence. (WP-5)
+  than risking a silent semantic divergence.
 - **Log-injection closed** — remote-sourced `verdict.reasoning` (and all
   interpolated log values) are markup-escaped, and `tracebacks_show_locals`
-  defaults to `False` so prompts/keys/PII don't leak into logs. (WP-8)
+  defaults to `False` so prompts/keys/PII don't leak into logs.
 - **Duplicate policy names fail closed** in the registry (`DuplicatePolicyError`)
-  instead of silently dropping one. (WP-9)
+  instead of silently dropping one.
+- **Port auto-kill deleted** — the `SIGKILL`-an-arbitrary-process-on-`EADDRINUSE`
+  behavior is gone; replaced with clean `errno`-based error reporting.
 
 ### Added
-- `instrument(...)` context manager that always restores patches on exit. (WP-8)
-- `PolicyLayer.fail_mode` property and the `FailMode` configuration. (WP-1, WP-8)
+
+- `instrument(...)` context manager that always restores patches on exit.
+- `PolicyLayer.fail_mode` property and the `FailMode` configuration.
+- `Verdict.unavailable()` factory for fail-closed transport/timeout denials.
 - `apl serve` flags: `--host`, `--auth-token`, `--cors-origin` (repeatable),
-  `--max-body`. (WP-7, WP-9)
+  `--max-body`.
+- `APLGraphWrapper` exported via lazy module `__getattr__` — `from apl import
+  APLGraphWrapper` works without pulling in `langgraph` on the common import path.
+- One shared `apply_operation` dispatcher honoring all five `Modification.operation`
+  values (replace/redact/append/prepend/patch-by-`path`).
 - Release & CI engineering: automated release-please releases, rolling `dev`
-  pre-release wheels on every push to main, CodeQL,
-  Dependabot, SHA-pinned actions, build-provenance + SBOM, pre-commit hooks, and
-  the `CONTRIBUTING` / `SECURITY` / `CODE_OF_CONDUCT` / issue + PR scaffolding.
+  pre-release wheels on every push to main, CodeQL, Dependabot, SHA-pinned
+  actions, build-provenance + SBOM, pre-commit hooks, and the `CONTRIBUTING` /
+  `SECURITY` / `CODE_OF_CONDUCT` / issue + PR scaffolding.
+- `pytest-asyncio` collected-async == executed-async guard in `conftest.py` — a
+  missing plugin can never again silently skip async tests.
 
 ### Changed
+
 - **Domain models migrated to pydantic v2** — validated on deserialize; clone via
-  `model_copy`; six hand-written serializers replaced by one codec. (WP-5)
+  `model_copy`; the 6 hand-written serializers replaced by a 4-function codec.
 - **Idempotent, transactional monkeypatching** with rollback, and reentrancy
-  isolation via `ContextVar`. (WP-6)
+  isolation via `ContextVar`.
 - `PolicyLayer.wrap()` now delegates to the real `APLGraphWrapper` and raises
-  `TypeError` on an unsupported object instead of silently returning it unwrapped
-  (a no-op wrap = zero enforcement). `APLGraphWrapper` is exported via a lazy
-  module `__getattr__`, keeping the optional `langgraph` extra off the common
-  import path. (WP-8, WP-10)
+  `TypeError` on an unsupported object instead of silently returning it unwrapped.
 - **Unified logging** through `get_logger` / `APLLogger`; `auto_instrument` /
-  `uninstrument` no longer print to stdout. (WP-8)
+  `uninstrument` no longer print to stdout.
 - **CLI consolidated 33 → 11 files**; the misleading `--stdio` flag is removed
   (stdio is the default, `--http` is the switch) and serve chrome goes to stderr
-  so stdout stays clean for the JSON protocol. (WP-9)
+  so stdout stays clean for the JSON protocol.
+- **Events consolidated 15 → 2 files** — a declarative `EventSpec` table replaces
+  the 15 near-identical event classes.
+- **Transports consolidated 19 → 7 files** — `stdio.py`, `routes.py`,
+  `middleware.py` replace the one-function-per-file layout.
+- **Adapters consolidated 6 → 1 file** — `adapters/langgraph.py` with a
+  running-loop-aware sync bridge (no more `asyncio.run` landmine).
+- **Composition strategies now receive config** — `WeightedStrategy` honours
+  per-policy `weights`, `FirstApplicableStrategy` honours `priority` ordering,
+  and `UnanimousStrategy` implements real unanimity (was silently identical to
+  deny-overrides).
+- Layer-level `timeout_ms`/`on_timeout` wired via `asyncio.wait_for`.
 - Version single-sourced from `apl/__init__.py` via `[tool.hatch.version]`;
-  `PROTOCOL_VERSION` tracked separately. (WP-8, WP-11)
+  `PROTOCOL_VERSION` tracked separately.
 - `Modification.target` widened to the seven targets the event table applies;
-  `Message.role` relaxed from a `Literal` to `str` for provider pass-through. (WP-4, WP-5)
+  `Message.role` relaxed from a `Literal` to `str` for provider pass-through.
 - Transport reliability — client/server timeouts, stderr drain, and
-  kill-escalation on close. (WP-7)
+  kill-escalation on close.
+- Stdio server: a malformed frame is logged and skipped, no longer fatal.
+- HTTP client errors return 4xx with a stable `{error, message, request_id}`
+  envelope instead of raw 500s with exception strings.
+- Request-id is now the outermost middleware (present on every error response).
+- `ruff` (format + lint) replaces `black` + `isort`.
 
 ### Fixed
+
 - `Modification.operation` is now honored everywhere (it was ignored at ~15 apply
-  sites). (WP-4)
-- Composition correctness (WP-2) and declarative-engine correctness — YAML is
-  validated **on load**, so a bad operator is refused up front instead of denying
-  at the first event. (WP-3, WP-9)
+  sites).
+- `UnanimousStrategy` implements real unanimity (was silently identical to
+  deny-overrides).
+- `CompositionConfig.weights`, `.priority`, `.timeout_ms`, `.on_timeout` are no
+  longer dead fields — all four are wired and tested.
+- `AllowOverridesStrategy` empty-input returns ALLOW (LSP-consistent with other
+  strategies).
+- Composition correctness and declarative-engine correctness — YAML is validated
+  **on load**, so a bad operator is refused up front instead of denying at the
+  first event.
+- Dot-path traversal resolves `Mapping` keys before attribute access (`items`,
+  `keys`, `values` etc. no longer return dict methods).
+- Unknown YAML condition operators raise at eval and are caught by the validator.
 - CLI: `--http 0` now binds (was a truthiness bug); a bad `--event` exits with a
   usage error instead of a traceback; the directory loader imports each file under
-  a unique module name (no `sys.modules` clobber). (WP-9)
+  a unique module name (no `sys.modules` clobber).
+- `started_at` now round-trips (was write-only, resetting to "now" every hop).
+- An explicit `llm_prompt=[]` is preserved distinct from `None`.
+- Missing/out-of-range `confidence` is rejected fail-closed (was silently
+  defaulted to 1.0).
+- LangGraph adapter: session-id uses `thread_id` (stable across nodes/turns);
+  `MODIFY` verdicts are applied to graph state; sync bridge uses a persistent
+  loop (no fresh `asyncio.run` per node).
+- 8 async tests that were silently not executing now run (`pytest-asyncio` pinned).
 
 ## [0.3.0]
 
-[Unreleased]: https://github.com/nimonkaranurag/agentpolicylayer/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/nimonkaranurag/agentpolicylayer/compare/agent-policy-layer-v0.4.0...HEAD
+[0.4.0]: https://github.com/nimonkaranurag/agentpolicylayer/compare/agent-policy-layer-v0.3.0...agent-policy-layer-v0.4.0
 [0.3.0]: https://github.com/nimonkaranurag/agentpolicylayer/releases/tag/v0.3.0
