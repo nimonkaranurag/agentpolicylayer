@@ -100,10 +100,9 @@ ignore = ["E501"]  # line length is owned by the formatter (ruff format)
 
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401"]                                # intentional re-exports
-# The following are pre-existing logic issues deferred to the WP that rewrites
-# that code, so the WP-0 formatting gate stays green without touching logic:
-"apl/instrumentation/providers/*.py" = ["F401", "E731"] # availability-probe imports + applier lambdas -> WP-6
-"apl/instrumentation/state.py" = ["E741"]               # background-loop arg rename -> WP-6
+# WP-6 cleaned the instrumentation code those ignores covered: availability-probe imports
+# now use importlib.util.find_spec, the applier lambdas are defs, and the background-loop
+# args are renamed — so the F401/E731/E741 ignores for that subtree are gone.
 "apl/templates.py" = ["W291", "W293"]                   # whitespace inside literal file templates
 
 [tool.mypy]

@@ -16,14 +16,9 @@ class WatsonXProvider(BaseProvider):
 
     @staticmethod
     def is_available() -> bool:
-        try:
-            from ibm_watsonx_ai.foundation_models import (
-                ModelInference,
-            )
+        import importlib.util
 
-            return True
-        except ImportError:
-            return False
+        return importlib.util.find_spec("ibm_watsonx_ai") is not None
 
     def patch_all_methods(self) -> None:
         from ibm_watsonx_ai.foundation_models import (
@@ -31,21 +26,30 @@ class WatsonXProvider(BaseProvider):
         )
 
         self.method_patcher.register_patch(
-            ModelInference,
-            "chat",
-            self._create_instance_method_sync_wrapper(patch_target_index=0),
+            ModelInference, "chat", self._sync_instance_factory()
         )
+        # Async chat (``achat``) shipped in newer ibm-watsonx-ai; patch it only when the
+        # installed SDK exposes it so older versions still instrument the sync path.
+        if hasattr(ModelInference, "achat"):
+            self.method_patcher.register_patch(
+                ModelInference, "achat", self._async_instance_factory()
+            )
         self.method_patcher.apply_all_patches()
 
-    def extract_messages_from_request(self, *args: Any, **kwargs: Any) -> Any:
+    def extract_messages_from_request(
+        self, instance: Any, *args: Any, **kwargs: Any
+    ) -> Any:
         if "messages" in kwargs:
             return kwargs["messages"]
         if len(args) >= 1:
             return args[0]
         return []
 
-    def extract_model_from_request(self, *args: Any, **kwargs: Any) -> str:
-        return "watsonx"
+    def extract_model_from_request(
+        self, instance: Any, *args: Any, **kwargs: Any
+    ) -> str:
+        # WatsonX binds the deployed model to the ModelInference instance.
+        return getattr(instance, "model_id", None) or "watsonx"
 
     def extract_text_from_response(self, response: Any) -> str:
         try:

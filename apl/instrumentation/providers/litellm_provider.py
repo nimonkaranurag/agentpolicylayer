@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Any
-
 from .base_provider import BaseProvider
 
 
@@ -12,42 +10,17 @@ class LiteLLMProvider(BaseProvider):
 
     @staticmethod
     def is_available() -> bool:
-        try:
-            import litellm
+        import importlib.util
 
-            return True
-        except ImportError:
-            return False
+        return importlib.util.find_spec("litellm") is not None
 
     def patch_all_methods(self) -> None:
         import litellm
 
         self.method_patcher.register_patch(
-            litellm,
-            "completion",
-            self._create_module_sync_wrapper(),
+            litellm, "completion", self._sync_module_factory()
         )
         self.method_patcher.register_patch(
-            litellm,
-            "acompletion",
-            self._create_module_async_wrapper(),
+            litellm, "acompletion", self._async_module_factory()
         )
         self.method_patcher.apply_all_patches()
-
-    def _create_module_sync_wrapper(self) -> Any:
-        provider: LiteLLMProvider = self
-
-        def wrapper(*args: Any, **kwargs: Any) -> Any:
-            original = provider.method_patcher.patch_targets[0].original_method
-            return provider.execute_llm_call_sync(original, *args, **kwargs)
-
-        return wrapper
-
-    def _create_module_async_wrapper(self) -> Any:
-        provider: LiteLLMProvider = self
-
-        async def wrapper(*args: Any, **kwargs: Any) -> Any:
-            original = provider.method_patcher.patch_targets[1].original_method
-            return await provider.execute_llm_call_async(original, *args, **kwargs)
-
-        return wrapper

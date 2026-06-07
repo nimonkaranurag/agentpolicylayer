@@ -12,12 +12,9 @@ class AnthropicProvider(BaseProvider):
 
     @staticmethod
     def is_available() -> bool:
-        try:
-            import anthropic
+        import importlib.util
 
-            return True
-        except ImportError:
-            return False
+        return importlib.util.find_spec("anthropic") is not None
 
     def patch_all_methods(self) -> None:
         from anthropic.resources import (
@@ -26,14 +23,10 @@ class AnthropicProvider(BaseProvider):
         )
 
         self.method_patcher.register_patch(
-            Messages,
-            "create",
-            self._create_instance_method_sync_wrapper(patch_target_index=0),
+            Messages, "create", self._sync_instance_factory()
         )
         self.method_patcher.register_patch(
-            AsyncMessages,
-            "create",
-            self._create_instance_method_async_wrapper(patch_target_index=1),
+            AsyncMessages, "create", self._async_instance_factory()
         )
         self.method_patcher.apply_all_patches()
 

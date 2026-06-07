@@ -11,19 +11,15 @@ from apl.instrumentation.events import (
     RegisteredEvent,
     get_event,
 )
-from apl.instrumentation.execution import (
-    AsyncLifecycleExecutor,
-    BaseLifecycleExecutor,
-    StreamingLifecycleExecutor,
-    SyncLifecycleExecutor,
-)
+from apl.instrumentation.execution import LifecycleExecutor
 from apl.instrumentation.lifecycle.context import (
     LifecycleContext,
 )
+from apl.instrumentation.lifecycle.sequence import EventSequence
 from apl.instrumentation.state import (
     InstrumentationState,
 )
-from apl.layer import PolicyLayer
+from apl.layer import PolicyDenied, PolicyLayer
 from apl.types import (
     CompositionConfig,
     Decision,
@@ -140,26 +136,61 @@ class TestApplyVerdictModifications:
         assert ctx.response_text == "new"
 
 
-class TestExecutorInheritance:
-    def test_sync_executor_inherits_evaluator(self):
-        assert issubclass(
-            SyncLifecycleExecutor,
-            BaseLifecycleExecutor,
-        )
+def _executor_yielding(verdicts: list[Verdict]) -> LifecycleExecutor:
+    """
+    A :class:`LifecycleExecutor` whose evaluator returns ``verdicts`` in order.
 
-    def test_async_executor_inherits_evaluator(self):
-        assert issubclass(
-            AsyncLifecycleExecutor,
-            BaseLifecycleExecutor,
-        )
+    Lets us exercise the evaluate -> raise -> apply loop (now shared by the sync, async and
+    streaming drivers) without standing up a policy server.
+    """
+    layer = PolicyLayer(composition=CompositionConfig(fail_mode=FailMode.CLOSED))
+    executor = LifecycleExecutor(InstrumentationState(policy_layer=layer))
+    pending = iter(verdicts)
 
-    def test_streaming_executor_inherits_evaluator(
-        self,
-    ):
-        assert issubclass(
-            StreamingLifecycleExecutor,
-            BaseLifecycleExecutor,
+    def _sync(event, context):
+        return next(pending)
+
+    async def _async(event, context):
+        return next(pending)
+
+    executor.policy_evaluator.evaluate_event_sync = _sync
+    executor.policy_evaluator.evaluate_event_async = _async
+    return executor
+
+
+def _output_sequence() -> EventSequence:
+    return EventSequence(name="post", events=[get_event("output.pre_send")])
+
+
+class TestLifecycleExecutor:
+    """
+    The one shared loop must evaluate, block on deny, and apply modifications.
+    """
+
+    def test_execute_sequence_applies_modification(self):
+        executor = _executor_yielding(
+            [Verdict.modify(target="output", operation="replace", value="clean")]
         )
+        ctx = LifecycleContext(response_text="dirty")
+        executor.execute_sequence(_output_sequence(), ctx)
+        assert ctx.response_text == "clean"
+
+    def test_execute_sequence_raises_on_deny(self):
+        executor = _executor_yielding([Verdict.deny("nope")])
+        ctx = LifecycleContext(response_text="dirty")
+        try:
+            executor.execute_sequence(_output_sequence(), ctx)
+            raise AssertionError("expected PolicyDenied")
+        except PolicyDenied:
+            pass
+
+    def test_async_sequence_applies_modification(self):
+        executor = _executor_yielding(
+            [Verdict.modify(target="output", operation="replace", value="clean")]
+        )
+        ctx = LifecycleContext(response_text="dirty")
+        asyncio.run(executor.execute_sequence_async(_output_sequence(), ctx))
+        assert ctx.response_text == "clean"
 
 
 class _BoomEvent(BaseEvent):
