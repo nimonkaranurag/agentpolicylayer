@@ -12,8 +12,9 @@ from .condition_evaluator import ConditionEvaluator
 
 
 def _literal_values(dataclass_type: type, field_name: str) -> frozenset[str]:
-    """Read the allowed values of a ``Literal[...]`` field straight from the domain
-    type, so the validator can never drift from ``types.py``.
+    """
+    Read the allowed values of a ``Literal[...]`` field straight from the domain type,
+    so the validator can never drift from ``types.py``.
     """
     field_type = get_type_hints(dataclass_type)[field_name]
     return frozenset(get_args(field_type))

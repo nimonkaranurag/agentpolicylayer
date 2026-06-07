@@ -59,7 +59,9 @@ PATTERNS = {
     description="Scans output text for PII patterns and redacts them",
 )
 async def redact_pii(event: PolicyEvent) -> Verdict:
-    """Scan output text for PII and redact if found."""
+    """
+    Scan output text for PII and redact if found.
+    """
     text = event.payload.output_text
 
     if not text:
@@ -99,7 +101,9 @@ async def redact_pii(event: PolicyEvent) -> Verdict:
 async def block_pii_in_tools(
     event: PolicyEvent,
 ) -> Verdict:
-    """Block tool calls that would send PII to external services."""
+    """
+    Block tool calls that would send PII to external services.
+    """
     tool_args = event.payload.tool_args or {}
     args_str = str(tool_args)
 

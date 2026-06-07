@@ -118,6 +118,8 @@ class SystemInfoRenderer:
 
 @cli.command(cls=RichCommand)
 def info():
-    """Show APL system information and status."""
+    """
+    Show APL system information and status.
+    """
     _banner.render("full")
     SystemInfoRenderer().render()

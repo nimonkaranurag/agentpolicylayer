@@ -89,7 +89,9 @@ class APLRichHandler(RichHandler):
         super().__init__(*args, **kwargs)
 
     def get_level_text(self, record: logging.LogRecord) -> Text:
-        """Custom level text with icons."""
+        """
+        Custom level text with icons.
+        """
         level_name = record.levelname
 
         icons = {
@@ -151,7 +153,9 @@ class APLLogger:
         self._console = Console(theme=APL_THEME)
 
     def _log(self, level: int, message: str, **kwargs):
-        """Internal log method."""
+        """
+        Internal log method.
+        """
         extra = {"markup": True, **kwargs}
         self._logger.log(level, message, extra=extra)
 
@@ -164,7 +168,9 @@ class APLLogger:
         transport: str,
         address: Optional[str] = None,
     ):
-        """Log server startup."""
+        """
+        Log server startup.
+        """
         if address:
             self._log(
                 logging.INFO,
@@ -177,11 +183,15 @@ class APLLogger:
             )
 
     def server_stopped(self):
-        """Log server shutdown."""
+        """
+        Log server shutdown.
+        """
         self._log(logging.INFO, "[dim]Server stopped[/dim]")
 
     def policy_registered(self, policy_name: str, events: list[str]):
-        """Log policy registration."""
+        """
+        Log policy registration.
+        """
         events_str = ", ".join(events)
         self._log(
             logging.DEBUG,
@@ -189,7 +199,9 @@ class APLLogger:
         )
 
     def event_received(self, event_type: str, event_id: str):
-        """Log incoming event."""
+        """
+        Log incoming event.
+        """
         self._log(
             logging.DEBUG,
             f"[event]Event received:[/event] {event_type} [dim]({event_id[:8]}...)[/dim]",
@@ -201,7 +213,9 @@ class APLLogger:
         verdict: Verdict,
         elapsed_ms: Optional[float] = None,
     ):
-        """Log policy evaluation result."""
+        """
+        Log policy evaluation result.
+        """
         decision_styles = {
             Decision.ALLOW: "[policy.allow]ALLOW[/policy.allow]",
             Decision.DENY: "[policy.deny]DENY[/policy.deny]",
@@ -229,7 +243,9 @@ class APLLogger:
         final_decision: Decision,
         elapsed_ms: float,
     ):
-        """Log verdict composition result."""
+        """
+        Log verdict composition result.
+        """
         decision_styles = {
             Decision.ALLOW: "[policy.allow]ALLOW[/policy.allow]",
             Decision.DENY: "[policy.deny]DENY[/policy.deny]",
@@ -246,36 +262,48 @@ class APLLogger:
         )
 
     def client_connected(self, client_id: str, address: str):
-        """Log client connection."""
+        """
+        Log client connection.
+        """
         self._log(
             logging.INFO,
             f"[green]Client connected:[/green] {client_id} from {address}",
         )
 
     def client_disconnected(self, client_id: str):
-        """Log client disconnection."""
+        """
+        Log client disconnection.
+        """
         self._log(
             logging.DEBUG,
             f"[dim]Client disconnected: {client_id}[/dim]",
         )
 
     def error(self, message: str, exc_info: bool = False):
-        """Log error."""
+        """
+        Log error.
+        """
         self._logger.error(message, exc_info=exc_info)
 
     def warning(self, message: str):
-        """Log warning."""
+        """
+        Log warning.
+        """
         self._log(
             logging.WARNING,
             f"[warning]{message}[/warning]",
         )
 
     def info(self, message: str):
-        """Log info."""
+        """
+        Log info.
+        """
         self._log(logging.INFO, message)
 
     def debug(self, message: str):
-        """Log debug."""
+        """
+        Log debug.
+        """
         self._log(logging.DEBUG, f"[dim]{message}[/dim]")
 
 

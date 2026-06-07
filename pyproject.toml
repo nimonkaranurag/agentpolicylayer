@@ -80,6 +80,7 @@ testpaths = ["tests"]
 recursive = true
 pre-summary-newline = true
 close-quotes-on-newline = true
+make-summary-multi-line = true
 wrap-summaries = 88
 wrap-descriptions = 88
 # templates.py holds triple-quoted *template strings* (not docstrings) that

@@ -124,14 +124,18 @@ class EventType(str, Enum):
 
 
 class FunctionCall(BaseModel):
-    """Function call details."""
+    """
+    Function call details.
+    """
 
     name: str
     arguments: str  # JSON string, as per OpenAI spec
 
 
 class ToolCall(BaseModel):
-    """Tool call within an assistant message."""
+    """
+    Tool call within an assistant message.
+    """
 
     id: str
     type: Literal["function"] = "function"
@@ -159,7 +163,9 @@ class Message(BaseModel):
 
 
 class SessionMetadata(BaseModel):
-    """Session-level context that isn't in the conversation."""
+    """
+    Session-level context that isn't in the conversation.
+    """
 
     session_id: str = Field(default_factory=_new_uuid)
     user_id: Optional[str] = None
@@ -271,7 +277,9 @@ class Decision(str, Enum):
 
 
 class Modification(BaseModel):
-    """How to modify the action/content."""
+    """
+    How to modify the action/content.
+    """
 
     # Every target the enforcement engine can apply: the instrumentation event
     # table (apl/instrumentation/events) wires accessors for all of these, so a
@@ -300,7 +308,9 @@ class Modification(BaseModel):
 
 
 class Escalation(BaseModel):
-    """How to escalate to humans."""
+    """
+    How to escalate to humans.
+    """
 
     type: Literal[
         "human_confirm",
@@ -518,7 +528,9 @@ class PolicyManifest(BaseModel):
 
 
 class CompositionMode(str, Enum):
-    """How to combine verdicts from multiple policies."""
+    """
+    How to combine verdicts from multiple policies.
+    """
 
     DENY_OVERRIDES = "deny_overrides"  # Any deny wins
     ALLOW_OVERRIDES = "allow_overrides"  # Any allow wins (rare)
@@ -528,7 +540,9 @@ class CompositionMode(str, Enum):
 
 
 class CompositionConfig(BaseModel):
-    """Configuration for verdict composition."""
+    """
+    Configuration for verdict composition.
+    """
 
     mode: CompositionMode = CompositionMode.DENY_OVERRIDES
 

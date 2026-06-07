@@ -247,7 +247,9 @@ class TestHttpTransportFailClosed:
 
 
 class _SlowClient:
-    """A stand-in PolicyClient whose evaluate() outlives the layer timeout."""
+    """
+    A stand-in PolicyClient whose evaluate() outlives the layer timeout.
+    """
 
     def __init__(self, delay: float) -> None:
         self._delay = delay

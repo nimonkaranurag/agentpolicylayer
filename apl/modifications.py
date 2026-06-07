@@ -78,8 +78,8 @@ def apply_operation(current: Any, modification: Modification) -> Any:
 
 
 def _combine(current: Any, value: Any, *, prepend: bool) -> Any:
-    """Concatenate ``value`` onto ``current`` (str/list/dict), order set by
-    ``prepend``.
+    """
+    Concatenate ``value`` onto ``current`` (str/list/dict), order set by ``prepend``.
     """
     if current is None:
         return value

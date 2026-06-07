@@ -43,7 +43,9 @@ WARNING_THRESHOLD = 0.8  # Warn at 80%
 async def check_token_budget(
     event: PolicyEvent,
 ) -> Verdict:
-    """Check if session is within token budget."""
+    """
+    Check if session is within token budget.
+    """
     token_count = event.metadata.token_count
     token_budget = event.metadata.token_budget or DEFAULT_TOKEN_BUDGET
 
@@ -81,7 +83,9 @@ async def check_token_budget(
 async def check_cost_budget(
     event: PolicyEvent,
 ) -> Verdict:
-    """Check if session is within cost budget."""
+    """
+    Check if session is within cost budget.
+    """
     cost_usd = event.metadata.cost_usd
     cost_budget = event.metadata.cost_budget_usd or DEFAULT_COST_BUDGET_USD
 
@@ -118,7 +122,9 @@ async def check_cost_budget(
 async def expensive_model_guard(
     event: PolicyEvent,
 ) -> Verdict:
-    """Suggest cheaper models when budget is running low."""
+    """
+    Suggest cheaper models when budget is running low.
+    """
     model = event.payload.llm_model or ""
     cost_usd = event.metadata.cost_usd
     cost_budget = event.metadata.cost_budget_usd or DEFAULT_COST_BUDGET_USD

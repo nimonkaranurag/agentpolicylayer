@@ -68,8 +68,8 @@ class EventSpec:
 
 
 class RegisteredEvent(BaseEvent):
-    """A concrete :class:`BaseEvent` whose behaviour comes from an
-    :class:`EventSpec`.
+    """
+    A concrete :class:`BaseEvent` whose behaviour comes from an :class:`EventSpec`.
     """
 
     def __init__(self, spec: EventSpec) -> None:

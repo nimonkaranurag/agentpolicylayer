@@ -323,7 +323,9 @@ class TestManifestCodec:
 
 
 class _ManifestTransport(BaseClientTransport):
-    """Fake client transport that yields a manifest with a chosen protocol version."""
+    """
+    Fake client transport that yields a manifest with a chosen protocol version.
+    """
 
     def __init__(self, protocol_version: str) -> None:
         self._protocol_version = protocol_version

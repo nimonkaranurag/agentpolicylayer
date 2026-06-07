@@ -40,12 +40,16 @@ def to_wire(model: BaseModel) -> dict[str, Any]:
 
 
 def event_from_wire(data: dict[str, Any]) -> PolicyEvent:
-    """Decode a :class:`~apl.types.PolicyEvent`, validating its shape."""
+    """
+    Decode a :class:`~apl.types.PolicyEvent`, validating its shape.
+    """
     return PolicyEvent.model_validate(data or {})
 
 
 def manifest_from_wire(data: dict[str, Any]) -> PolicyManifest:
-    """Decode a :class:`~apl.types.PolicyManifest`, validating its shape."""
+    """
+    Decode a :class:`~apl.types.PolicyManifest`, validating its shape.
+    """
     return PolicyManifest.model_validate(data)
 
 

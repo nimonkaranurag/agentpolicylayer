@@ -108,7 +108,9 @@ async def demo_decorator_api():
     # Define a tool function with policy checks
     @policies.on("tool.pre_invoke")
     async def execute_tool(tool_name: str, tool_args: dict):
-        """Simulated tool execution."""
+        """
+        Simulated tool execution.
+        """
         print(f"  Executing {tool_name} with {tool_args}")
         return {"status": "success"}
 
@@ -194,7 +196,9 @@ async def demo_composition():
 
 
 async def main():
-    """Run all demos."""
+    """
+    Run all demos.
+    """
     print("=" * 60)
     print("APL (Agent Policy Layer) - Demo")
     print("=" * 60)
