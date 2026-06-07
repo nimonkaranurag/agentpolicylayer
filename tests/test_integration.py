@@ -11,8 +11,9 @@ from apl.declarative_engine.rule_evaluator import (
 )
 from apl.declarative_engine.schema import YAMLRule
 from apl.serialization import (
-    EventSerializer,
-    VerdictSerializer,
+    event_from_wire,
+    to_wire,
+    verdict_from_wire,
 )
 from apl.server import PolicyServer
 from apl.types import (
@@ -132,9 +133,8 @@ class TestEndToEndSerialization:
             ),
         )
 
-        serializer = EventSerializer()
-        data = serializer.serialize(event)
-        restored = serializer.deserialize(data)
+        data = to_wire(event)
+        restored = event_from_wire(data)
 
         assert restored.type == EventType.LLM_PRE_REQUEST
         assert len(restored.messages) == 2
@@ -144,8 +144,6 @@ class TestEndToEndSerialization:
         assert restored.metadata.user_region == "US"
 
     def test_verdict_roundtrip_all_types(self):
-        serializer = VerdictSerializer()
-
         for verdict in [
             Verdict.allow(reasoning="ok"),
             Verdict.deny("no"),
@@ -157,8 +155,7 @@ class TestEndToEndSerialization:
             Verdict.escalate(type="human_confirm", prompt="check"),
             Verdict.observe(trace={"key": "val"}),
         ]:
-            data = serializer.serialize(verdict)
-            restored = serializer.deserialize(data)
+            restored = verdict_from_wire(to_wire(verdict))
             assert restored.decision == verdict.decision
 
 

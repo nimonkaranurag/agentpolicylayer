@@ -19,6 +19,17 @@ from apl.types import (
 )
 
 
+def _named(verdict: Verdict, name: str) -> Verdict:
+    """
+    Attach a ``policy_name`` to a verdict.
+
+    The ``Verdict`` factories don't take one, but weighted/priority composition keys on
+    it, so the config-driven tests set it explicitly.
+    """
+    verdict.policy_name = name
+    return verdict
+
+
 class TestDenyOverridesStrategy:
     def setup_method(self):
         self.strategy = DenyOverridesStrategy()
@@ -79,31 +90,73 @@ class TestDenyOverridesStrategy:
 
 
 class TestUnanimousStrategy:
+    """
+    Real unanimity: every non-observe verdict must ALLOW, else deny.
+
+    These replace ``test_same_logic_as_deny_overrides``, which encoded the bug (review
+    §3.2) by asserting Unanimous == DenyOverrides.
+    """
+
     def setup_method(self):
         self.strategy = UnanimousStrategy()
 
     def test_empty_verdicts_returns_allow(self):
         assert self.strategy.compose([]).decision == Decision.ALLOW
 
-    def test_same_logic_as_deny_overrides(self):
+    def test_all_allow_is_allow(self):
+        verdicts = [Verdict.allow(), Verdict.allow()]
+        assert self.strategy.compose(verdicts).decision == Decision.ALLOW
+
+    def test_any_deny_breaks_unanimity(self):
+        verdicts = [Verdict.allow(), Verdict.deny("no")]
+        assert self.strategy.compose(verdicts).decision == Decision.DENY
+
+    def test_modify_breaks_unanimity(self):
+        # The old deny-overrides impl carried the lone MODIFY through; real
+        # unanimity denies. Fails against pre-fix code.
         verdicts = [
             Verdict.allow(),
-            Verdict.deny("no"),
+            Verdict.modify(target="output", operation="replace", value="x"),
         ]
         assert self.strategy.compose(verdicts).decision == Decision.DENY
+
+    def test_escalate_breaks_unanimity(self):
+        # The old impl surfaced the ESCALATE; real unanimity denies.
+        verdicts = [
+            Verdict.allow(),
+            Verdict.escalate(type="human_confirm"),
+        ]
+        assert self.strategy.compose(verdicts).decision == Decision.DENY
+
+    def test_observe_abstains(self):
+        verdicts = [Verdict.allow(), Verdict.observe()]
+        assert self.strategy.compose(verdicts).decision == Decision.ALLOW
+
+    def test_all_observe_is_allow(self):
+        verdicts = [Verdict.observe(), Verdict.observe()]
+        assert self.strategy.compose(verdicts).decision == Decision.ALLOW
 
     def test_all_allow_has_unanimous_reasoning(self):
         result = self.strategy.compose([Verdict.allow()])
         assert "agreed" in result.reasoning
+
+    def test_deny_reason_records_dissent(self):
+        verdicts = [Verdict.allow(), Verdict.deny("PII detected")]
+        result = self.strategy.compose(verdicts)
+        assert result.decision == Decision.DENY
+        assert "PII detected" in result.reasoning
 
 
 class TestAllowOverridesStrategy:
     def setup_method(self):
         self.strategy = AllowOverridesStrategy()
 
-    def test_empty_verdicts_returns_deny(self):
+    def test_empty_verdicts_returns_allow(self):
+        # LSP fix (review §4.3): every strategy treats "no policy had an
+        # opinion" as allow. This used to deny — an empty-input surprise when
+        # swapping strategies. Fails against pre-fix code.
         result = self.strategy.compose([])
-        assert result.decision == Decision.DENY
+        assert result.decision == Decision.ALLOW
 
     def test_allow_overrides_deny(self):
         verdicts = [
@@ -148,8 +201,52 @@ class TestFirstApplicableStrategy:
         result = self.strategy.compose(verdicts)
         assert result.decision == Decision.ALLOW
 
+    def test_priority_reorders_selection(self):
+        # Arrival order would pick the allow first; priority elevates "high"
+        # so its deny wins. Fails against pre-fix code (priority ignored).
+        config = CompositionConfig(
+            mode=CompositionMode.FIRST_APPLICABLE,
+            priority=["high"],
+        )
+        strategy = FirstApplicableStrategy(config)
+        verdicts = [
+            _named(Verdict.allow(), "low"),
+            _named(Verdict.deny("blocked"), "high"),
+        ]
+        assert strategy.compose(verdicts).decision == Decision.DENY
+
+    def test_no_priority_uses_arrival_order(self):
+        strategy = FirstApplicableStrategy()
+        verdicts = [
+            _named(Verdict.deny("first"), "a"),
+            _named(Verdict.allow(), "b"),
+        ]
+        assert strategy.compose(verdicts).decision == Decision.DENY
+
+    def test_unranked_policies_keep_relative_order(self):
+        # priority names nothing in this set; arrival order must be preserved.
+        config = CompositionConfig(
+            mode=CompositionMode.FIRST_APPLICABLE,
+            priority=["absent"],
+        )
+        strategy = FirstApplicableStrategy(config)
+        verdicts = [
+            _named(Verdict.deny("first"), "a"),
+            _named(Verdict.allow(), "b"),
+        ]
+        assert strategy.compose(verdicts).decision == Decision.DENY
+
 
 class TestWeightedStrategy:
+    """
+    Weighted voting.
+
+    The no-config cases below document the default-weight (1.0) fallback, where the
+    score reduces to a sum of confidences. The ``test_*_weight_*`` cases exercise
+    ``CompositionConfig.weights`` and fail against pre-fix code, which ignored the
+    weights map entirely (review §3.3).
+    """
+
     def setup_method(self):
         self.strategy = WeightedStrategy()
 
@@ -180,12 +277,49 @@ class TestWeightedStrategy:
         result = self.strategy.compose(verdicts)
         assert result.decision == Decision.ALLOW
 
+    def test_configured_weight_overrides_confidence(self):
+        # A heavily-weighted, modest-confidence deny beats a default-weight,
+        # high-confidence allow: allow=1.0*0.9=0.9 vs deny=10.0*0.5=5.0.
+        config = CompositionConfig(
+            mode=CompositionMode.WEIGHTED,
+            weights={"strict": 10.0},
+        )
+        strategy = WeightedStrategy(config)
+        verdicts = [
+            _named(Verdict.allow(confidence=0.9), "lenient"),
+            _named(Verdict.deny("risky", confidence=0.5), "strict"),
+        ]
+        assert strategy.compose(verdicts).decision == Decision.DENY
+
+    def test_zero_weight_silences_policy(self):
+        # A zero-weighted deny cannot block: allow=1.0*0.4=0.4 vs deny=0.0.
+        config = CompositionConfig(
+            mode=CompositionMode.WEIGHTED,
+            weights={"noisy": 0.0},
+        )
+        strategy = WeightedStrategy(config)
+        verdicts = [
+            _named(Verdict.allow(confidence=0.4), "trusted"),
+            _named(Verdict.deny("spurious", confidence=1.0), "noisy"),
+        ]
+        assert strategy.compose(verdicts).decision == Decision.ALLOW
+
 
 class TestGetStrategy:
-    def test_all_modes_resolve(self):
-        for mode in CompositionMode:
-            strategy = get_strategy(mode)
-            assert hasattr(strategy, "compose")
+    def test_each_mode_composes_to_documented_decision(self):
+        # Replaces a hasattr() tautology with a real behavioural check per mode
+        # over the same mixed input, and guards that every mode is covered.
+        verdicts = [Verdict.allow(), Verdict.deny("no")]
+        expected = {
+            CompositionMode.DENY_OVERRIDES: Decision.DENY,
+            CompositionMode.ALLOW_OVERRIDES: Decision.ALLOW,
+            CompositionMode.UNANIMOUS: Decision.DENY,
+            CompositionMode.FIRST_APPLICABLE: Decision.ALLOW,
+            CompositionMode.WEIGHTED: Decision.ALLOW,  # 1.0 vs 1.0 tie -> allow
+        }
+        assert set(expected) == set(CompositionMode)
+        for mode, decision in expected.items():
+            assert get_strategy(mode).compose(verdicts).decision == decision, mode
 
     def test_unknown_mode_raises(self):
         with pytest.raises(
@@ -212,3 +346,18 @@ class TestVerdictComposer:
         verdicts = [Verdict.deny("x"), Verdict.allow()]
         result = composer.compose(verdicts)
         assert result.decision == Decision.ALLOW
+
+    def test_composer_threads_config_into_strategy(self):
+        # End-to-end proof that config flows composer -> get_strategy ->
+        # strategy: the weights map must reach WeightedStrategy. Pre-fix the
+        # strategy was constructed without config, so weights had no effect.
+        config = CompositionConfig(
+            mode=CompositionMode.WEIGHTED,
+            weights={"strict": 10.0},
+        )
+        composer = VerdictComposer(config)
+        verdicts = [
+            _named(Verdict.allow(confidence=0.9), "lenient"),
+            _named(Verdict.deny("risky", confidence=0.5), "strict"),
+        ]
+        assert composer.compose(verdicts).decision == Decision.DENY

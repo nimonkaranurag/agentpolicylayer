@@ -9,7 +9,7 @@ from .strategies import (
 class VerdictComposer:
     def __init__(self, config: CompositionConfig | None = None):
         self._config = config or CompositionConfig()
-        self._strategy = get_strategy(self._config.mode)
+        self._strategy = get_strategy(self._config.mode, self._config)
 
     @property
     def config(self) -> CompositionConfig:

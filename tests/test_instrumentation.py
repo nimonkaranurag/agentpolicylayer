@@ -7,49 +7,9 @@ from apl.instrumentation.evaluation.policy_evaluator import (
 )
 from apl.instrumentation.events import (
     EVENT_REGISTRY,
-    get_event,
-)
-from apl.instrumentation.events.agent_post_handoff_event import (
-    AgentPostHandoffEvent,
-)
-from apl.instrumentation.events.agent_pre_handoff_event import (
-    AgentPreHandoffEvent,
-)
-from apl.instrumentation.events.base_event import (
     BaseEvent,
-)
-from apl.instrumentation.events.input_received_event import (
-    InputReceivedEvent,
-)
-from apl.instrumentation.events.input_validated_event import (
-    InputValidatedEvent,
-)
-from apl.instrumentation.events.llm_post_response_event import (
-    LLMPostResponseEvent,
-)
-from apl.instrumentation.events.llm_pre_request_event import (
-    LLMPreRequestEvent,
-)
-from apl.instrumentation.events.output_pre_send_event import (
-    OutputPreSendEvent,
-)
-from apl.instrumentation.events.plan_approved_event import (
-    PlanApprovedEvent,
-)
-from apl.instrumentation.events.plan_proposed_event import (
-    PlanProposedEvent,
-)
-from apl.instrumentation.events.session_end_event import (
-    SessionEndEvent,
-)
-from apl.instrumentation.events.session_start_event import (
-    SessionStartEvent,
-)
-from apl.instrumentation.events.tool_post_invoke_event import (
-    ToolPostInvokeEvent,
-)
-from apl.instrumentation.events.tool_pre_invoke_event import (
-    ToolPreInvokeEvent,
+    RegisteredEvent,
+    get_event,
 )
 from apl.instrumentation.execution import (
     AsyncLifecycleExecutor,
@@ -70,106 +30,114 @@ from apl.types import (
     EventPayload,
     EventType,
     FailMode,
+    Message,
     Verdict,
 )
 
 
 class TestEventRegistry:
-    def test_all_thirteen_events_registered(self):
-        assert len(EVENT_REGISTRY) == 13
+    def test_one_registered_event_per_event_type(self):
+        assert len(EVENT_REGISTRY) == len(EventType)
+        assert set(EVENT_REGISTRY) == {e.value for e in EventType}
 
-    def test_all_event_type_values_present(self):
-        expected_keys = {e.value for e in EventType}
-        actual_keys = set(EVENT_REGISTRY.keys())
-        assert expected_keys == actual_keys
+    def test_get_event_returns_registered_event_with_matching_type(self):
+        for name in EVENT_REGISTRY:
+            event = get_event(name)
+            assert isinstance(event, RegisteredEvent)
+            assert event.event_type.value == name
 
-    def test_get_event_returns_correct_type(self):
-        assert isinstance(
-            get_event("session.start"),
-            SessionStartEvent,
-        )
-        assert isinstance(
-            get_event("output.pre_send"),
-            OutputPreSendEvent,
-        )
-        assert isinstance(
-            get_event("tool.pre_invoke"),
-            ToolPreInvokeEvent,
-        )
-
-    def test_all_events_are_base_event_subclasses(
-        self,
-    ):
+    def test_all_events_are_base_event_subclasses(self):
         for event in EVENT_REGISTRY.values():
             assert isinstance(event, BaseEvent)
 
 
-class TestEventTypes:
-    def test_session_start_event_type(self):
-        assert SessionStartEvent().event_type == EventType.SESSION_START
-
-    def test_session_end_event_type(self):
-        assert SessionEndEvent().event_type == EventType.SESSION_END
-
-    def test_input_received_event_type(self):
-        assert InputReceivedEvent().event_type == EventType.INPUT_RECEIVED
-
-    def test_input_validated_event_type(self):
-        assert InputValidatedEvent().event_type == EventType.INPUT_VALIDATED
-
-    def test_llm_pre_request_event_type(self):
-        assert LLMPreRequestEvent().event_type == EventType.LLM_PRE_REQUEST
-
-    def test_llm_post_response_event_type(self):
-        assert LLMPostResponseEvent().event_type == EventType.LLM_POST_RESPONSE
-
-    def test_tool_pre_invoke_event_type(self):
-        assert ToolPreInvokeEvent().event_type == EventType.TOOL_PRE_INVOKE
-
-    def test_tool_post_invoke_event_type(self):
-        assert ToolPostInvokeEvent().event_type == EventType.TOOL_POST_INVOKE
-
-    def test_output_pre_send_event_type(self):
-        assert OutputPreSendEvent().event_type == EventType.OUTPUT_PRE_SEND
-
-    def test_plan_proposed_event_type(self):
-        assert PlanProposedEvent().event_type == EventType.PLAN_PROPOSED
-
-    def test_plan_approved_event_type(self):
-        assert PlanApprovedEvent().event_type == EventType.PLAN_APPROVED
-
-    def test_agent_pre_handoff_event_type(self):
-        assert AgentPreHandoffEvent().event_type == EventType.AGENT_PRE_HANDOFF
-
-    def test_agent_post_handoff_event_type(self):
-        assert AgentPostHandoffEvent().event_type == EventType.AGENT_POST_HANDOFF
+def _populated_context() -> LifecycleContext:
+    return LifecycleContext(
+        apl_messages=[Message(role="user", content="hi")],
+        model_name="gpt-4",
+        response_text="answer",
+        tool_name="search",
+        tool_args={"q": "x"},
+        tool_result={"r": 1},
+        proposed_plan=["step-1"],
+        source_agent="a",
+        target_agent="b",
+        handoff_payload={"k": "v"},
+    )
 
 
-class TestDefaultBuildPayload:
-    def test_session_start_returns_empty_payload(self):
-        ctx = type("ctx", (), {"proposed_plan": None})()
-        payload = SessionStartEvent().build_payload(ctx)
-        assert isinstance(payload, EventPayload)
-        assert payload.tool_name is None
+# The payload each event is expected to build from a fully-populated context. This is the
+# behaviour parity check for the events consolidation: it independently re-encodes the
+# field mapping that used to live in 13 separate build_payload() overrides.
+_EXPECTED_PAYLOADS: dict[str, EventPayload] = {
+    "input.received": EventPayload(),
+    "input.validated": EventPayload(),
+    "llm.pre_request": EventPayload(
+        llm_model="gpt-4",
+        llm_prompt=[Message(role="user", content="hi")],
+    ),
+    "llm.post_response": EventPayload(
+        llm_model="gpt-4",
+        llm_response=Message(role="assistant", content="answer"),
+    ),
+    "tool.pre_invoke": EventPayload(tool_name="search", tool_args={"q": "x"}),
+    "tool.post_invoke": EventPayload(
+        tool_name="search",
+        tool_args={"q": "x"},
+        tool_result={"r": 1},
+    ),
+    "output.pre_send": EventPayload(output_text="answer"),
+    "session.start": EventPayload(),
+    "session.end": EventPayload(),
+    "plan.proposed": EventPayload(plan=["step-1"]),
+    "plan.approved": EventPayload(plan=["step-1"]),
+    "agent.pre_handoff": EventPayload(
+        target_agent="b",
+        source_agent="a",
+        handoff_payload={"k": "v"},
+    ),
+    "agent.post_handoff": EventPayload(
+        target_agent="b",
+        source_agent="a",
+        handoff_payload={"k": "v"},
+    ),
+}
 
-    def test_session_end_returns_empty_payload(self):
-        ctx = type("ctx", (), {})()
-        payload = SessionEndEvent().build_payload(ctx)
-        assert isinstance(payload, EventPayload)
+
+class TestBuildPayloadParity:
+    def test_expected_payloads_cover_every_event_type(self):
+        assert set(_EXPECTED_PAYLOADS) == {e.value for e in EventType}
+
+    def test_build_payload_matches_expected_for_all_events(self):
+        ctx = _populated_context()
+        for name, expected in _EXPECTED_PAYLOADS.items():
+            assert get_event(name).build_payload(ctx) == expected, name
 
 
 class TestApplyVerdictModifications:
     def test_non_modify_verdict_is_noop(self):
-        event = SessionStartEvent()
-        verdict = Verdict.allow()
-        ctx = type("ctx", (), {})()
-        event.apply_verdict_modifications(verdict, ctx)
+        ctx = LifecycleContext(response_text="unchanged")
+        get_event("output.pre_send").apply_verdict_modifications(Verdict.allow(), ctx)
+        assert ctx.response_text == "unchanged"
 
-    def test_modify_with_no_modification_is_noop(self):
-        event = SessionStartEvent()
-        verdict = Verdict(decision=Decision.MODIFY, modifications=[])
-        ctx = type("ctx", (), {})()
-        event.apply_verdict_modifications(verdict, ctx)
+    def test_modify_with_unsupported_target_is_noop(self):
+        # A MODIFY whose target this event doesn't support is a no-op. (A MODIFY
+        # with *no* modifications is no longer representable; that invariant is
+        # covered in test_serialization.)
+        ctx = LifecycleContext(response_text="unchanged")
+        get_event("output.pre_send").apply_verdict_modifications(
+            Verdict.modify(target="tool_args", operation="replace", value="x"),
+            ctx,
+        )
+        assert ctx.response_text == "unchanged"
+
+    def test_replace_modification_is_applied(self):
+        ctx = LifecycleContext(response_text="old")
+        get_event("output.pre_send").apply_verdict_modifications(
+            Verdict.modify(target="output", operation="replace", value="new"),
+            ctx,
+        )
+        assert ctx.response_text == "new"
 
 
 class TestExecutorInheritance:

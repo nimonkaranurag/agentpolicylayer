@@ -7,8 +7,13 @@ from .base_strategy import BaseCompositionStrategy
 
 class AllowOverridesStrategy(BaseCompositionStrategy):
     def compose(self, verdicts: list[Verdict]) -> Verdict:
-        if not verdicts:
-            return Verdict.deny(reasoning="No policies evaluated")
+        # Empty input means no policy had an opinion (unavailability is already
+        # converted to an in-list deny upstream by the fail-closed client), so
+        # allow — matching every other strategy. Previously this denied, an LSP
+        # surprise when swapping strategies (review §4.3).
+        guard = self._guard_empty_verdicts(verdicts)
+        if guard is not None:
+            return guard
 
         all_mods = self._collect_all_modifications(verdicts)
 

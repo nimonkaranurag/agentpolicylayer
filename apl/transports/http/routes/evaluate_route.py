@@ -3,16 +3,11 @@ import time
 from aiohttp import web
 
 from apl.composition import VerdictComposer
-from apl.serialization import (
-    EventSerializer,
-    VerdictSerializer,
-)
+from apl.serialization import event_from_wire, to_wire
 
 
 class EvaluateRouteHandler:
     def __init__(self):
-        self._event_serializer = EventSerializer()
-        self._verdict_serializer = VerdictSerializer()
         self._composer = VerdictComposer()
 
     async def handle(self, request: web.Request) -> web.Response:
@@ -30,7 +25,7 @@ class EvaluateRouteHandler:
                 status=400,
             )
 
-        event = self._event_serializer.deserialize(data)
+        event = event_from_wire(data)
 
         if logger:
             logger.event_received(event.type.value, event.id)
@@ -65,8 +60,8 @@ class EvaluateRouteHandler:
         return web.json_response(
             {
                 "event_id": event.id,
-                "verdicts": [self._verdict_serializer.serialize(v) for v in verdicts],
-                "composed_verdict": self._verdict_serializer.serialize(composed),
+                "verdicts": [to_wire(v) for v in verdicts],
+                "composed_verdict": to_wire(composed),
                 "evaluation_ms": elapsed_ms,
             }
         )

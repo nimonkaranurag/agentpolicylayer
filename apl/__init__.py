@@ -83,10 +83,6 @@ from .logging import (
     get_logger,
     setup_logging,
 )
-from .serialization import (
-    EventSerializer,
-    VerdictSerializer,
-)
 from .server import PolicyServer
 from .types import (  # Events; Context (chat/completions compatible); Verdicts; Definitions; Composition
     CompositionConfig,
@@ -154,6 +150,4 @@ __all__ = [
     # Auto-instrumentation
     "auto_instrument",
     "uninstrument",
-    "EventSerializer",
-    "VerdictSerializer",
 ]

@@ -57,7 +57,9 @@ HIGH_RISK_TOOLS = [
 async def confirm_delete(
     event: PolicyEvent,
 ) -> Verdict:
-    """Check if tool is destructive and require confirmation."""
+    """
+    Check if tool is destructive and require confirmation.
+    """
     tool_name = event.payload.tool_name or ""
     tool_args = event.payload.tool_args or {}
 
@@ -96,7 +98,9 @@ async def confirm_delete(
 async def warn_high_risk(
     event: PolicyEvent,
 ) -> Verdict:
-    """High-risk operations require admin role or explicit confirmation."""
+    """
+    High-risk operations require admin role or explicit confirmation.
+    """
     tool_name = event.payload.tool_name or ""
     user_roles = event.metadata.user_roles or []
 

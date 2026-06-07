@@ -2,11 +2,7 @@ import sys
 from typing import TYPE_CHECKING
 
 from apl.logging import get_logger
-from apl.serialization import (
-    EventSerializer,
-    ManifestSerializer,
-    VerdictSerializer,
-)
+from apl.serialization import event_from_wire, to_wire
 
 from .message_writer import write_json_line
 
@@ -19,9 +15,6 @@ logger = get_logger("transport.stdio")
 class StdioProtocolHandler:
     def __init__(self, server: "PolicyServer"):
         self._server = server
-        self._event_serializer = EventSerializer()
-        self._verdict_serializer = VerdictSerializer()
-        self._manifest_serializer = ManifestSerializer()
 
     async def handle_message(self, message: dict) -> None:
         message_type = message.get("type")
@@ -36,14 +29,14 @@ class StdioProtocolHandler:
             logger.warning(f"Unknown message type: {message_type}")
 
     async def _handle_evaluate(self, message: dict) -> None:
-        event = self._event_serializer.deserialize(message.get("event", {}))
+        event = event_from_wire(message.get("event", {}))
         verdicts = await self._server.evaluate(event)
 
         write_json_line(
             {
                 "type": "verdicts",
                 "event_id": event.id,
-                "verdicts": [self._verdict_serializer.serialize(v) for v in verdicts],
+                "verdicts": [to_wire(v) for v in verdicts],
             }
         )
 
@@ -59,6 +52,6 @@ class StdioProtocolHandler:
         write_json_line(
             {
                 "type": "manifest",
-                "manifest": self._manifest_serializer.serialize(manifest),
+                "manifest": to_wire(manifest),
             }
         )

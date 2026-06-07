@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 
 import pytest
+from pydantic import ValidationError
 
 from apl.layer.client_transports import (
     BaseClientTransport,
@@ -20,7 +21,9 @@ from apl.layer.exceptions import (
     PolicyEscalation,
 )
 from apl.layer.policy_client import PolicyClient
+from apl.layer.policy_layer import PolicyLayer
 from apl.types import (
+    CompositionConfig,
     Decision,
     EventPayload,
     EventType,
@@ -107,12 +110,6 @@ class TestPolicyClient:
         assert client.is_connected is False
         assert client.manifest is None
 
-    def test_client_has_serializers(self):
-        client = PolicyClient("http://localhost:8080")
-        assert client._event_serializer is not None
-        assert client._manifest_serializer is not None
-        assert client._verdict_serializer is not None
-
 
 class TestExceptions:
     def test_policy_denied(self):
@@ -135,10 +132,12 @@ class TestExceptions:
         assert exc.verdict is verdict
         assert str(exc) == "Please confirm"
 
-    def test_policy_escalation_no_escalation(self):
-        verdict = Verdict(decision=Decision.ESCALATE)
-        exc = PolicyEscalation(verdict)
-        assert str(exc) == "Escalation required"
+    def test_escalate_without_escalation_is_rejected(self):
+        # WP-5 invariant: an ESCALATE verdict must carry an escalation, so the
+        # "no escalation" state PolicyEscalation defends against can no longer be
+        # constructed.
+        with pytest.raises(ValidationError):
+            Verdict(decision=Decision.ESCALATE)
 
 
 class _RaisingTransport(BaseClientTransport):
@@ -238,3 +237,80 @@ class TestHttpTransportFailClosed:
             _FakeResponse(200, {"verdicts": [{"decision": "deny"}]})
         )
         assert asyncio.run(transport.evaluate({})) == [{"decision": "deny"}]
+
+
+# ---------------------------------------------------------------------------
+# WP-2: layer-level timeout + fail-mode threading (apl/layer/policy_layer.py).
+# Lives here with the other layer/client tests rather than in
+# test_composition.py (which is strategy-only).
+# ---------------------------------------------------------------------------
+
+
+class _SlowClient:
+    """
+    A stand-in PolicyClient whose evaluate() outlives the layer timeout.
+    """
+
+    def __init__(self, delay: float) -> None:
+        self._delay = delay
+
+    async def evaluate(self, event):
+        await asyncio.sleep(self._delay)
+        return [Verdict.allow()]
+
+
+class _InstantClient:
+    def __init__(self, verdicts: list[Verdict]) -> None:
+        self._verdicts = verdicts
+
+    async def evaluate(self, event):
+        return list(self._verdicts)
+
+
+def _layer_with(clients, composition: CompositionConfig) -> PolicyLayer:
+    layer = PolicyLayer(composition)
+    layer._clients = list(clients)
+    layer._is_connected = True  # skip connect(); fakes don't implement it
+    return layer
+
+
+class TestPolicyLayerTimeout:
+    def test_timeout_denies_by_default(self):
+        # on_timeout defaults to DENY: a hung server must fail closed.
+        layer = _layer_with(
+            [_SlowClient(1.0)],
+            CompositionConfig(timeout_ms=10),
+        )
+        verdict = asyncio.run(layer.evaluate(EventType.OUTPUT_PRE_SEND))
+        assert verdict.decision == Decision.DENY
+
+    def test_timeout_allows_only_when_explicitly_configured(self):
+        layer = _layer_with(
+            [_SlowClient(1.0)],
+            CompositionConfig(timeout_ms=10, on_timeout=Decision.ALLOW),
+        )
+        verdict = asyncio.run(layer.evaluate(EventType.OUTPUT_PRE_SEND))
+        assert verdict.decision == Decision.ALLOW
+
+    def test_fast_clients_compose_normally(self):
+        # The timeout path must not disturb the normal composition path.
+        layer = _layer_with(
+            [_InstantClient([Verdict.deny("blocked")])],
+            CompositionConfig(timeout_ms=500),
+        )
+        verdict = asyncio.run(layer.evaluate(EventType.OUTPUT_PRE_SEND))
+        assert verdict.decision == Decision.DENY
+
+
+class TestPolicyLayerFailModeThreading:
+    def test_add_server_propagates_fail_mode(self):
+        # Pre-fix the client always defaulted to CLOSED; the layer config never
+        # reached it. Fails against pre-fix code.
+        layer = PolicyLayer(CompositionConfig(fail_mode=FailMode.OPEN))
+        layer.add_server("stdio://./x.py")
+        assert layer._clients[0]._fail_mode == FailMode.OPEN
+
+    def test_add_server_defaults_to_closed(self):
+        layer = PolicyLayer()
+        layer.add_server("stdio://./x.py")
+        assert layer._clients[0]._fail_mode == FailMode.CLOSED

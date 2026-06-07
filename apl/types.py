@@ -6,17 +6,39 @@ Design Philosophy:
 - Wrap it in an event envelope with lifecycle + metadata context
 - Policies declare what context they need (context contracts)
 - Verdicts are rich: allow/deny/modify/escalate/observe
+
+The protocol types are pydantic models so that (a) validation happens on
+deserialize for free, (b) the domain types enforce their own invariants
+(see :class:`Verdict`), and (c) the wire codec in ``apl.serialization`` is a
+thin shim over ``model_dump``/``model_validate`` rather than hand-written
+per-field serializers.
 """
 
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass, field
-from datetime import datetime
+import uuid
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Literal, Optional
 
+from pydantic import BaseModel, Field, model_validator
+
 logger = logging.getLogger("apl")
+
+# The protocol/wire version this build speaks. Single-sourced here and reused as
+# the manifest default below and by the client's compatibility check on connect.
+# (WP-8 owns folding the remaining "0.3.0" literals — pyproject, the CLI info
+# command, the CLI banner — onto this constant.)
+PROTOCOL_VERSION = "0.3.0"
+
+
+def _new_uuid() -> str:
+    return str(uuid.uuid4())
+
+
+def _now_utc() -> datetime:
+    return datetime.now(timezone.utc)
 
 
 # =============================================================================
@@ -95,41 +117,57 @@ class EventType(str, Enum):
 # =============================================================================
 # CONTEXT - What policies receive (chat/completions + metadata)
 # =============================================================================
+#
+# Defined leaf-first (FunctionCall -> ToolCall -> Message) so the nested model
+# references resolve without forward-ref rebuilding under
+# ``from __future__ import annotations``.
 
 
-@dataclass
-class Message:
-    """OpenAI chat/completions compatible message format."""
+class FunctionCall(BaseModel):
+    """
+    Function call details.
+    """
 
-    role: Literal["system", "user", "assistant", "tool"]
+    name: str
+    arguments: str  # JSON string, as per OpenAI spec
+
+
+class ToolCall(BaseModel):
+    """
+    Tool call within an assistant message.
+    """
+
+    id: str
+    type: Literal["function"] = "function"
+    # A tool call without its function is meaningless and used to AttributeError
+    # during serialization; make it required so that illegal state can't exist.
+    function: FunctionCall
+
+
+class Message(BaseModel):
+    """
+    OpenAI chat/completions compatible message format.
+
+    ``role`` is a free ``str`` (conventionally ``system``/``user``/``assistant``/
+    ``tool``) rather than a strict literal: messages are adapted in-process from
+    arbitrary provider SDKs whose role vocabularies drift (``function``, ``developer``,
+    ...), and rejecting an unrecognised role would crash instrumentation or spuriously
+    deny a legitimate turn.
+    """
+
+    role: str
     content: Optional[str] = None
     name: Optional[str] = None  # For tool messages
     tool_calls: Optional[list[ToolCall]] = None  # For assistant messages
     tool_call_id: Optional[str] = None  # For tool messages
 
 
-@dataclass
-class ToolCall:
-    """Tool call within an assistant message."""
+class SessionMetadata(BaseModel):
+    """
+    Session-level context that isn't in the conversation.
+    """
 
-    id: str
-    type: Literal["function"] = "function"
-    function: FunctionCall = None
-
-
-@dataclass
-class FunctionCall:
-    """Function call details."""
-
-    name: str
-    arguments: str  # JSON string, as per OpenAI spec
-
-
-@dataclass
-class SessionMetadata:
-    """Session-level context that isn't in the conversation."""
-
-    session_id: str
+    session_id: str = Field(default_factory=_new_uuid)
     user_id: Optional[str] = None
     agent_id: Optional[str] = None
 
@@ -142,21 +180,21 @@ class SessionMetadata:
     cost_budget_usd: Optional[float] = None
 
     # Permissions & compliance
-    user_roles: list[str] = field(default_factory=list)
+    user_roles: list[str] = Field(default_factory=list)
     user_region: Optional[str] = None  # For GDPR, data residency
-    compliance_tags: list[str] = field(default_factory=list)
+    compliance_tags: list[str] = Field(default_factory=list)
 
-    # Timing
-    started_at: datetime = field(default_factory=datetime.utcnow)
+    # Timing (timezone-aware; round-trips through the wire codec)
+    started_at: datetime = Field(default_factory=_now_utc)
 
     # Extensible
-    custom: dict[str, Any] = field(default_factory=dict)
+    custom: dict[str, Any] = Field(default_factory=dict)
 
 
-@dataclass
-class EventPayload:
+class EventPayload(BaseModel):
     """
     Event-specific payload - the "delta" or what's happening NOW.
+
     Different events populate different fields.
     """
 
@@ -185,8 +223,7 @@ class EventPayload:
     handoff_payload: Optional[dict[str, Any]] = None
 
 
-@dataclass
-class PolicyEvent:
+class PolicyEvent(BaseModel):
     """
     The complete event sent to policy servers.
 
@@ -195,20 +232,24 @@ class PolicyEvent:
     - Messages: chat/completions format (conversation history)
     - Payload: event-specific data (the delta)
     - Metadata: session context (who/where/limits)
+
+    The envelope fields carry defaults so a sparse inbound event decodes
+    leniently (matching the prior serializer); tightening inbound validation
+    on the server transport is WP-7's concern (§3.11).
     """
 
-    id: str
-    type: EventType
-    timestamp: datetime
+    id: str = Field(default_factory=_new_uuid)
+    type: EventType = EventType.INPUT_RECEIVED
+    timestamp: datetime = Field(default_factory=_now_utc)
 
     # Conversation context - chat/completions format
-    messages: list[Message]
+    messages: list[Message] = Field(default_factory=list)
 
     # Event-specific payload
-    payload: EventPayload
+    payload: EventPayload = Field(default_factory=EventPayload)
 
     # Session metadata
-    metadata: SessionMetadata
+    metadata: SessionMetadata = Field(default_factory=SessionMetadata)
 
 
 # =============================================================================
@@ -235,11 +276,24 @@ class Decision(str, Enum):
     OBSERVE = "observe"
 
 
-@dataclass
-class Modification:
-    """How to modify the action/content."""
+class Modification(BaseModel):
+    """
+    How to modify the action/content.
+    """
 
-    target: Literal["input", "tool_args", "llm_prompt", "output"]
+    # Every target the enforcement engine can apply: the instrumentation event
+    # table (apl/instrumentation/events) wires accessors for all of these, so a
+    # narrower set would silently make a built-in capability unconstructable
+    # (e.g. a redact on ``plan``). Keep in sync with that table.
+    target: Literal[
+        "input",
+        "tool_args",
+        "llm_prompt",
+        "output",
+        "tool_result",
+        "plan",
+        "handoff_payload",
+    ]
     operation: Literal[
         "replace",
         "redact",
@@ -253,9 +307,10 @@ class Modification:
     path: Optional[str] = None  # JSON path for surgical modifications
 
 
-@dataclass
-class Escalation:
-    """How to escalate to humans."""
+class Escalation(BaseModel):
+    """
+    How to escalate to humans.
+    """
 
     type: Literal[
         "human_confirm",
@@ -271,19 +326,34 @@ class Escalation:
     options: Optional[list[str]] = None  # e.g., ["Proceed", "Cancel", "Modify"]
 
 
-@dataclass
-class Verdict:
-    """Policy response."""
+class Verdict(BaseModel):
+    """
+    Policy response.
+
+    Invariants (enforced on construction *and* deserialize):
+    - ``confidence`` is in ``[0, 1]`` — weighted composition sums it, so an
+      out-of-range value can't be allowed to skew the vote.
+    - a ``MODIFY`` verdict carries at least one modification.
+    - an ``ESCALATE`` verdict carries an escalation.
+    """
 
     decision: Decision
-    confidence: float = 1.0
+    confidence: float = Field(default=1.0, ge=0.0, le=1.0)
     reasoning: Optional[str] = None
-    modifications: list[Modification] = field(default_factory=list)
+    modifications: list[Modification] = Field(default_factory=list)
     escalation: Optional[Escalation] = None
     policy_name: Optional[str] = None
     policy_version: Optional[str] = None
     evaluation_ms: Optional[float] = None
     trace: Optional[dict[str, Any]] = None
+
+    @model_validator(mode="after")
+    def _check_decision_invariants(self) -> Verdict:
+        if self.decision is Decision.MODIFY and not self.modifications:
+            raise ValueError("a MODIFY verdict must carry at least one modification")
+        if self.decision is Decision.ESCALATE and self.escalation is None:
+            raise ValueError("an ESCALATE verdict must carry an escalation")
+        return self
 
     @classmethod
     def allow(
@@ -391,8 +461,7 @@ class Verdict:
 # =============================================================================
 
 
-@dataclass
-class ContextRequirement:
+class ContextRequirement(BaseModel):
     """
     A single context field requirement.
 
@@ -405,8 +474,7 @@ class ContextRequirement:
     description: Optional[str] = None  # For documentation
 
 
-@dataclass
-class PolicyDefinition:
+class PolicyDefinition(BaseModel):
     """
     How a policy server describes its policies to the runtime.
 
@@ -420,7 +488,7 @@ class PolicyDefinition:
     events: list[EventType]
 
     # What context it needs (the contract)
-    context_requirements: list[ContextRequirement] = field(default_factory=list)
+    context_requirements: list[ContextRequirement] = Field(default_factory=list)
 
     # Execution characteristics
     blocking: bool = True  # Must await vs fire-and-forget
@@ -429,11 +497,10 @@ class PolicyDefinition:
     # Metadata
     description: Optional[str] = None
     author: Optional[str] = None
-    tags: list[str] = field(default_factory=list)
+    tags: list[str] = Field(default_factory=list)
 
 
-@dataclass
-class PolicyManifest:
+class PolicyManifest(BaseModel):
     """
     Complete manifest from a policy server.
 
@@ -442,9 +509,9 @@ class PolicyManifest:
 
     server_name: str
     server_version: str
-    protocol_version: str = "0.3.0"
+    protocol_version: str = PROTOCOL_VERSION
 
-    policies: list[PolicyDefinition] = field(default_factory=list)
+    policies: list[PolicyDefinition] = Field(default_factory=list)
 
     # Server capabilities
     supports_batch: bool = False  # Can handle multiple events at once
@@ -461,7 +528,9 @@ class PolicyManifest:
 
 
 class CompositionMode(str, Enum):
-    """How to combine verdicts from multiple policies."""
+    """
+    How to combine verdicts from multiple policies.
+    """
 
     DENY_OVERRIDES = "deny_overrides"  # Any deny wins
     ALLOW_OVERRIDES = "allow_overrides"  # Any allow wins (rare)
@@ -470,9 +539,10 @@ class CompositionMode(str, Enum):
     WEIGHTED = "weighted"  # Confidence-weighted voting
 
 
-@dataclass
-class CompositionConfig:
-    """Configuration for verdict composition."""
+class CompositionConfig(BaseModel):
+    """
+    Configuration for verdict composition.
+    """
 
     mode: CompositionMode = CompositionMode.DENY_OVERRIDES
 
@@ -490,15 +560,17 @@ class CompositionConfig:
     on_timeout: Decision = Decision.DENY
 
     # Priority ordering (policy names, first = highest priority)
-    priority: list[str] = field(default_factory=list)
+    priority: list[str] = Field(default_factory=list)
 
     # For weighted mode
-    weights: dict[str, float] = field(default_factory=dict)
+    weights: dict[str, float] = Field(default_factory=dict)
 
-    def __post_init__(self) -> None:
+    @model_validator(mode="after")
+    def _warn_when_fail_open(self) -> CompositionConfig:
         if self.fail_mode is FailMode.OPEN:
             logger.warning(
                 "APL is configured FAIL-OPEN: policy errors, timeouts, and "
                 "unreachable servers will ALLOW the action instead of denying "
                 "it. Enforcement is disabled whenever a policy is unavailable."
             )
+        return self
