@@ -12,6 +12,7 @@ Shows:
 import asyncio
 import os
 import sys
+from pathlib import Path
 
 sys.path.insert(
     0,
@@ -28,6 +29,15 @@ from apl import (
     Verdict,
 )
 
+EXAMPLES_DIR = Path(__file__).resolve().parent
+
+
+def policy_uri(filename: str) -> str:
+    """
+    Return a stdio URI that works regardless of the current working directory.
+    """
+    return f"stdio://{sys.executable} {EXAMPLES_DIR / filename}"
+
 
 async def demo_manual_evaluation():
     """
@@ -41,55 +51,57 @@ async def demo_manual_evaluation():
 
     # Create policy layer and add servers
     policies = PolicyLayer()
-    policies.add_server("stdio://./examples/pii_filter.py")
-    policies.add_server("stdio://./examples/budget_limiter.py")
+    policies.add_server(policy_uri("pii_filter.py"))
+    policies.add_server(policy_uri("budget_limiter.py"))
 
-    # Connect to servers
-    await policies.connect()
+    try:
+        # Connect to servers. The stdio transport spawns each policy process.
+        await policies.connect()
 
-    # Simulate an output event with PII
-    print("\nEvaluating output with SSN...")
-    verdict = await policies.evaluate(
-        event_type="output.pre_send",
-        messages=[
-            Message(role="user", content="What's my SSN?"),
-            Message(
-                role="assistant",
-                content="Your SSN is 123-45-6789",
+        # Simulate an output event with PII
+        print("\nEvaluating output with SSN...")
+        verdict = await policies.evaluate(
+            event_type="output.pre_send",
+            messages=[
+                Message(role="user", content="What's my SSN?"),
+                Message(
+                    role="assistant",
+                    content="Your SSN is 123-45-6789",
+                ),
+            ],
+            payload=EventPayload(output_text="Your SSN is 123-45-6789"),
+            metadata=SessionMetadata(
+                session_id="demo-session",
+                user_id="user-123",
+                token_count=1000,
+                token_budget=10000,
             ),
-        ],
-        payload=EventPayload(output_text="Your SSN is 123-45-6789"),
-        metadata=SessionMetadata(
-            session_id="demo-session",
-            user_id="user-123",
-            token_count=1000,
-            token_budget=10000,
-        ),
-    )
+        )
 
-    print(f"  Decision: {verdict.decision.value}")
-    print(f"  Reasoning: {verdict.reasoning}")
-    if verdict.modification:
-        print(f"  Modified output: {verdict.modification.value}")
+        print(f"  Decision: {verdict.decision.value}")
+        print(f"  Reasoning: {verdict.reasoning}")
+        for modification in verdict.modifications:
+            if modification.target == "output":
+                print(f"  Modified output: {modification.value}")
 
-    # Test budget enforcement
-    print("\nEvaluating LLM call near budget limit...")
-    verdict = await policies.evaluate(
-        event_type="llm.pre_request",
-        messages=[],
-        payload=EventPayload(llm_model="gpt-4"),
-        metadata=SessionMetadata(
-            session_id="demo-session",
-            user_id="user-123",
-            token_count=95000,
-            token_budget=100000,  # 95% used
-        ),
-    )
+        # Test budget enforcement
+        print("\nEvaluating LLM call near budget limit...")
+        verdict = await policies.evaluate(
+            event_type="llm.pre_request",
+            messages=[],
+            payload=EventPayload(llm_model="gpt-4"),
+            metadata=SessionMetadata(
+                session_id="demo-session",
+                user_id="user-123",
+                token_count=95000,
+                token_budget=100000,  # 95% used
+            ),
+        )
 
-    print(f"  Decision: {verdict.decision.value}")
-    print(f"  Reasoning: {verdict.reasoning}")
-
-    await policies.close()
+        print(f"  Decision: {verdict.decision.value}")
+        print(f"  Reasoning: {verdict.reasoning}")
+    finally:
+        await policies.close()
 
 
 async def demo_decorator_api():
@@ -103,7 +115,7 @@ async def demo_decorator_api():
     print("=" * 60)
 
     policies = PolicyLayer()
-    policies.add_server("stdio://./examples/confirm_destructive.py")
+    policies.add_server(policy_uri("confirm_destructive.py"))
 
     # Define a tool function with policy checks
     @policies.on("tool.pre_invoke")
@@ -117,7 +129,7 @@ async def demo_decorator_api():
     # Test with a safe tool
     print("\nCalling safe tool 'search'...")
     try:
-        result = await execute_tool("search", {"query": "weather"})
+        result = await execute_tool(tool_name="search", tool_args={"query": "weather"})
         print(f"  Result: {result}")
     except PolicyDenied as e:
         print(f"  DENIED: {e.verdict.reasoning}")
@@ -127,7 +139,10 @@ async def demo_decorator_api():
     # Test with a dangerous tool
     print("\nCalling dangerous tool 'delete_file'...")
     try:
-        result = await execute_tool("delete_file", {"path": "/important/data"})
+        result = await execute_tool(
+            tool_name="delete_file",
+            tool_args={"path": "/important/data"},
+        )
         print(f"  Result: {result}")
     except PolicyDenied as e:
         print(f"  DENIED: {e.verdict.reasoning}")
@@ -161,38 +176,39 @@ async def demo_composition():
     )
 
     # Add multiple policy servers
-    policies.add_server("stdio://./examples/pii_filter.py")
-    policies.add_server("stdio://./examples/budget_limiter.py")
-    policies.add_server("stdio://./examples/confirm_destructive.py")
+    policies.add_server(policy_uri("pii_filter.py"))
+    policies.add_server(policy_uri("budget_limiter.py"))
+    policies.add_server(policy_uri("confirm_destructive.py"))
 
-    await policies.connect()
+    try:
+        await policies.connect()
 
-    # Event that triggers multiple policies
-    print("\nEvaluating tool call with PII and low budget...")
-    verdict = await policies.evaluate(
-        event_type="tool.pre_invoke",
-        messages=[],
-        payload=EventPayload(
-            tool_name="send_email",
-            tool_args={
-                "to": "test@test.com",
-                "body": "SSN: 123-45-6789",
-            },
-        ),
-        metadata=SessionMetadata(
-            session_id="demo-session",
-            token_count=99000,
-            token_budget=100000,
-            cost_usd=0.95,
-            cost_budget_usd=1.00,
-        ),
-    )
+        # Event that triggers multiple policies
+        print("\nEvaluating tool call with PII and low budget...")
+        verdict = await policies.evaluate(
+            event_type="tool.pre_invoke",
+            messages=[],
+            payload=EventPayload(
+                tool_name="send_email",
+                tool_args={
+                    "to": "test@test.com",
+                    "body": "SSN: 123-45-6789",
+                },
+            ),
+            metadata=SessionMetadata(
+                session_id="demo-session",
+                token_count=99000,
+                token_budget=100000,
+                cost_usd=0.95,
+                cost_budget_usd=1.00,
+            ),
+        )
 
-    print(f"  Final Decision: {verdict.decision.value}")
-    print(f"  Reasoning: {verdict.reasoning}")
-    print(f"  Policy: {verdict.policy_name}")
-
-    await policies.close()
+        print(f"  Final Decision: {verdict.decision.value}")
+        print(f"  Reasoning: {verdict.reasoning}")
+        print(f"  Policy: {verdict.policy_name}")
+    finally:
+        await policies.close()
 
 
 async def main():
@@ -203,19 +219,10 @@ async def main():
     print("APL (Agent Policy Layer) - Demo")
     print("=" * 60)
 
-    # Note: In a real scenario, you'd have the policy servers running.
-    # For this demo, we'll just show the API patterns.
-
-    print("\nNote: This demo shows the API patterns.")
-    print("To run with real policy servers, start them first:")
-    print("  python examples/pii_filter.py")
-    print("  python examples/budget_limiter.py")
-    print("  python examples/confirm_destructive.py")
-
-    # Uncomment to run demos (requires policy servers running)
-    # await demo_manual_evaluation()
-    # await demo_decorator_api()
-    # await demo_composition()
+    print("\nRunning against the shipped policy examples over stdio.")
+    await demo_manual_evaluation()
+    await demo_decorator_api()
+    await demo_composition()
 
     # Instead, let's show a simple inline example
     print("\n" + "=" * 60)
@@ -242,7 +249,7 @@ async def main():
 
     # Create a test event
     import uuid
-    from datetime import datetime
+    from datetime import datetime, timezone
 
     from apl import (
         EventPayload,
@@ -253,7 +260,7 @@ async def main():
     event = PolicyEvent(
         id=str(uuid.uuid4()),
         type=EventType.OUTPUT_PRE_SEND,
-        timestamp=datetime.utcnow(),
+        timestamp=datetime.now(timezone.utc),
         messages=[
             Message(
                 role="assistant",
