@@ -1,0 +1,42 @@
+name: Bug report
+description: Report a problem with agent-policy-layer
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. **For security vulnerabilities, do not file an issue** —
+        report privately via [SECURITY.md](https://github.com/nimonkaranurag/agentpolicylayer/blob/main/SECURITY.md).
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you expect to happen, and what actually happened?
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Reproduction
+      description: Minimal steps or code (policy + event) that triggers the bug.
+      render: python
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: APL version
+      description: "`apl info`, or `python -c \"import apl; print(apl.__version__)\"`"
+    validations:
+      required: true
+  - type: input
+    id: python
+    attributes:
+      label: Python version
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / traceback
+      render: shell

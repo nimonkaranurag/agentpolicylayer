@@ -6,11 +6,10 @@ from rich import box
 from rich.table import Table
 
 from ... import __version__
+from ...types import PROTOCOL_VERSION
 from .. import cli, console
-from ..branding import BannerRenderer
+from ..branding import render_banner
 from ..formatting import RichCommand
-
-_banner = BannerRenderer(console, __version__)
 
 TRANSPORT_ENTRIES = [
     (
@@ -82,7 +81,7 @@ class SystemInfoRenderer:
         table.add_row("Version", __version__)
         table.add_row("Python", sys.version.split()[0])
         table.add_row("Platform", sys.platform)
-        table.add_row("Protocol", "0.3.0")
+        table.add_row("Protocol", PROTOCOL_VERSION)
 
         self._console.print(table)
         self._console.print()
@@ -121,5 +120,5 @@ def info():
     """
     Show APL system information and status.
     """
-    _banner.render("full")
+    render_banner(console, "full")
     SystemInfoRenderer().render()

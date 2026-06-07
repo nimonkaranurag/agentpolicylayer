@@ -1,0 +1,30 @@
+# EditorConfig — https://editorconfig.org
+# Keeps whitespace/encoding consistent across editors so it never shows up in diffs.
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 4
+
+[*.py]
+max_line_length = 88  # matches [tool.ruff] line-length
+
+# apl/templates.py holds triple-quoted *file templates* whose trailing whitespace
+# is significant — ruff per-file-ignores W291/W293 keep it, so don't let editors
+# strip it on save.
+[apl/templates.py]
+trim_trailing_whitespace = false
+
+[*.{yml,yaml,json,toml}]
+indent_size = 2
+
+# Markdown: two trailing spaces is a hard line break, so don't trim.
+[*.md]
+trim_trailing_whitespace = false
+
+[Makefile]
+indent_style = tab

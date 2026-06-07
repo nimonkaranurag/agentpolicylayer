@@ -5,6 +5,13 @@
 
 **Portable, composable policies for AI agents.**
 
+[![CI](https://github.com/nimonkaranurag/agentpolicylayer/actions/workflows/ci.yml/badge.svg)](https://github.com/nimonkaranurag/agentpolicylayer/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/nimonkaranurag/agentpolicylayer/actions/workflows/codeql.yml/badge.svg)](https://github.com/nimonkaranurag/agentpolicylayer/actions/workflows/codeql.yml)
+[![codecov](https://codecov.io/gh/nimonkaranurag/agentpolicylayer/branch/main/graph/badge.svg)](https://codecov.io/gh/nimonkaranurag/agentpolicylayer)
+[![PyPI](https://img.shields.io/pypi/v/agent-policy-layer.svg)](https://pypi.org/project/agent-policy-layer/)
+[![Python versions](https://img.shields.io/pypi/pyversions/agent-policy-layer.svg)](https://pypi.org/project/agent-policy-layer/)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
+
 [Installation](#-installation) •
 [Quick Start](#-quick-start-2-minutes) •
 [How It Works](#-how-it-works) •

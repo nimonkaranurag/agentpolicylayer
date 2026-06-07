@@ -129,6 +129,24 @@ class TestStdioClientReliability:
         elapsed = _run(run())
         assert elapsed < 3.0  # bounded by the 0.5s timeout, not hung
 
+    def test_evaluate_on_a_different_loop_fails_closed(self):
+        # A subprocess transport can't move between loops; if connect() bound it
+        # to one loop and evaluate() runs on another, fail closed with a clear
+        # message rather than crash deep in asyncio.
+        from apl.layer.client_transports import StdioClientTransport
+
+        class _FakeProc:
+            stdin = object()
+
+        transport = StdioClientTransport("stdio://noop.py")
+        transport._process = _FakeProc()
+        other_loop = asyncio.new_event_loop()
+        transport._bound_loop = other_loop  # "connected" on a different loop
+
+        with pytest.raises(PolicyUnavailableError, match="different event loop"):
+            _run(transport.evaluate({"x": 1}))
+        other_loop.close()
+
     def test_no_response_fails_closed(self):
         # Server emits a manifest then exits without answering evaluate.
         # Pre-fix this raised ConnectionError, which PolicyClient does NOT catch
@@ -265,6 +283,44 @@ class TestHttpClientReliability:
         transport = HttpClientTransport("http://x")
         with pytest.raises(PolicyUnavailableError):
             _run(transport.connect())
+
+    def test_session_recreated_when_loop_changes(self, monkeypatch):
+        # aiohttp pins a session to its loop; if connect() ran on one loop and
+        # evaluate() runs on another (eager connect, or the LangGraph sync
+        # bridge), the transport must recreate the session, not crash on a
+        # closed loop.
+        import aiohttp
+
+        from apl.layer.client_transports import HttpClientTransport
+
+        class _Fake:
+            closed = False
+
+            def __init__(self, *, timeout=None):
+                pass
+
+            def get(self, url):
+                return _FakeAiohttpResponse(200, {"server_name": "x", "policies": []})
+
+            async def close(self):
+                pass
+
+        monkeypatch.setattr(aiohttp, "ClientSession", _Fake)
+        transport = HttpClientTransport("http://x")
+
+        loop_a = asyncio.new_event_loop()
+        loop_a.run_until_complete(transport.connect())
+        first = transport._session
+
+        async def _resolve():
+            return transport._session_for_current_loop()
+
+        loop_b = asyncio.new_event_loop()
+        second = loop_b.run_until_complete(_resolve())
+        loop_a.close()
+        loop_b.close()
+
+        assert second is not first  # recreated for the new loop
 
 
 # ===========================================================================

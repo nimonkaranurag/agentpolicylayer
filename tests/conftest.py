@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import inspect
 import uuid
 from datetime import datetime, timezone
 
@@ -12,6 +13,61 @@ from apl.types import (
     PolicyEvent,
     SessionMetadata,
 )
+
+# Lets tests use the ``pytester`` fixture (e.g. to verify the async-execution
+# guard below); ``pytest_plugins`` is only honoured in the top-level conftest.
+pytest_plugins = ["pytester"]
+
+
+def async_execution_error(
+    asyncio_plugin_active: bool,
+    async_node_ids: list[str],
+) -> str | None:
+    """
+    Return a failure message if collected async tests cannot execute, else None.
+
+    This is the pure decision behind :func:`pytest_collection_modifyitems`, factored out
+    so the collected-async == executed-async invariant (WP-11, ENGINEERING_REVIEW §6) is
+    unit-testable without spawning a subprocess.
+
+    Without an active async plugin, pytest cannot await ``async def`` tests;
+    historically they were reported as passing no-ops, silently hiding the entire
+    server/integration path. If any async test is collected while the ``asyncio`` plugin
+    is inactive, refuse the run rather than pass vacuously.
+    """
+    if asyncio_plugin_active or not async_node_ids:
+        return None
+    shown = ", ".join(async_node_ids[:3])
+    suffix = "..." if len(async_node_ids) > 3 else ""
+    return (
+        f"{len(async_node_ids)} async test(s) were collected but the pytest "
+        "'asyncio' plugin is not active, so they would not execute (and would "
+        "silently count as passing). Install the 'dev' extra (pytest-asyncio) "
+        f"and keep asyncio_mode=auto. Affected: {shown}{suffix}"
+    )
+
+
+def pytest_collection_modifyitems(
+    config: pytest.Config,
+    items: list[pytest.Item],
+) -> None:
+    """
+    Fail the session loudly if async tests were collected but can't run.
+
+    Guards the collected-async == executed-async invariant so a missing or disabled
+    pytest-asyncio can never again hide an untested async subsystem.
+    """
+    async_node_ids = [
+        item.nodeid
+        for item in items
+        if inspect.iscoroutinefunction(getattr(item, "obj", None))
+    ]
+    message = async_execution_error(
+        config.pluginmanager.hasplugin("asyncio"),
+        async_node_ids,
+    )
+    if message is not None:
+        raise pytest.UsageError(message)
 
 
 @pytest.fixture

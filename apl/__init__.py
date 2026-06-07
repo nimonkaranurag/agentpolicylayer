@@ -57,7 +57,7 @@ CLI:
 Documentation: https://github.com/nimonkaranurag/agentpolicylayer
 """
 
-__version__ = "0.3.0"
+__version__ = "0.3.0"  # x-release-please-version
 
 # =============================================================================
 # CORE TYPES
@@ -70,6 +70,7 @@ from .declarative_engine import (
 )
 from .instrumentation import (
     auto_instrument,
+    instrument,
     uninstrument,
 )
 from .layer import (
@@ -149,5 +150,24 @@ __all__ = [
     "APLLogger",
     # Auto-instrumentation
     "auto_instrument",
+    "instrument",
     "uninstrument",
+    # Framework adapters
+    "APLGraphWrapper",
 ]
+
+
+def __getattr__(name: str) -> object:
+    """
+    Lazily expose the optional LangGraph adapter.
+
+    ``langgraph`` is an optional extra, so importing the adapter (and probing for that
+    dependency) is deferred until first use — ``import apl`` stays lean and independent
+    of the adapters subpackage, while ``from apl import APLGraphWrapper`` still resolves
+    (PEP 562).
+    """
+    if name == "APLGraphWrapper":
+        from .adapters import APLGraphWrapper
+
+        return APLGraphWrapper
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

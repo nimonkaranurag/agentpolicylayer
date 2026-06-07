@@ -5,15 +5,10 @@ from pathlib import Path
 
 import click
 
-from ... import __version__
 from .. import cli, console
-from ..branding import BannerRenderer, StatusPrinter
+from ..branding import print_status, render_banner
 from ..formatting import RichCommand
-from ..validators import PolicyValidatorRegistry
-
-_banner = BannerRenderer(console, __version__)
-_status = StatusPrinter(console)
-_validator_registry = PolicyValidatorRegistry()
+from ..policy_source import validate_policy
 
 
 @cli.command(cls=RichCommand)
@@ -26,23 +21,16 @@ def validate(path: str):
       apl validate ./my_policy.py
       apl validate ./policy.yaml
     """
-    _banner.render("mini")
+    render_banner(console, "mini")
     console.print()
 
-    _status.print(f"Validating: [cyan]{path}[/cyan]", "loading")
+    print_status(console, f"Validating: [cyan]{path}[/cyan]", "loading")
 
-    try:
-        path_obj = Path(path)
-        errors = _validator_registry.validate(path_obj)
-
-        if errors:
-            _status.print("Validation failed", "error")
-            for error in errors:
-                console.print(f"    [red]•[/red] {error}")
-            sys.exit(1)
-        else:
-            _status.print("Validation passed!", "success")
-
-    except Exception as e:
-        _status.print(f"Validation error: {e}", "error")
+    errors = validate_policy(Path(path))
+    if errors:
+        print_status(console, "Validation failed", "error")
+        for error in errors:
+            console.print(f"    [red]•[/red] {error}")
         sys.exit(1)
+
+    print_status(console, "Validation passed!", "success")

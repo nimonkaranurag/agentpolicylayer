@@ -4,13 +4,9 @@ import sys
 
 import click
 
-from ... import __version__
 from .. import cli, console
-from ..branding import BannerRenderer, StatusPrinter
+from ..branding import print_status, render_banner
 from ..formatting import RichCommand
-
-_banner = BannerRenderer(console, __version__)
-_status = StatusPrinter(console)
 
 
 @cli.command(cls=RichCommand)
@@ -30,29 +26,22 @@ def init(name: str, template: str):
       apl init my-policy
       apl init compliance --template pii
     """
-    _banner.render("mini")
+    render_banner(console, "mini")
     console.print()
 
     from ...templates import create_policy_project
 
-    _status.print(
-        f"Creating policy project: [cyan]{name}[/cyan]",
-        "loading",
-    )
+    print_status(console, f"Creating policy project: [cyan]{name}[/cyan]", "loading")
 
     try:
         project_path = create_policy_project(name, template)
-        _status.print(
-            f"Created project at: [cyan]{project_path}[/cyan]",
-            "success",
-        )
-
-        console.print()
-        console.print("  [bold]Next steps:[/bold]")
-        console.print(f"    [dim]$[/dim] cd {name}")
-        console.print("    [dim]$[/dim] apl serve policy.py")
-        console.print()
-
-    except Exception as e:
-        _status.print(f"Failed to create project: {e}", "error")
+    except Exception as exc:
+        print_status(console, f"Failed to create project: {exc}", "error")
         sys.exit(1)
+
+    print_status(console, f"Created project at: [cyan]{project_path}[/cyan]", "success")
+    console.print()
+    console.print("  [bold]Next steps:[/bold]")
+    console.print(f"    [dim]$[/dim] cd {name}")
+    console.print("    [dim]$[/dim] apl serve policy.py")
+    console.print()

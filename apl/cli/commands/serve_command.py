@@ -6,20 +6,12 @@ from typing import Optional
 
 import click
 
-from ... import __version__
 from ...logging import setup_logging
-from .. import cli, console
-from ..branding import BannerRenderer, StatusPrinter
+from .. import cli, err_console
+from ..branding import print_status, render_banner
 from ..formatting import RichCommand
-from ..loaders import PolicyLoaderRegistry
-from ..renderers import (
-    PolicyTreeRenderer,
-    ServerPanelRenderer,
-)
-
-_banner = BannerRenderer(console, __version__)
-_status = StatusPrinter(console)
-_loader_registry = PolicyLoaderRegistry()
+from ..policy_source import is_supported_path, load_policy_server
+from ..renderers import render_policy_tree, render_server_panel
 
 
 @cli.command(cls=RichCommand)
@@ -29,41 +21,49 @@ _loader_registry = PolicyLoaderRegistry()
     "http_port",
     type=int,
     default=None,
-    help="Enable HTTP transport on this port",
+    help="Serve over HTTP on this port (default: stdio)",
 )
 @click.option(
     "--host",
-    default="0.0.0.0",
-    help="HTTP host to bind to",
+    default="127.0.0.1",
+    help="HTTP host to bind to (use 0.0.0.0 to expose externally)",
 )
 @click.option(
-    "--stdio",
-    is_flag=True,
-    default=False,
-    help="Use stdio transport (default)",
+    "--auth-token",
+    default=None,
+    help="Require this bearer token on HTTP requests",
 )
 @click.option(
-    "-v",
-    "--verbose",
-    is_flag=True,
-    help="Enable verbose logging",
+    "--cors-origin",
+    "cors_origins",
+    multiple=True,
+    help="Allowed CORS origin (repeatable); omit to send no CORS headers",
 )
 @click.option(
-    "-q",
-    "--quiet",
-    is_flag=True,
-    help="Minimal output",
+    "--max-body",
+    "max_body_bytes",
+    type=int,
+    default=None,
+    help="Max HTTP request body size in bytes",
 )
+@click.option("-v", "--verbose", is_flag=True, help="Enable verbose logging")
+@click.option("-q", "--quiet", is_flag=True, help="Minimal output")
 def serve(
     path: str,
     http_port: Optional[int],
     host: str,
-    stdio: bool,
+    auth_token: Optional[str],
+    cors_origins: tuple[str, ...],
+    max_body_bytes: Optional[int],
     verbose: bool,
     quiet: bool,
 ):
     """
     Run a policy server.
+
+    Serves over stdio by default; pass ``--http PORT`` to serve over HTTP instead.
+    Human-readable output goes to stderr so stdout stays clean for the stdio
+    protocol.
 
     Examples:
       apl serve ./pii_filter.py
@@ -72,58 +72,83 @@ def serve(
       apl serve ./my_policy.py --http 8080
     """
     if not quiet:
-        _banner.render("small")
-        console.print()
+        render_banner(err_console, "small")
+        err_console.print()
 
-    log_level = "DEBUG" if verbose else "INFO" if not quiet else "WARNING"
-    logger = setup_logging(level=log_level, rich_output=not stdio)
+    log_level = "DEBUG" if verbose else "WARNING" if quiet else "INFO"
+    logger = setup_logging(level=log_level)
 
     path_obj = Path(path)
-    if not _loader_registry.find_loader_for_path(path_obj):
-        _status.print(
-            f"Unsupported file type: {path_obj.suffix}",
-            "error",
-        )
+    if not is_supported_path(path_obj):
+        print_status(err_console, f"Unsupported source: {path_obj.suffix}", "error")
         sys.exit(1)
 
     if not quiet:
-        _status.print(f"Loading: [cyan]{path}[/cyan]", "loading")
+        print_status(err_console, f"Loading: [cyan]{path}[/cyan]", "loading")
 
-    server = _loader_registry.load(path_obj, logger)
+    server = load_policy_server(path_obj, logger)
     if server is None:
-        _status.print("Failed to load policy server", "error")
+        print_status(err_console, "Failed to load policy server", "error")
         sys.exit(1)
 
     if not quiet:
-        PolicyTreeRenderer(console).render(server)
+        render_policy_tree(err_console, server)
 
-    if http_port:
-        _serve_over_http(server, host, http_port, logger, quiet)
+    # Port 0 is a valid request (the OS assigns an ephemeral port), so the switch
+    # is "was --http given", not the truthiness of the port number.
+    if http_port is not None:
+        _serve_over_http(
+            server,
+            host=host,
+            port=http_port,
+            logger=logger,
+            quiet=quiet,
+            auth_token=auth_token,
+            cors_origins=list(cors_origins),
+            max_body_bytes=max_body_bytes,
+        )
     else:
         _serve_over_stdio(server, quiet)
 
 
-def _serve_over_http(server, host, port, logger, quiet):
+def _serve_over_http(
+    server,
+    *,
+    host: str,
+    port: int,
+    logger,
+    quiet: bool,
+    auth_token: Optional[str],
+    cors_origins: list[str],
+    max_body_bytes: Optional[int],
+):
     if not quiet:
-        _status.print(
+        print_status(
+            err_console,
             f"Starting HTTP server on [cyan]http://{host}:{port}[/cyan]",
             "security",
         )
-        ServerPanelRenderer(console).render(host, port)
+        render_server_panel(err_console, host, port)
 
-    server.run(
+    run_kwargs = dict(
         transport="http",
         host=host,
         port=port,
         apl_logger=logger,
+        auth_token=auth_token,
+        cors_origins=cors_origins,
     )
+    if max_body_bytes is not None:
+        run_kwargs["max_request_bytes"] = max_body_bytes
+
+    server.run(**run_kwargs)
 
 
-def _serve_over_stdio(server, quiet):
+def _serve_over_stdio(server, quiet: bool):
     if not quiet:
-        _status.print("Starting stdio transport", "security")
-        console.print()
-        console.print("  [dim]Waiting for events on stdin...[/dim]")
-        console.print("  [dim]Press Ctrl+C to stop[/dim]")
-        console.print()
+        print_status(err_console, "Starting stdio transport", "security")
+        err_console.print()
+        err_console.print("  [dim]Waiting for events on stdin...[/dim]")
+        err_console.print("  [dim]Press Ctrl+C to stop[/dim]")
+        err_console.print()
     server.run(transport="stdio")

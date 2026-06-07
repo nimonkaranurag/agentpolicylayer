@@ -22,6 +22,7 @@ from typing import Optional
 
 from rich.console import Console
 from rich.logging import RichHandler
+from rich.markup import escape
 from rich.text import Text
 from rich.theme import Theme
 
@@ -66,6 +67,18 @@ APL_THEME = Theme(
 )
 
 
+# One source of truth for the per-decision Rich-markup labels. Previously this
+# dict was defined identically inside both policy_evaluated() and
+# composition_result(); a single constant keeps them from drifting.
+_DECISION_STYLES: dict[Decision, str] = {
+    Decision.ALLOW: "[policy.allow]ALLOW[/policy.allow]",
+    Decision.DENY: "[policy.deny]DENY[/policy.deny]",
+    Decision.MODIFY: "[policy.modify]MODIFY[/policy.modify]",
+    Decision.ESCALATE: "[policy.escalate]ESCALATE[/policy.escalate]",
+    Decision.OBSERVE: "[policy.observe]OBSERVE[/policy.observe]",
+}
+
+
 # =============================================================================
 # CUSTOM LOG HANDLER
 # =============================================================================
@@ -85,7 +98,10 @@ class APLRichHandler(RichHandler):
         kwargs.setdefault("show_time", True)
         kwargs.setdefault("show_path", False)
         kwargs.setdefault("rich_tracebacks", True)
-        kwargs.setdefault("tracebacks_show_locals", True)
+        # Default OFF: this is a security product whose locals routinely hold
+        # prompts, API keys, and PII. Dumping them into tracebacks would leak
+        # secrets. Callers can still opt back in explicitly.
+        kwargs.setdefault("tracebacks_show_locals", False)
         super().__init__(*args, **kwargs)
 
     def get_level_text(self, record: logging.LogRecord) -> Text:
@@ -174,12 +190,14 @@ class APLLogger:
         if address:
             self._log(
                 logging.INFO,
-                f"[security]🛡️  Server started[/security] on [cyan]{transport}://{address}[/cyan]",
+                f"[security]🛡️  Server started[/security] on "
+                f"[cyan]{escape(transport)}://{escape(address)}[/cyan]",
             )
         else:
             self._log(
                 logging.INFO,
-                f"[security]🛡️  Server started[/security] with [cyan]{transport}[/cyan] transport",
+                f"[security]🛡️  Server started[/security] with "
+                f"[cyan]{escape(transport)}[/cyan] transport",
             )
 
     def server_stopped(self):
@@ -192,10 +210,11 @@ class APLLogger:
         """
         Log policy registration.
         """
-        events_str = ", ".join(events)
+        events_str = ", ".join(escape(event) for event in events)
         self._log(
             logging.DEBUG,
-            f"[policy.name]{policy_name}[/policy.name] registered for events: [event]{events_str}[/event]",
+            f"[policy.name]{escape(policy_name)}[/policy.name] registered for "
+            f"events: [event]{events_str}[/event]",
         )
 
     def event_received(self, event_type: str, event_id: str):
@@ -204,7 +223,8 @@ class APLLogger:
         """
         self._log(
             logging.DEBUG,
-            f"[event]Event received:[/event] {event_type} [dim]({event_id[:8]}...)[/dim]",
+            f"[event]Event received:[/event] {escape(event_type)} "
+            f"[dim]({escape(event_id[:8])}...)[/dim]",
         )
 
     def policy_evaluated(
@@ -216,23 +236,20 @@ class APLLogger:
         """
         Log policy evaluation result.
         """
-        decision_styles = {
-            Decision.ALLOW: "[policy.allow]ALLOW[/policy.allow]",
-            Decision.DENY: "[policy.deny]DENY[/policy.deny]",
-            Decision.MODIFY: "[policy.modify]MODIFY[/policy.modify]",
-            Decision.ESCALATE: "[policy.escalate]ESCALATE[/policy.escalate]",
-            Decision.OBSERVE: "[policy.observe]OBSERVE[/policy.observe]",
-        }
-
-        decision_str = decision_styles.get(verdict.decision, str(verdict.decision))
+        decision_str = _DECISION_STYLES.get(verdict.decision, str(verdict.decision))
         timing_str = f" [timing]({elapsed_ms:.2f}ms)[/timing]" if elapsed_ms else ""
 
+        # escape() the interpolated values: policy_name and (especially)
+        # verdict.reasoning can originate from a remote policy server, and the
+        # handler renders this message as Rich markup — unescaped, a reasoning of
+        # "[red]…[/red]" would be markup/log injection.
         message = (
-            f"[policy.name]{policy_name}[/policy.name] → {decision_str}{timing_str}"
+            f"[policy.name]{escape(policy_name)}[/policy.name] → "
+            f"{decision_str}{timing_str}"
         )
 
         if verdict.reasoning:
-            message += f" [dim]// {verdict.reasoning}[/dim]"
+            message += f" [dim]// {escape(verdict.reasoning)}[/dim]"
 
         level = logging.WARNING if verdict.decision == Decision.DENY else logging.INFO
         self._log(level, message)
@@ -246,15 +263,7 @@ class APLLogger:
         """
         Log verdict composition result.
         """
-        decision_styles = {
-            Decision.ALLOW: "[policy.allow]ALLOW[/policy.allow]",
-            Decision.DENY: "[policy.deny]DENY[/policy.deny]",
-            Decision.MODIFY: "[policy.modify]MODIFY[/policy.modify]",
-            Decision.ESCALATE: "[policy.escalate]ESCALATE[/policy.escalate]",
-            Decision.OBSERVE: "[policy.observe]OBSERVE[/policy.observe]",
-        }
-
-        decision_str = decision_styles.get(final_decision, str(final_decision))
+        decision_str = _DECISION_STYLES.get(final_decision, str(final_decision))
 
         self._log(
             logging.INFO,
@@ -267,7 +276,8 @@ class APLLogger:
         """
         self._log(
             logging.INFO,
-            f"[green]Client connected:[/green] {client_id} from {address}",
+            f"[green]Client connected:[/green] {escape(client_id)} "
+            f"from {escape(address)}",
         )
 
     def client_disconnected(self, client_id: str):
@@ -276,7 +286,7 @@ class APLLogger:
         """
         self._log(
             logging.DEBUG,
-            f"[dim]Client disconnected: {client_id}[/dim]",
+            f"[dim]Client disconnected: {escape(client_id)}[/dim]",
         )
 
     def error(self, message: str, exc_info: bool = False):
@@ -291,20 +301,20 @@ class APLLogger:
         """
         self._log(
             logging.WARNING,
-            f"[warning]{message}[/warning]",
+            f"[warning]{escape(message)}[/warning]",
         )
 
     def info(self, message: str):
         """
         Log info.
         """
-        self._log(logging.INFO, message)
+        self._log(logging.INFO, escape(message))
 
     def debug(self, message: str):
         """
         Log debug.
         """
-        self._log(logging.DEBUG, f"[dim]{message}[/dim]")
+        self._log(logging.DEBUG, f"[dim]{escape(message)}[/dim]")
 
 
 # =============================================================================
