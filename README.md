@@ -10,7 +10,7 @@
 [![codecov](https://codecov.io/gh/nimonkaranurag/agentpolicylayer/branch/main/graph/badge.svg)](https://codecov.io/gh/nimonkaranurag/agentpolicylayer)
 [![PyPI](https://img.shields.io/pypi/v/agent-policy-layer.svg)](https://pypi.org/project/agent-policy-layer/)
 [![Python versions](https://img.shields.io/pypi/pyversions/agent-policy-layer.svg)](https://pypi.org/project/agent-policy-layer/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 
 [Installation](#-installation) •
 [Quick Start](#-quick-start-2-minutes) •
