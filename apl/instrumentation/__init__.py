@@ -57,4 +57,7 @@ def uninstrument(state: InstrumentationState) -> None:
     for provider in state.active_providers:
         provider.unpatch_all_methods()
     state.clear_providers()
+    # Restoring the patches isn't enough — the sync bridge may have spun up a daemon
+    # event loop; tear it down so uninstrument leaves no live thread behind (WP-6).
+    state.shutdown_background_loop()
     console.print("[dim]APL instrumentation removed[/dim]")
