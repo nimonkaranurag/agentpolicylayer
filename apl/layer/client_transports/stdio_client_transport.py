@@ -3,16 +3,16 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import json
-import logging
 import subprocess
 import sys
 from typing import Any
 
+from apl.logging import APLLogger, get_logger
 from apl.types import PolicyUnavailableError
 
 from .base_client_transport import BaseClientTransport
 
-logger: logging.Logger = logging.getLogger("apl")
+logger: APLLogger = get_logger("transport.stdio_client")
 
 # Bounded waits so a hung policy server can never hang the agent's hot path. On
 # any failure we raise PolicyUnavailableError (parity with the HTTP transport) so

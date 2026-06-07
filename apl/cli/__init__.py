@@ -9,6 +9,9 @@ from .. import __version__
 from .formatting import RichGroup
 
 console = Console()
+# Human-facing chrome for `serve` goes here so stdout stays clean for the
+# newline-delimited JSON the stdio transport speaks.
+err_console = Console(stderr=True)
 
 
 @click.group(cls=RichGroup)

@@ -1,0 +1,19 @@
+# Codecov configuration — https://docs.codecov.com/docs/codecovyml-reference
+coverage:
+  status:
+    project:
+      default:
+        target: 80%
+        threshold: 1%  # tolerate tiny dips without failing the check
+    patch:
+      default:
+        target: 80%    # new/changed lines must be covered too
+
+comment:
+  layout: "reach, diff, files"
+  require_changes: true
+
+ignore:
+  - "tests/**"
+  - "examples/**"
+  - "demo/**"

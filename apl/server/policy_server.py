@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Callable
 
+from apl import __version__
 from apl.types import (
     PolicyEvent,
     PolicyManifest,
@@ -20,7 +21,7 @@ class PolicyServer:
     def __init__(
         self,
         name: str,
-        version: str = "0.3.0",
+        version: str = __version__,
         description: str | None = None,
     ) -> None:
         self.name: str = name

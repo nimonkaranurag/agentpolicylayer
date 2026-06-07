@@ -358,7 +358,7 @@ class Verdict(BaseModel):
     @classmethod
     def allow(
         cls,
-        reasoning: str = None,
+        reasoning: Optional[str] = None,
         confidence: float = 1.0,
     ) -> Verdict:
         return cls(
@@ -381,9 +381,9 @@ class Verdict(BaseModel):
         target: str,
         operation: str,
         value: Any,
-        reasoning: str = None,
+        reasoning: Optional[str] = None,
         confidence: float = 1.0,
-        path: str = None,
+        path: Optional[str] = None,
     ) -> Verdict:
         return cls(
             decision=Decision.MODIFY,
@@ -403,11 +403,11 @@ class Verdict(BaseModel):
     def escalate(
         cls,
         type: str,
-        prompt: str = None,
-        reasoning: str = None,
-        timeout_ms: int = None,
-        fallback_action: str = None,
-        options: list[str] = None,
+        prompt: Optional[str] = None,
+        reasoning: Optional[str] = None,
+        timeout_ms: Optional[int] = None,
+        fallback_action: Optional[str] = None,
+        options: Optional[list[str]] = None,
     ) -> Verdict:
         return cls(
             decision=Decision.ESCALATE,
@@ -422,7 +422,11 @@ class Verdict(BaseModel):
         )
 
     @classmethod
-    def observe(cls, reasoning: str = None, trace: dict = None) -> Verdict:
+    def observe(
+        cls,
+        reasoning: Optional[str] = None,
+        trace: Optional[dict] = None,
+    ) -> Verdict:
         return cls(
             decision=Decision.OBSERVE,
             reasoning=reasoning,

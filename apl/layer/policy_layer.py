@@ -1,16 +1,17 @@
 from __future__ import annotations
 
 import asyncio
-import logging
 import time
 from typing import Any, Callable
 
 from apl.composition import VerdictComposer
+from apl.logging import APLLogger, get_logger
 from apl.types import (
     CompositionConfig,
     Decision,
     EventPayload,
     EventType,
+    FailMode,
     Message,
     SessionMetadata,
     Verdict,
@@ -20,7 +21,7 @@ from .decorator_evaluator import PolicyDecoratorFactory
 from .event_builder import PolicyEventBuilder
 from .policy_client import PolicyClient
 
-logger: logging.Logger = logging.getLogger("apl")
+logger: APLLogger = get_logger("layer")
 
 
 class PolicyLayer:
@@ -34,6 +35,17 @@ class PolicyLayer:
         self._composer: VerdictComposer = VerdictComposer(self._composition)
         self._event_builder: PolicyEventBuilder = PolicyEventBuilder()
         self._decorator_factory: PolicyDecoratorFactory = PolicyDecoratorFactory(self)
+
+    @property
+    def fail_mode(self) -> FailMode:
+        """
+        Configured behaviour when a policy cannot be evaluated.
+
+        Public read accessor for ``composition.fail_mode`` so collaborators (e.g. the
+        instrumentation evaluator) can honour fail-closed/open without reaching into the
+        private composition config.
+        """
+        return self._composition.fail_mode
 
     def add_server(self, uri: str) -> PolicyLayer:
         client: PolicyClient = PolicyClient(uri, fail_mode=self._composition.fail_mode)
@@ -106,17 +118,30 @@ class PolicyLayer:
         )
 
     def wrap(self, agent: Any) -> Any:
-        agent_type_name: str = type(agent).__name__
+        """
+        Wrap a supported agent/graph so APL policies fire during its execution.
 
+        Currently supports LangGraph ``StateGraph`` objects, detected structurally (they
+        expose ``add_node``/``add_edge``). An unsupported object raises ``TypeError``
+        rather than being returned unmodified: silently handing back an unwrapped agent
+        would run it with *no* enforcement — the exact fail-open trap this layer exists
+        to prevent.
+        """
         if hasattr(agent, "add_node") and hasattr(agent, "add_edge"):
             return self._wrap_langgraph(agent)
 
-        logger.warning(f"Unknown agent type: {agent_type_name}, returning unwrapped")
-        return agent
+        raise TypeError(
+            f"PolicyLayer.wrap() cannot wrap {type(agent).__name__!r}; expected a "
+            "LangGraph StateGraph (an object exposing add_node/add_edge)."
+        )
 
     def _wrap_langgraph(self, graph: Any) -> Any:
-        logger.info("LangGraph wrapper not yet implemented")
-        return graph
+        # Imported lazily: keeps the LangGraph adapter (and its optional
+        # dependency) off the common import path, and avoids a layer<->adapters
+        # import cycle (the adapter imports PolicyLayer).
+        from apl.adapters import APLGraphWrapper
+
+        return APLGraphWrapper(self).wrap(graph)
 
     async def _collect_within_timeout(self, event: Any) -> list[Verdict]:
         timeout_ms: int = self._composition.timeout_ms

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "agent-policy-layer"
-version = "0.3.0"
+dynamic = ["version"]
 description = "Agent Policy Layer - Portable, composable policies for AI agents"
 readme = "README.md"
 license = "MIT"
@@ -47,12 +47,13 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "pytest>=7.0",
-    "pytest-asyncio>=0.21",
+    "pytest-asyncio>=1.0",
     "pytest-cov>=4.0",
     "ruff>=0.6",
     "mypy>=1.10",
     "docformatter>=1.7",
     "types-PyYAML",
+    "pre-commit>=3.5",
 ]
 langgraph = [
     "langgraph>=0.2",
@@ -69,11 +70,21 @@ Issues = "https://github.com/nimonkaranurag/agentpolicylayer/issues"
 [project.scripts]
 apl = "apl.cli:main"
 
+[tool.hatch.version]
+# Single source of truth for the package version: apl/__init__.py defines
+# `__version__` and hatchling reads it here, so cutting a release is one string
+# to bump. (Distinct from PROTOCOL_VERSION in apl/types.py, which versions the
+# wire protocol and moves independently of package releases.)
+path = "apl/__init__.py"
+
 [tool.hatch.build.targets.wheel]
 packages = ["apl"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
+# Pin the async fixture loop scope explicitly (pytest-asyncio 1.x otherwise warns
+# and will change the default); function scope matches how the suite is written.
+asyncio_default_fixture_loop_scope = "function"
 testpaths = ["tests"]
 
 [tool.docformatter]
@@ -83,9 +94,10 @@ close-quotes-on-newline = true
 make-summary-multi-line = true
 wrap-summaries = 88
 wrap-descriptions = 88
-# templates.py holds triple-quoted *template strings* (not docstrings) that
-# docformatter would rewrite into invalid Python; keep it out of scope.
-exclude = ["templates.py"]
+# templates.py holds triple-quoted *template strings* (not docstrings) and
+# test_cli.py embeds triple-quoted YAML/Python policy fixtures; docformatter would
+# rewrite both into invalid content, so keep them out of scope.
+exclude = ["templates.py", "test_cli.py"]
 
 [tool.ruff]
 line-length = 88

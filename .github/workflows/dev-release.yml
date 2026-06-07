@@ -1,0 +1,101 @@
+name: Dev Release
+
+# Publishes an installable "dev wheel" for every push to main — the OSS analog of
+# pushing dev builds to Artifactory for test-fests. Each build is a PEP 440 dev
+# version (X.Y.Z.devN+gSHA) attached to a single rolling "dev" prerelease, so the
+# tag always points at the latest main and only the newest artifacts are kept.
+#
+# Install the latest dev build:
+#   gh release download dev --repo nimonkaranurag/agentpolicylayer --pattern '*.whl'
+#   pip install ./agent_policy_layer-*.whl
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dev-release
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build dev wheel
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+
+      - name: Install build tooling
+        run: python -m pip install --upgrade pip build hatch twine
+
+      - name: Compute dev version
+        id: version
+        run: |
+          BASE="$(hatch version)"
+          SHORT_SHA="$(git rev-parse --short HEAD)"
+          DEV_VERSION="${BASE}.dev${{ github.run_number }}+g${SHORT_SHA}"
+          hatch version "${DEV_VERSION}"
+          echo "version=${DEV_VERSION}" >> "$GITHUB_OUTPUT"
+          echo "::notice::Building dev version ${DEV_VERSION}"
+
+      - name: Build
+        run: python -m build
+
+      - name: Verify metadata
+        run: twine check dist/*
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: dev-dist
+          path: dist/
+
+  publish:
+    name: Publish rolling dev prerelease
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write      # create/replace the rolling 'dev' release + tag
+      id-token: write       # build-provenance attestation
+      attestations: write   # build-provenance attestation
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: dev-dist
+          path: dist/
+
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@ef244123eb79f2f7a7e75d99086184180e6d0018 # v1
+        with:
+          subject-path: dist/*
+
+      - name: Replace rolling 'dev' prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Delete the old rolling release + tag so only the latest artifacts
+          # remain and the 'dev' tag advances to this commit.
+          gh release delete dev --repo "$GITHUB_REPOSITORY" --cleanup-tag --yes || true
+          gh release create dev dist/* \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
+            --prerelease \
+            --title "Dev build (latest main)" \
+            --notes "Rolling pre-release built from the latest \`main\`.
+
+          Version \`${{ needs.build.outputs.version }}\` · commit \`${{ github.sha }}\`.
+          **Not for production.** Install:
+          \`\`\`
+          gh release download dev --repo $GITHUB_REPOSITORY --pattern '*.whl'
+          pip install ./agent_policy_layer-*.whl
+          \`\`\`"

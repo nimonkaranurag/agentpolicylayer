@@ -21,12 +21,27 @@ if TYPE_CHECKING:
 logger = get_logger("server")
 
 
+class DuplicatePolicyError(ValueError):
+    """
+    Raised when two policies are registered under the same name.
+
+    Silently keeping only the last of two same-named policies would drop an author's
+    policy without warning — a fail-open hazard for a guardrails product — so
+    registration rejects the duplicate instead.
+    """
+
+
 class PolicyRegistry:
     def __init__(self) -> None:
         self._policies: dict[str, RegisteredPolicy] = {}
         self._handlers_by_event: dict[EventType, list[RegisteredPolicy]] = {}
 
     def register(self, policy: RegisteredPolicy) -> None:
+        if policy.name in self._policies:
+            raise DuplicatePolicyError(
+                f"Duplicate policy name {policy.name!r}: policy names must be "
+                f"unique within a server"
+            )
         self._policies[policy.name] = policy
 
         for event_type in policy.events:

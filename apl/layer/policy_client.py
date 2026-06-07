@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-import logging
 from typing import Any, Optional
 
 from pydantic import ValidationError
 
+from apl.logging import APLLogger, get_logger
 from apl.serialization import (
     manifest_from_wire,
     to_wire,
@@ -24,7 +24,7 @@ from .client_transports import (
     resolve_client_transport_for_uri,
 )
 
-logger: logging.Logger = logging.getLogger("apl")
+logger: APLLogger = get_logger("layer.client")
 
 
 def _major(version: str) -> Optional[int]:

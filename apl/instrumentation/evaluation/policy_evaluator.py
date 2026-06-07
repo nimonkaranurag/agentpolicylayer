@@ -48,10 +48,10 @@ class PolicyEvaluator:
     @property
     def _fail_mode(self) -> FailMode:
         # Honour the fail mode configured on the policy layer (set via
-        # auto_instrument / CompositionConfig); default to fail-closed if it is
-        # not available. WP-8 could expose this as a public PolicyLayer property.
-        composition = getattr(self.state.policy_layer, "_composition", None)
-        return getattr(composition, "fail_mode", FailMode.CLOSED)
+        # auto_instrument / CompositionConfig); default to fail-closed if the
+        # collaborator doesn't expose one. Reads the public PolicyLayer.fail_mode
+        # property (WP-8) instead of reaching into the private composition config.
+        return getattr(self.state.policy_layer, "fail_mode", FailMode.CLOSED)
 
     def evaluate_event_sync(
         self,

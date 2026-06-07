@@ -1,0 +1,23 @@
+# Weekly dependency + GitHub Actions updates. The github-actions ecosystem keeps
+# the SHA pins in .github/workflows/* current — Dependabot bumps both the pinned
+# SHA and its `# vX` comment, so pinning stays maintainable instead of frozen.
+version: 2
+updates:
+  - package-ecosystem: pip
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    labels: [dependencies]
+    groups:
+      python:
+        patterns: ["*"]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    labels: [dependencies, ci]
+    groups:
+      actions:
+        patterns: ["*"]
