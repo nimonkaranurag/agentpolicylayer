@@ -1,14 +1,13 @@
-name: Publish to PyPI
+name: Publish (manual)
 
+# Manual publish tool only. Automated releases to PyPI are owned by
+# release-please.yml — this workflow exists for publishing release candidates to
+# TestPyPI and as a manual PyPI escape hatch. Run it from Actions → "Run workflow".
 on:
-  release:
-    types: [published]
-
-  # Allow manual trigger for testing
   workflow_dispatch:
     inputs:
       target:
-        description: 'Target PyPI (testpypi or pypi)'
+        description: 'Where to publish'
         required: true
         default: 'testpypi'
         type: choice
@@ -88,7 +87,7 @@ jobs:
   publish-testpypi:
     needs: build
     runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch' && github.event.inputs.target == 'testpypi'
+    if: github.event.inputs.target == 'testpypi'
     environment: testpypi
     permissions:
       id-token: write  # Required for trusted publishing
@@ -107,9 +106,7 @@ jobs:
   publish-pypi:
     needs: build
     runs-on: ubuntu-latest
-    # Only full (non-prerelease) Releases auto-publish to PyPI. Prereleases/rcs go
-    # via manual workflow_dispatch, and the rolling `dev` prerelease can't reach here.
-    if: (github.event_name == 'release' && github.event.release.prerelease == false) || (github.event_name == 'workflow_dispatch' && github.event.inputs.target == 'pypi')
+    if: github.event.inputs.target == 'pypi'
     environment: pypi
     permissions:
       id-token: write  # Required for trusted publishing

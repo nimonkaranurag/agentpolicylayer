@@ -20,10 +20,20 @@ Each wrapped node runs *before* checkpoints, invokes the original node, then run
 ``asyncio.run``, shared client sessions preserved) and only a purely synchronous
 ``graph.invoke(...)`` falls back to the blocking bridge below.
 
-Failure handling is fail-closed by construction: a ``DENY`` or ``ESCALATE``
-verdict raises (:class:`~apl.layer.PolicyDenied` /
-:class:`~apl.layer.PolicyEscalation`) and aborts the node, and the underlying
-``PolicyLayer`` already denies on a policy-server outage (WP-1).
+Verdicts are fail-closed by construction. ``DENY``/``ESCALATE`` raise
+(:class:`~apl.layer.PolicyDenied` / :class:`~apl.layer.PolicyEscalation`) and
+abort the node; a ``MODIFY`` is *applied* to the graph state in place via the
+shared :func:`~apl.modifications.apply_operation` dispatcher (so ``redact`` /
+``append`` actually change what the node sends/receives — the old adapter
+ignored it), and a modification that can't be mapped to the state denies rather
+than proceeding unmodified. The underlying ``PolicyLayer`` already denies on a
+policy-server outage (WP-1).
+
+Loop affinity is handled in the client transports, not papered over here: the
+HTTP client recreates its aiohttp session when evaluation runs on a different
+loop than ``connect`` (so mixing sync ``invoke`` and async ``ainvoke`` is safe),
+and the stdio client — whose subprocess genuinely can't move between loops —
+fails closed with a clear message instead of crashing deep in asyncio.
 """
 
 from __future__ import annotations
@@ -40,6 +50,7 @@ from apl.adapters.base_adapter import BaseFrameworkAdapter
 from apl.instrumentation.messages import LangChainMessageAdapter
 from apl.layer import PolicyDenied, PolicyEscalation, PolicyLayer
 from apl.logging import get_logger
+from apl.modifications import apply_operation
 from apl.types import (
     Decision,
     EventPayload,
@@ -57,23 +68,62 @@ logger = get_logger("adapter.langgraph")
 # =============================================================================
 
 
+class _BridgeLoop:
+    """
+    A lazily-started, process-lived daemon event loop for driving coroutines from
+    synchronous code.
+
+    Using *one* persistent loop instead of a fresh ``asyncio.run`` per call is a
+    correctness requirement, not an optimisation: a remote ``PolicyClient`` pins its
+    aiohttp session to the loop it connected on, so a fresh-loop-per-node sync
+    ``invoke`` would orphan that session after the first node and every later node would
+    fail. One loop keeps the client usable across the whole run.
+    """
+
+    def __init__(self) -> None:
+        self._loop: Optional[asyncio.AbstractEventLoop] = None
+        self._thread: Optional[threading.Thread] = None
+        self._lock = threading.Lock()
+
+    def run(self, coro: Coroutine[Any, Any, Any]) -> Any:
+        loop, thread = self._ensure_started()
+        if threading.current_thread() is thread:
+            # Reentrant call from the bridge's own thread (pathological nested
+            # wrapping): submitting back to this loop and blocking on the result
+            # would deadlock, so drive a throwaway loop on a fresh thread instead.
+            return _run_on_throwaway_thread(coro)
+        return asyncio.run_coroutine_threadsafe(coro, loop).result()
+
+    def _ensure_started(self):
+        with self._lock:
+            if self._loop is None:
+                self._loop = asyncio.new_event_loop()
+                self._thread = threading.Thread(
+                    target=self._loop.run_forever,
+                    name="apl-langgraph-bridge",
+                    daemon=True,
+                )
+                self._thread.start()
+            return self._loop, self._thread
+
+
+_BRIDGE = _BridgeLoop()
+
+
 def run_coroutine_blocking(coro: Coroutine[Any, Any, Any]) -> Any:
     """
-    Run ``coro`` to completion and return its result, from sync code.
+    Run ``coro`` to completion from synchronous code and return its result.
 
-    ``asyncio.run`` raises ``RuntimeError`` if a loop is already running in the current
-    thread (the common async-server topology), so this bridge only uses it when no loop
-    is running. Otherwise it drives the coroutine on a private loop in a worker thread
-    and blocks for the result, which never reenters — or interferes with — the caller's
-    loop. Exceptions propagate to the caller.
+    Drives the coroutine on the shared bridge loop (a daemon thread), so it works
+    whether or not a loop is already running in the caller's thread (``ainvoke`` runs
+    policies natively and never reaches here) and so a remote policy client's session
+    survives across every node of a sync run. Exceptions raised by ``coro`` propagate to
+    the caller.
     """
-    try:
-        asyncio.get_running_loop()
-    except RuntimeError:
-        # No loop in this thread (sync caller, or a node dispatched to an
-        # executor thread): safe to own one for the duration of the call.
-        return asyncio.run(coro)
+    return _BRIDGE.run(coro)
 
+
+def _run_on_throwaway_thread(coro: Coroutine[Any, Any, Any]) -> Any:
     outcome: dict[str, Any] = {}
 
     def _drive() -> None:
@@ -85,7 +135,9 @@ def run_coroutine_blocking(coro: Coroutine[Any, Any, Any]) -> Any:
         finally:
             loop.close()
 
-    worker = threading.Thread(target=_drive, name="apl-langgraph-bridge")
+    worker = threading.Thread(
+        target=_drive, name="apl-langgraph-bridge-reentrant", daemon=True
+    )
     worker.start()
     worker.join()
     if "error" in outcome:
@@ -196,6 +248,19 @@ class LangGraphStateExtractor:
 # =============================================================================
 
 
+# APL modification target -> the LangGraph state keys it can write back to (the
+# first key already present wins, else the first listed). Mirrors the read keys in
+# ``_build_payload`` so a MODIFY writes to the same place the payload was read from.
+# Targets absent here (``input``/``llm_prompt``/``handoff_payload`` — messages and
+# complex structures the adapter has no single state key for) are refused fail-closed.
+_TARGET_STATE_KEYS: dict[str, tuple[str, ...]] = {
+    "output": ("output", "response", "output_text"),
+    "tool_args": ("tool_args", "tool_input"),
+    "tool_result": ("tool_result", "result"),
+    "plan": ("plan", "steps"),
+}
+
+
 class CheckpointEvaluator:
     """
     Build the event payload for a checkpoint, evaluate it, and enforce the verdict
@@ -238,7 +303,67 @@ class CheckpointEvaluator:
             raise PolicyDenied(verdict)
         if verdict.decision == Decision.ESCALATE:
             raise PolicyEscalation(verdict)
+        if verdict.decision == Decision.MODIFY:
+            self._apply_modifications(verdict, state, node_name)
         return verdict
+
+    def _apply_modifications(
+        self,
+        verdict: Verdict,
+        state: Any,
+        node_name: str,
+    ) -> None:
+        """
+        Apply a ``MODIFY`` verdict's modifications to the graph state in place.
+
+        Each modification is mapped to the matching state key and routed through the
+        shared :func:`~apl.modifications.apply_operation` dispatcher, so ``redact`` /
+        ``append`` / ``patch`` mean the same thing here as everywhere else and actually
+        change what the node sends/receives — the old adapter let ``MODIFY`` through
+        untouched, a silent no-op.
+
+        Fails **closed**: if a modification targets something the adapter cannot map to
+        the (dict) state, or the dispatcher rejects it, the action is *denied* rather
+        than allowed to proceed unmodified — letting an action through without the
+        modification a policy demanded is the fail-open trap a guardrails layer must not
+        have.
+        """
+        if not isinstance(state, dict):
+            raise PolicyDenied(
+                Verdict.deny(
+                    reasoning=(
+                        f"Policy returned MODIFY at node {node_name!r} but the graph "
+                        f"state is {type(state).__name__}, not a dict APL can modify; "
+                        "denying."
+                    )
+                )
+            )
+
+        for modification in verdict.modifications:
+            state_keys = _TARGET_STATE_KEYS.get(modification.target)
+            if state_keys is None:
+                raise PolicyDenied(
+                    Verdict.deny(
+                        reasoning=(
+                            f"Policy returned MODIFY target={modification.target!r} at "
+                            f"node {node_name!r}, which the LangGraph adapter cannot map "
+                            "to graph state; denying rather than proceeding unmodified."
+                        )
+                    )
+                )
+            key = next((k for k in state_keys if k in state), state_keys[0])
+            try:
+                state[key] = apply_operation(state.get(key), modification)
+            except (ValueError, KeyError, IndexError, TypeError) as exc:
+                raise PolicyDenied(
+                    Verdict.deny(
+                        reasoning=(
+                            f"Policy MODIFY ({modification.operation} "
+                            f"{modification.target}) at node {node_name!r} could not be "
+                            f"applied: {exc}"
+                        )
+                    )
+                ) from exc
 
     def _build_payload(
         self,

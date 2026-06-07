@@ -10,6 +10,7 @@ integration tests are gated on the optional ``langgraph`` extra and build a real
 
 from __future__ import annotations
 
+import asyncio
 import importlib.util
 import threading
 from types import SimpleNamespace
@@ -103,6 +104,41 @@ class TestRunCoroutineBlocking:
 
         with pytest.raises(ValueError, match="kaboom-off-thread"):
             run_coroutine_blocking(boom())
+
+    def test_reuses_one_loop_across_calls(self) -> None:
+        # A remote client pins its session to the loop it connected on, so the
+        # bridge must reuse ONE loop across nodes; a fresh loop per call would
+        # orphan that session after the first node.
+        loops: list[Any] = []
+
+        async def capture() -> None:
+            loops.append(asyncio.get_running_loop())
+
+        run_coroutine_blocking(capture())
+        run_coroutine_blocking(capture())
+        assert loops[0] is loops[1]
+
+    def test_reentrant_call_from_bridge_thread_does_not_deadlock(self) -> None:
+        # A nested blocking call made from within the bridge loop's own thread
+        # must fall back to a throwaway loop rather than deadlock on itself.
+        async def inner() -> int:
+            return 99
+
+        async def outer() -> int:
+            # Runs on the bridge thread; the nested call re-enters the bridge.
+            return run_coroutine_blocking(inner())
+
+        assert run_coroutine_blocking(outer()) == 99
+
+    def test_reentrant_call_propagates_exception(self) -> None:
+        async def inner() -> None:
+            raise ValueError("nested-boom")
+
+        async def outer() -> None:
+            return run_coroutine_blocking(inner())
+
+        with pytest.raises(ValueError, match="nested-boom"):
+            run_coroutine_blocking(outer())
 
 
 class TestLangGraphStateExtractor:
@@ -233,6 +269,145 @@ class TestCheckpointEvaluator:
         assert call.payload.tool_name is None
         assert call.messages and call.messages[0].content == "hi"
 
+    async def test_payload_matches_plan_event(self) -> None:
+        layer = FakeLayer()
+        await CheckpointEvaluator(layer).evaluate(
+            PolicyCheckpoint(EventType.PLAN_PROPOSED),
+            {"plan": ["a", "b"]},
+            None,
+            "n",
+            "S",
+        )
+        assert layer.calls[0].payload.plan == ["a", "b"]
+
+    async def test_payload_matches_handoff_event(self) -> None:
+        layer = FakeLayer()
+        await CheckpointEvaluator(layer).evaluate(
+            PolicyCheckpoint(EventType.AGENT_PRE_HANDOFF),
+            {"target_agent": "billing"},
+            None,
+            "router",
+            "S",
+        )
+        payload = layer.calls[0].payload
+        assert payload.target_agent == "billing"
+        assert payload.source_agent == "router"
+
+    async def test_payload_llm_response_from_last_assistant(self) -> None:
+        layer = FakeLayer()
+        await CheckpointEvaluator(layer).evaluate(
+            PolicyCheckpoint(EventType.LLM_POST_RESPONSE),
+            {
+                "messages": [
+                    {"role": "user", "content": "q"},
+                    {"role": "assistant", "content": "a"},
+                ]
+            },
+            None,
+            "n",
+            "S",
+        )
+        assert layer.calls[0].payload.llm_response.content == "a"
+
+    async def test_output_text_falls_back_to_last_assistant_message(self) -> None:
+        layer = FakeLayer()
+        await CheckpointEvaluator(layer).evaluate(
+            PolicyCheckpoint(EventType.OUTPUT_PRE_SEND),
+            {"messages": [{"role": "assistant", "content": "final answer"}]},
+            None,
+            "n",
+            "S",
+        )
+        assert layer.calls[0].payload.output_text == "final answer"
+
+
+class TestCheckpointEvaluatorModify:
+    """
+    A MODIFY verdict must actually change the graph state, or fail closed.
+    """
+
+    async def test_replace_output_in_state(self) -> None:
+        layer = FakeLayer(
+            Verdict.modify(target="output", operation="replace", value="[REDACTED]")
+        )
+        state = {"output": "SECRET"}
+        await CheckpointEvaluator(layer).evaluate(
+            PolicyCheckpoint(EventType.OUTPUT_PRE_SEND), state, None, "n", "S"
+        )
+        assert state["output"] == "[REDACTED]"
+
+    async def test_redact_routes_through_shared_dispatcher(self) -> None:
+        # operation='redact' with no value uses the dispatcher's DEFAULT_REDACTION,
+        # proving MODIFY honours the operation (not a degraded 'replace').
+        layer = FakeLayer(
+            Verdict.modify(target="output", operation="redact", value=None)
+        )
+        state = {"output": "SECRET"}
+        await CheckpointEvaluator(layer).evaluate(
+            PolicyCheckpoint(EventType.OUTPUT_PRE_SEND), state, None, "n", "S"
+        )
+        assert state["output"] == "[REDACTED]"
+
+    async def test_append_to_output(self) -> None:
+        layer = FakeLayer(
+            Verdict.modify(target="output", operation="append", value=" [edited]")
+        )
+        state = {"output": "hello"}
+        await CheckpointEvaluator(layer).evaluate(
+            PolicyCheckpoint(EventType.OUTPUT_PRE_SEND), state, None, "n", "S"
+        )
+        assert state["output"] == "hello [edited]"
+
+    async def test_modify_tool_args(self) -> None:
+        layer = FakeLayer(
+            Verdict.modify(
+                target="tool_args", operation="replace", value={"safe": True}
+            )
+        )
+        state = {"tool_args": {"danger": True}}
+        await CheckpointEvaluator(layer).evaluate(
+            PolicyCheckpoint(EventType.TOOL_PRE_INVOKE), state, None, "n", "S"
+        )
+        assert state["tool_args"] == {"safe": True}
+
+    async def test_unmappable_target_fails_closed(self) -> None:
+        layer = FakeLayer(
+            Verdict.modify(target="llm_prompt", operation="replace", value="x")
+        )
+        with pytest.raises(PolicyDenied, match="cannot map"):
+            await CheckpointEvaluator(layer).evaluate(
+                PolicyCheckpoint(EventType.OUTPUT_PRE_SEND),
+                {"output": "x"},
+                None,
+                "n",
+                "S",
+            )
+
+    async def test_non_dict_state_fails_closed(self) -> None:
+        layer = FakeLayer(
+            Verdict.modify(target="output", operation="replace", value="x")
+        )
+        with pytest.raises(PolicyDenied, match="not a dict"):
+            await CheckpointEvaluator(layer).evaluate(
+                PolicyCheckpoint(EventType.OUTPUT_PRE_SEND),
+                "a bare string",
+                None,
+                "n",
+                "S",
+            )
+
+    async def test_dispatcher_error_fails_closed(self) -> None:
+        # 'patch' with no path is rejected by the shared dispatcher -> deny.
+        layer = FakeLayer(Verdict.modify(target="output", operation="patch", value="x"))
+        with pytest.raises(PolicyDenied, match="could not be applied"):
+            await CheckpointEvaluator(layer).evaluate(
+                PolicyCheckpoint(EventType.OUTPUT_PRE_SEND),
+                {"output": "hello"},
+                None,
+                "n",
+                "S",
+            )
+
 
 class TestNodeWrapperCallablePath:
     def test_sync_node_fires_before_and_after(self) -> None:
@@ -304,9 +479,32 @@ class TestNodeWrapperCallablePath:
         NodeWrapper(layer, []).wrap("n", node)({"x": 1}, config)
         assert seen["config"] == config
 
+    def test_modify_before_checkpoint_changes_what_node_sees(self) -> None:
+        # A MODIFY in a before-checkpoint must mutate the state the node receives.
+        layer = FakeLayer(
+            Verdict.modify(target="tool_args", operation="replace", value={"safe": 1})
+        )
+        seen: dict[str, Any] = {}
+
+        def node(state: Any) -> Any:
+            seen["tool_args"] = state.get("tool_args")
+            return state
+
+        NodeWrapper(
+            layer,
+            [PolicyCheckpoint(EventType.TOOL_PRE_INVOKE, before_node_execution=True)],
+        ).wrap("n", node)({"tool_args": {"danger": 1}})
+        assert seen["tool_args"] == {"safe": 1}
+
     def test_non_callable_non_spec_raises(self) -> None:
         with pytest.raises(TypeError, match="Cannot wrap node"):
             NodeWrapper(FakeLayer(), []).wrap("n", 12345)
+
+    def test_wrap_handles_uninspectable_callable(self) -> None:
+        # A C builtin with no introspectable signature (range) must not crash
+        # wrap(); _accepts_config falls back to "no config param".
+        wrapped = NodeWrapper(FakeLayer(), []).wrap("n", range)
+        assert callable(wrapped)
 
 
 class _FakeGraph:
@@ -333,7 +531,7 @@ class TestCreateAplGraphFactory:
 
         graph.add_node("n", original)
 
-        wrapped = create_apl_graph(graph, policy_servers=[])
+        wrapped = create_apl_graph(graph, policy_servers=["stdio://noop.py"])
 
         assert wrapped is graph
         # The node was replaced by a policy-enforcing wrapper, not left as-is.
@@ -409,6 +607,32 @@ def _blocking_server():
     async def block_secret(event):
         if "SECRET" in (event.payload.output_text or ""):
             return Verdict.deny(reasoning="secret leaked")
+        return Verdict.allow()
+
+    return server
+
+
+def _redacting_server():
+    """
+    A PolicyServer that redacts any output containing 'SECRET' via MODIFY.
+    """
+    from apl import PolicyServer, Verdict
+
+    server = PolicyServer("redact-it")
+
+    @server.policy(
+        name="redact-secret",
+        events=["output.pre_send"],
+        context=["payload.output_text"],
+    )
+    async def redact_secret(event):
+        if "SECRET" in (event.payload.output_text or ""):
+            return Verdict.modify(
+                target="output",
+                operation="replace",
+                value="[REDACTED]",
+                reasoning="redacted secret",
+            )
         return Verdict.allow()
 
     return server
@@ -517,3 +741,27 @@ class TestLangGraphIntegration:
 
         assert captured  # checkpoints actually fired
         assert set(captured) == {"THREAD-9"}  # one stable session across the run
+
+    def test_modify_redacts_node_output(self) -> None:
+        from typing import TypedDict
+
+        from langgraph.graph import END, START, StateGraph
+
+        class State(TypedDict):
+            output: str
+
+        def leak(state: State) -> dict:
+            return {"output": "SECRET data"}
+
+        graph = StateGraph(State)
+        graph.add_node("leak", leak)
+        graph.add_edge(START, "leak")
+        graph.add_edge("leak", END)
+        app = (
+            APLGraphWrapper(_layer_with_inprocess_server(_redacting_server()))
+            .wrap(graph)
+            .compile()
+        )
+
+        # The MODIFY verdict rewrites the node's output before it leaves the graph.
+        assert app.invoke({"output": ""})["output"] == "[REDACTED]"

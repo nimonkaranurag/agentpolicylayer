@@ -1,6 +1,5 @@
-# Run the same gates as CI, locally, before each commit:
-#   pip install -e ".[dev]" && pre-commit install
-#   pre-commit run --all-files     # one-off over the whole tree
+# Installed by `source scripts/dev.sh`; after that these run on every `git commit`.
+# To check the whole tree in one go:  pre-commit run --all-files
 #
 # The Python tools (ruff/docformatter/mypy) run from your installed dev env
 # (language: system) so they always match what CI runs — there's no separate

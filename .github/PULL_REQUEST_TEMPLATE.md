@@ -4,8 +4,7 @@
 
 ## Checklist
 
-- [ ] `pre-commit run --all-files` passes (ruff format + check, docformatter, mypy)
+- [ ] Commits use [Conventional Commit](https://www.conventionalcommits.org/) prefixes (release-please versions and builds the changelog from them)
 - [ ] Tests added/updated and `pytest` passes; coverage stays ≥ 80%
-- [ ] `CHANGELOG.md` updated under `## [Unreleased]`
 - [ ] Fail-closed preserved — no new path where an error results in "allow"
 - [ ] Docs/README updated if behavior or the public API changed

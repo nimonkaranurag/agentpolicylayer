@@ -33,6 +33,10 @@ class StdioClientTransport(BaseClientTransport):
         self._timeout_seconds: float = timeout_seconds
         self._process: asyncio.subprocess.Process | None = None
         self._stderr_drain: asyncio.Task | None = None
+        # The subprocess and its stream transports are bound to the loop they were
+        # created on. We record it so evaluate() can fail closed with a clear
+        # message if it runs on a different loop, rather than crash deep in asyncio.
+        self._bound_loop: asyncio.AbstractEventLoop | None = None
 
     async def connect(self) -> dict | None:
         args: list[str] = self._build_spawn_args()
@@ -49,6 +53,8 @@ class StdioClientTransport(BaseClientTransport):
             raise PolicyUnavailableError(
                 f"could not spawn policy server {self._raw_command!r}: {exc}"
             ) from exc
+
+        self._bound_loop = asyncio.get_running_loop()
 
         # Drain stderr continuously: an undrained PIPE fills (~64KB) and the
         # server deadlocks waiting to write while we wait to read stdout.
@@ -74,6 +80,15 @@ class StdioClientTransport(BaseClientTransport):
     async def evaluate(self, serialized_event: dict) -> list[dict]:
         if self._process is None or self._process.stdin is None:
             raise PolicyUnavailableError("policy server subprocess is not running")
+
+        if self._bound_loop is not asyncio.get_running_loop():
+            raise PolicyUnavailableError(
+                f"stdio policy server {self._raw_command!r} was connected on a "
+                "different event loop; a subprocess transport can't move between "
+                "loops. Connect and evaluate on the same loop (don't mix a sync "
+                "graph.invoke with async ainvoke on one layer), or use the HTTP "
+                "transport."
+            )
 
         wire_message: dict[str, Any] = {
             "type": "evaluate",

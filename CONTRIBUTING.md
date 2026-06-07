@@ -22,9 +22,10 @@ automatically** via pre-commit, so formatting and linting are handled for you.
 
 ## What runs on every commit & PR
 
-`pre-commit` runs these on your changes at commit time; [CI](.github/workflows/ci.yml)
-runs them across the whole tree on every PR. You rarely need to run them by hand —
-but `pre-commit run --all-files` runs the full set, and `pytest` runs the tests.
+After `source scripts/dev.sh`, the pre-commit hook runs **ruff (format + lint),
+docformatter, and mypy automatically on every `git commit`** — you don't run them
+yourself. [CI](.github/workflows/ci.yml) re-runs the same checks across the whole
+tree on every PR:
 
 | Gate | Tool | Notes |
 |---|---|---|
@@ -36,8 +37,7 @@ but `pre-commit run --all-files` runs the full set, and `pytest` runs the tests.
 | Deps | `pip-audit` | Fails on known-vulnerable dependencies (CI). |
 
 The Python tools in [.pre-commit-config.yaml](.pre-commit-config.yaml) run from
-your `.venv` (`language: system`), so they always match the versions CI uses —
-there's no second pinned version to drift.
+your `.venv` (`language: system`), so they always match the versions CI uses.
 
 ## Coding conventions
 
@@ -60,42 +60,52 @@ there's no second pinned version to drift.
 ## Pull requests
 
 1. Branch from `main` (e.g. `yourname/short-description`).
-2. Make sure `pre-commit run --all-files` is green and tests pass.
-3. Add an entry to [CHANGELOG.md](CHANGELOG.md) under `## [Unreleased]`.
+2. Commit normally — the hook formats, lints, and type-checks for you; run
+   `pytest` to cover tests.
+3. Write [Conventional Commits](#commit-messages-drive-releases-important) —
+   release-please builds the changelog from them, so you don't touch `CHANGELOG.md`.
 4. Open the PR; [CODEOWNERS](CODEOWNERS) are requested automatically, and CI must
    be green to merge.
 
-## Versioning & releasing
+## Versioning & releasing (FYI)
 
-There are **two independent versions** — don't conflate them:
+Two independent versions, and **you bump neither by hand**:
 
-- **Package version** — `__version__` in [apl/\_\_init\_\_.py](apl/__init__.py). The
-  single source of truth: `pyproject.toml` reads it dynamically
-  (`[tool.hatch.version]`) and the CLI/manifest import it. **Bumping this one
-  string is the whole release** — that's why there's no `RELEASING.md`.
+- **Package version** — `__version__` in [apl/__init__.py](apl/__init__.py), the
+  single source the build reads (`[tool.hatch.version]`). **release-please owns
+  it** — it writes the next value via the `# x-release-please-version` annotation
+  when it opens the release PR. Editing it manually just fights the tooling.
 - **Protocol version** — `PROTOCOL_VERSION` in [apl/types.py](apl/types.py). The
-  wire-compatibility contract checked on connect. Bump it only when the
-  event/verdict protocol changes, independently of package releases.
+  wire-compatibility contract checked on connect; bump it by hand only when the
+  event/verdict format changes, independently of package releases.
 
-To cut a release:
+### Commit messages drive releases (important)
 
-1. Bump `__version__` in `apl/__init__.py` (semver).
-2. Move `## [Unreleased]` entries under a new `## [X.Y.Z]` heading in `CHANGELOG.md`.
-3. Merge to `main`, then publish a **GitHub Release** tagged `vX.Y.Z`.
-4. [publish.yml](.github/workflows/publish.yml) builds and publishes to **PyPI**
-   via OIDC trusted publishing (no API tokens to manage).
+Releases are computed from **[Conventional Commits](https://www.conventionalcommits.org/)**,
+so the commit *type* is what picks the next version — the format is not optional:
 
-Dev builds are automatic — you don't manage them by hand:
+| Prefix | Example | Version effect (while on `0.x`) |
+|---|---|---|
+| `fix:` | `fix: bind --http 0 correctly` | patch — `0.3.0` → `0.3.1` |
+| `feat:` | `feat: add serve --max-body flag` | minor — `0.3.0` → `0.4.0` |
+| `feat!:` / `BREAKING CHANGE:` in body | `feat!: remove --stdio flag` | minor pre-1.0 — `0.3.0` → `0.4.0` |
+| `chore:` `docs:` `refactor:` `test:` `ci:` `perf:` | `docs: fix a typo` | no release on their own |
 
-- **Every push to `main`** publishes an installable **dev wheel**
-  (`X.Y.Z.devN+gSHA`) to the rolling `dev` pre-release — the test-fest channel:
-  ```bash
-  gh release download dev --repo nimonkaranurag/agentpolicylayer --pattern '*.whl'
-  pip install ./agent_policy_layer-*.whl
-  ```
-- Container images for `apl serve` go to **GHCR**
-  (`ghcr.io/nimonkaranurag/agentpolicylayer`): `:dev` and `:sha-<short>` on main,
-  `:X.Y.Z` and `:latest` on release.
+Optional scope (`feat(cli): …`); keep the subject imperative and ≤ ~72 chars.
+
+### Cutting a release
+
+You don't tag or publish anything by hand:
+
+1. Merge Conventional-Commit PRs to `main`.
+2. [release-please](.github/workflows/release-please.yml) keeps an open
+   **"chore: release X.Y.Z" PR** that bumps the version and updates
+   [CHANGELOG.md](CHANGELOG.md) from your commits.
+3. **Merge that release PR** → it tags `vX.Y.Z`, creates the GitHub Release, and
+   publishes to **PyPI** via OIDC.
+
+Dev builds need no action: every push to `main` ships a dev wheel
+(`X.Y.Z.devN+gSHA`) to the rolling `dev` pre-release.
 
 ## Security
 
