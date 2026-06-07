@@ -1,6 +1,6 @@
 <div align="center">
 
-# Agent Policy Layer
+# APL🛡️ (Agent Policy Layer)
 
 **Portable, composable, fail-closed guardrails for AI agents.**
 *Like MCP — but for constraints instead of capabilities.*
@@ -15,7 +15,7 @@
 <br/>
 
 <img src="./_resources/APL.png" alt="APL Mascot" width="780">
-<em>APL restrains your agents - when you need him to! 🚔 </em>
+<em> APL restrains your agents - when you need him to! 🚔 </em>
 
 <br/>
 <br/>
