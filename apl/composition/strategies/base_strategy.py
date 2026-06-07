@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Protocol
 
-from apl.types import Decision, Modification, Verdict
+from apl.types import CompositionConfig, Decision, Modification, Verdict
 
 
 class CompositionStrategy(Protocol):
@@ -10,6 +10,18 @@ class CompositionStrategy(Protocol):
 
 
 class BaseCompositionStrategy:
+    """
+    Shared helpers for the built-in composition strategies.
+
+    The active :class:`CompositionConfig` is injected at construction so a strategy can
+    read the fields that tune it — ``weights`` for weighted voting, ``priority`` for
+    first-applicable ordering. Strategies that need neither simply ignore
+    ``self._config``.
+    """
+
+    def __init__(self, config: CompositionConfig | None = None) -> None:
+        self._config: CompositionConfig = config or CompositionConfig()
+
     @staticmethod
     def _find_first_verdict_with_decision(
         verdicts: list[Verdict],

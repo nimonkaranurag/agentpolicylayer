@@ -6,14 +6,7 @@ from .base_strategy import BaseCompositionStrategy
 
 
 class DenyOverridesStrategy(BaseCompositionStrategy):
-    def __init__(
-        self,
-        allow_reasoning: str = "All policies allowed",
-    ) -> None:
-        self._allow_reasoning = allow_reasoning
-
     def compose(self, verdicts: list[Verdict]) -> Verdict:
-
         guard = self._guard_empty_verdicts(verdicts)
         if guard is not None:
             return guard
@@ -30,4 +23,4 @@ class DenyOverridesStrategy(BaseCompositionStrategy):
         if modified is not None:
             return modified
 
-        return Verdict.allow(reasoning=self._allow_reasoning)
+        return Verdict.allow(reasoning="All policies allowed")

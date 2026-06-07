@@ -8,6 +8,7 @@ from typing import Any, Callable
 from apl.composition import VerdictComposer
 from apl.types import (
     CompositionConfig,
+    Decision,
     EventPayload,
     EventType,
     Message,
@@ -35,7 +36,7 @@ class PolicyLayer:
         self._decorator_factory: PolicyDecoratorFactory = PolicyDecoratorFactory(self)
 
     def add_server(self, uri: str) -> PolicyLayer:
-        client: PolicyClient = PolicyClient(uri)
+        client: PolicyClient = PolicyClient(uri, fail_mode=self._composition.fail_mode)
         self._clients.append(client)
         return self
 
@@ -77,8 +78,18 @@ class PolicyLayer:
         )
 
         start_time: float = time.perf_counter()
-        verdicts: list[Verdict] = await self._collect_verdicts(event)
-        elapsed_ms: float = (time.perf_counter() - start_time) * 1000
+        try:
+            verdicts: list[Verdict] = await self._collect_within_timeout(event)
+        except asyncio.TimeoutError:
+            elapsed_ms = (time.perf_counter() - start_time) * 1000
+            logger.warning(
+                f"Policy evaluation exceeded the "
+                f"{self._composition.timeout_ms}ms layer timeout after "
+                f"{elapsed_ms:.1f}ms; applying on_timeout="
+                f"{self._composition.on_timeout.value}"
+            )
+            return self._timeout_verdict()
+        elapsed_ms = (time.perf_counter() - start_time) * 1000
 
         logger.debug(f"Evaluated {len(verdicts)} policies in {elapsed_ms:.1f}ms")
 
@@ -106,6 +117,32 @@ class PolicyLayer:
     def _wrap_langgraph(self, graph: Any) -> Any:
         logger.info("LangGraph wrapper not yet implemented")
         return graph
+
+    async def _collect_within_timeout(self, event: Any) -> list[Verdict]:
+        timeout_ms: int = self._composition.timeout_ms
+        if timeout_ms and timeout_ms > 0:
+            return await asyncio.wait_for(
+                self._collect_verdicts(event),
+                timeout=timeout_ms / 1000,
+            )
+        # A non-positive timeout disables the budget rather than firing instantly.
+        return await self._collect_verdicts(event)
+
+    def _timeout_verdict(self) -> Verdict:
+        """
+        Build the single verdict to return when the layer timeout fires.
+
+        ``on_timeout`` defaults to ``DENY`` so the layer is fail-closed: a slow or hung
+        policy server blocks the action rather than silently allowing it. Only an
+        explicit ``on_timeout=ALLOW`` downgrades a timeout to allow.
+        """
+        reasoning = (
+            f"Policy evaluation exceeded the "
+            f"{self._composition.timeout_ms}ms layer timeout"
+        )
+        if self._composition.on_timeout is Decision.ALLOW:
+            return Verdict.allow(reasoning=reasoning)
+        return Verdict.deny(reasoning=reasoning)
 
     async def _collect_verdicts(self, event: Any) -> list[Verdict]:
         if self._composition.parallel:

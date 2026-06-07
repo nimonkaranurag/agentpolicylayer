@@ -1,8 +1,10 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+import dataclasses
+from typing import TYPE_CHECKING, Optional
 
 from apl.logging import get_logger
+from apl.modifications import apply_operation
 from apl.types import (
     Decision,
     EventPayload,
@@ -75,51 +77,41 @@ class PolicyRegistry:
         event: PolicyEvent,
         modification: Modification,
     ) -> PolicyEvent:
-        payload = event.payload
-        new_payload_kwargs = {
-            "tool_name": payload.tool_name,
-            "tool_args": payload.tool_args,
-            "tool_result": payload.tool_result,
-            "tool_error": payload.tool_error,
-            "llm_model": payload.llm_model,
-            "llm_prompt": payload.llm_prompt,
-            "llm_response": payload.llm_response,
-            "llm_tokens_used": payload.llm_tokens_used,
-            "output_text": payload.output_text,
-            "output_structured": payload.output_structured,
-            "plan": payload.plan,
-            "target_agent": payload.target_agent,
-            "source_agent": payload.source_agent,
-            "handoff_payload": payload.handoff_payload,
-        }
+        """
+        Apply one modification to the event's payload during sequential evaluation.
 
-        target = modification.target
-        value = modification.value
+        The modification's ``operation`` (replace/redact/append/prepend/patch) is
+        honoured via the shared dispatcher; the payload is rebuilt with
+        :func:`dataclasses.replace`, so untouched fields are preserved and the original
+        event is never mutated.
+        """
+        field_name = self._payload_field_for_target(event.payload, modification.target)
+        if field_name is None:
+            return event
 
+        current = getattr(event.payload, field_name)
+        new_value = apply_operation(current, modification)
+        new_payload = dataclasses.replace(event.payload, **{field_name: new_value})
+        return dataclasses.replace(event, payload=new_payload)
+
+    @staticmethod
+    def _payload_field_for_target(payload: EventPayload, target: str) -> Optional[str]:
+        """
+        Map a modification ``target`` to the payload field it writes, or ``None`` if the
+        server-side sequential path cannot modify it.
+
+        Message-valued targets (``input``) live on the event, not the payload, so they
+        can only be modified by the in-process instrumentation events.
+        """
         if target == "output":
-            if payload.tool_result is not None:
-                new_payload_kwargs["tool_result"] = value
-            elif payload.output_text is not None:
-                new_payload_kwargs["output_text"] = value
-            else:
-                new_payload_kwargs["output_text"] = value
-        elif target == "input":
-            logger.warning(
-                "Modification target 'input' is not supported during sequential evaluation; "
-                "use instrumentation-level events for input modifications"
-            )
-        elif target == "tool_args":
-            new_payload_kwargs["tool_args"] = value
-        elif target == "llm_prompt":
-            new_payload_kwargs["llm_prompt"] = value
+            return "tool_result" if payload.tool_result is not None else "output_text"
+        if target == "tool_args":
+            return "tool_args"
+        if target == "llm_prompt":
+            return "llm_prompt"
 
-        new_payload = EventPayload(**new_payload_kwargs)
-
-        return PolicyEvent(
-            id=event.id,
-            type=event.type,
-            timestamp=event.timestamp,
-            messages=event.messages,
-            payload=new_payload,
-            metadata=event.metadata,
+        logger.warning(
+            f"Modification target {target!r} is not supported during sequential "
+            f"evaluation; use instrumentation-level events instead"
         )
+        return None

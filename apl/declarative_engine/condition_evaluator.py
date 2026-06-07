@@ -29,6 +29,17 @@ class ConditionEvaluator:
     ) -> None:
         self._handler_registry[operator_name] = handler
 
+    @property
+    def known_operators(self) -> frozenset[str]:
+        """
+        The operator names this evaluator recognises (built-ins + any registered via
+        :meth:`register_condition`).
+
+        The YAML validator reads this so ``apl validate`` and the evaluator agree on
+        exactly one vocabulary.
+        """
+        return frozenset(self._handler_registry)
+
     def evaluate(self, value: Any, condition: Any) -> bool:
         if condition is None:
             return value is None
@@ -38,28 +49,59 @@ class ConditionEvaluator:
 
         return value == condition
 
-    def _evaluate_dict_condition(self, value, condition):
-        results = []
-        for (
-            operator_name,
-            operator_argument,
-        ) in condition.items():
+    def _evaluate_dict_condition(self, value: Any, condition: dict[str, Any]) -> bool:
+        """
+        Evaluate an operator mapping (``{"contains": "x", "gt": 1}`` -> all must hold).
+
+        Every key must be a known operator. An unknown operator (typically a typo such
+        as ``contians:``) or an empty mapping raises rather than silently disabling the
+        rule — for a guardrails product a misconfigured condition must fail loudly, not
+        under-enforce. Compare against a literal dict with the explicit ``equals``
+        operator.
+        """
+        if not condition:
+            raise ValueError(
+                "Empty condition mapping; expected at least one operator from: "
+                f"{self._sorted_operators()}"
+            )
+
+        results: list[bool] = []
+        for operator_name, operator_argument in condition.items():
             handler = self._handler_registry.get(operator_name)
-            if handler is not None:
-                results.append(handler(value, operator_argument))
-        if results:
-            return all(results)
-        return value == condition
+            if handler is None:
+                raise ValueError(
+                    f"Unknown condition operator {operator_name!r}; "
+                    f"valid operators: {self._sorted_operators()}"
+                )
+            results.append(handler(value, operator_argument))
+        return all(results)
+
+    def _sorted_operators(self) -> str:
+        return ", ".join(sorted(self._handler_registry))
 
     @staticmethod
     def _handle_equals(value: Any, expected: Any) -> bool:
         return value == expected
 
     @staticmethod
-    def _handle_regex_match(value: Any, pattern: str) -> bool:
+    def _handle_regex_match(value: Any, pattern: Any) -> bool:
+        """
+        ``matches`` semantics: case-insensitive :func:`re.search`, i.e. the pattern may
+        match *anywhere* in the value (not only the start, as ``re.match`` would).
+
+        ``re.search`` is the fail-closed choice for a detection rule — e.g. ``matches:
+        SECRET`` fires on ``"this has SECRET"`` instead of silently passing it. An
+        invalid or non-string pattern raises ``ValueError`` rather than silently never
+        matching.
+        """
         if value is None:
             return False
-        return bool(re.match(pattern, str(value), re.IGNORECASE))
+        try:
+            return bool(re.search(pattern, str(value), re.IGNORECASE))
+        except (re.error, TypeError) as exc:
+            raise ValueError(
+                f"Invalid 'matches' regex pattern {pattern!r}: {exc}"
+            ) from exc
 
     @staticmethod
     def _handle_contains(value: Any, needle: Any) -> bool:

@@ -8,6 +8,7 @@ from typing import (
     Coroutine,
 )
 
+from apl.modifications import apply_operation
 from apl.types import (
     Decision,
     EventPayload,
@@ -81,13 +82,15 @@ class PolicyDecoratorFactory:
 
         if verdict.decision == Decision.MODIFY:
             for modification in verdict.modifications:
-                if (
-                    modification.target == "tool_args"
-                    and modification.operation == "replace"
-                ):
-                    keyword_args["tool_args"] = modification.value
-                else:
+                # The decorator runs *before* the wrapped call, so the only thing it can
+                # modify is the call's inputs (tool_args). All operations are honoured
+                # via the shared dispatcher; other targets are refused loudly rather
+                # than silently dropped.
+                if modification.target != "tool_args":
                     raise NotImplementedError(
-                        f"Unsupported modification: target={modification.target}, "
-                        f"operation={modification.operation}"
+                        "The policy decorator can only modify 'tool_args' before the "
+                        f"call; got target={modification.target!r}"
                     )
+                keyword_args["tool_args"] = apply_operation(
+                    keyword_args.get("tool_args"), modification
+                )

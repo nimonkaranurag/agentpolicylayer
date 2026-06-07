@@ -6,6 +6,17 @@ from .base_strategy import BaseCompositionStrategy
 
 
 class WeightedStrategy(BaseCompositionStrategy):
+    """
+    Confidence-weighted vote between allow and deny.
+
+    Each verdict contributes ``weight × confidence`` to its decision's score, where
+    ``weight`` is the per-policy value from ``CompositionConfig.weights`` (keyed by
+    ``policy_name``) and defaults to 1.0 for any policy not listed. With no weights
+    configured every weight is 1.0, so the score reduces to the sum of confidences. An
+    escalation short-circuits to a human. Deny wins on a tie — allow must score strictly
+    higher to overturn a deny — so the bias is toward enforcement.
+    """
+
     def compose(self, verdicts: list[Verdict]) -> Verdict:
         guard = self._guard_empty_verdicts(verdicts)
         if guard is not None:
@@ -17,10 +28,8 @@ class WeightedStrategy(BaseCompositionStrategy):
         if escalate is not None:
             return escalate
 
-        allow_score = sum(
-            v.confidence for v in verdicts if v.decision == Decision.ALLOW
-        )
-        deny_score = sum(v.confidence for v in verdicts if v.decision == Decision.DENY)
+        allow_score = self._score_for(verdicts, Decision.ALLOW)
+        deny_score = self._score_for(verdicts, Decision.DENY)
 
         if deny_score > allow_score:
             deny = self._find_first_verdict_with_decision(verdicts, Decision.DENY)
@@ -39,4 +48,12 @@ class WeightedStrategy(BaseCompositionStrategy):
 
         return Verdict.allow(
             reasoning=f"Weighted allow ({allow_score:.2f} vs {deny_score:.2f})"
+        )
+
+    def _score_for(self, verdicts: list[Verdict], decision: Decision) -> float:
+        weights = self._config.weights
+        return sum(
+            weights.get(verdict.policy_name, 1.0) * verdict.confidence
+            for verdict in verdicts
+            if verdict.decision == decision
         )
