@@ -7,6 +7,28 @@ release onward versions are cut automatically by
 [release-please](https://github.com/googleapis/release-please) from Conventional
 Commits.
 
+## [0.4.0](https://github.com/nimonkaranurag/agentpolicylayer/compare/agent-policy-layer-v0.3.0...agent-policy-layer-v0.4.0) (2026-06-07)
+
+
+### ⚠ BREAKING CHANGES
+
+* release 0.4.0
+* policies now fail closed (errors deny instead of allow); the `--stdio` serve flag is removed (stdio is the default, `--http` is the switch); PolicyLayer.wrap() raises TypeError on unsupported objects instead of silently no-op'ing; domain models are pydantic v2 with stricter validation.
+
+### Features
+
+* add contributor ecosystem, more engineering enhancements, bug fixes and doc-improvements ([99faea9](https://github.com/nimonkaranurag/agentpolicylayer/commit/99faea986d39a708e78b001e3d7b112b6d3b74da))
+* agent context protocol (APL) ([ee4d461](https://github.com/nimonkaranurag/agentpolicylayer/commit/ee4d461b3354ebfbc64dbc24aa6bac05bd01239c))
+* cleanup and demo ([0614259](https://github.com/nimonkaranurag/agentpolicylayer/commit/06142590cd25758dc4a5a72bc0559c1d36db2f46))
+* release 0.4.0 ([d3a66af](https://github.com/nimonkaranurag/agentpolicylayer/commit/d3a66affdffe60faa1bb89893ccedfd2819b33c6))
+* release 0.4.0 ([b1b167e](https://github.com/nimonkaranurag/agentpolicylayer/commit/b1b167edd6eec795408a2bd996d820758d04bc1b))
+* release workflows ([31f03a6](https://github.com/nimonkaranurag/agentpolicylayer/commit/31f03a637115573d31e49aaaa5850a92262f5d68))
+
+
+### Bug Fixes
+
+* **ci:** add a jobs key to .yml ([2ea16c0](https://github.com/nimonkaranurag/agentpolicylayer/commit/2ea16c0fbd7e07ef896d88b7b4a7ae52e7bca3ff))
+
 ## [Unreleased]
 
 The engineering revamp (WP-0 – WP-11): the layer no longer fails open, the wire
