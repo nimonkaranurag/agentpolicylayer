@@ -67,7 +67,6 @@
 - [Fail-closed by design](#fail-closed-by-design)
 - [Reference](#reference)
 - [Examples](#examples)
-- [Project status](#project-status)
 - [Contributing](#contributing)
 
 ---
