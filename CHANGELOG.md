@@ -9,6 +9,15 @@ Commits.
 
 ## [Unreleased]
 
+### Fixes
+
+- Fixed `examples/usage_demo.py` to be compatible with `v0.4.0` of APL.
+- CI (was failing): Type-checking (`mypy`) reported errors have been fixed.
+
+### Doc Updates
+
+- README updates.
+
 ## [0.4.0](https://github.com/nimonkaranurag/agentpolicylayer/compare/agent-policy-layer-v0.3.0...agent-policy-layer-v0.4.0) (2026-06-07)
 
 
