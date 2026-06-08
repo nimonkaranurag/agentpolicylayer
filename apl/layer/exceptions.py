@@ -16,6 +16,8 @@ class PolicyEscalation(Exception):
     def __init__(self, verdict: Verdict) -> None:
         self.verdict: Verdict = verdict
         escalation_prompt: str = (
-            verdict.escalation.prompt if verdict.escalation else "Escalation required"
+            verdict.escalation.prompt
+            if verdict.escalation and verdict.escalation.prompt
+            else "Escalation required"
         )
         super().__init__(escalation_prompt)

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Dict, Type
+from typing import Callable, Dict
 
 from apl.types import CompositionConfig, CompositionMode
 
@@ -14,7 +14,12 @@ from .first_applicable import FirstApplicableStrategy
 from .unanimous import UnanimousStrategy
 from .weighted import WeightedStrategy
 
-STRATEGY_REGISTRY: Dict[CompositionMode, Type[CompositionStrategy]] = {
+# Maps mode -> a factory that builds the strategy from the (optional) config. The
+# strategies take config through their shared BaseCompositionStrategy constructor, so the
+# registry is typed as the factory call site uses it.
+StrategyFactory = Callable[[CompositionConfig | None], CompositionStrategy]
+
+STRATEGY_REGISTRY: Dict[CompositionMode, StrategyFactory] = {
     CompositionMode.DENY_OVERRIDES: DenyOverridesStrategy,
     CompositionMode.ALLOW_OVERRIDES: AllowOverridesStrategy,
     CompositionMode.UNANIMOUS: UnanimousStrategy,
@@ -27,10 +32,10 @@ def get_strategy(
     mode: CompositionMode,
     config: CompositionConfig | None = None,
 ) -> CompositionStrategy:
-    strategy_class: Type[CompositionStrategy] | None = STRATEGY_REGISTRY.get(mode)
-    if strategy_class is None:
+    strategy_factory: StrategyFactory | None = STRATEGY_REGISTRY.get(mode)
+    if strategy_factory is None:
         raise ValueError(f"Unknown composition mode: {mode}")
-    return strategy_class(config)
+    return strategy_factory(config)
 
 
 __all__: list[str] = [

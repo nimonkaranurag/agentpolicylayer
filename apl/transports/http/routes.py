@@ -159,13 +159,19 @@ async def handle_server_sent_events(request: web.Request) -> web.StreamResponse:
     return response
 
 
+async def handle_root(request: web.Request) -> web.StreamResponse:
+    # Raising the redirect is aiohttp's idiom (HTTPFound is an HTTPException); it also
+    # gives this handler the async signature add_get expects, unlike a bare lambda.
+    raise web.HTTPFound("/health")
+
+
 def register_all_routes(app: web.Application) -> None:
     app.router.add_post("/evaluate", handle_evaluate)
     app.router.add_get("/manifest", handle_manifest)
     app.router.add_get("/health", handle_health)
     app.router.add_get("/metrics", handle_metrics)
     app.router.add_get("/events", handle_server_sent_events)
-    app.router.add_get("/", lambda r: web.HTTPFound("/health"))
+    app.router.add_get("/", handle_root)
 
 
 __all__ = [
