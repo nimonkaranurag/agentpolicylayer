@@ -108,9 +108,12 @@ class InstrumentationState:
                 )
                 self._background_thread.start()
                 ready.wait()
-            # Either the loop existed and is running, or we just created it above.
-            assert self._background_loop is not None
-            return self._background_loop
+            # Capture under the lock so a concurrent shutdown can't null the field
+            # between here and the return; by now it is the still-running loop or the
+            # one just created above.
+            background_loop = self._background_loop
+        assert background_loop is not None
+        return background_loop
 
     def shutdown_background_loop(self) -> None:
         """

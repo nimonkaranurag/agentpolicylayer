@@ -1,12 +1,3 @@
-"""
-CLI tests driven through the public Click group with :class:`CliRunner`.
-
-These exercise each command's happy and error paths and pin the WP-9 fixes:
-``--event`` rejects bad values cleanly, ``--http 0`` actually binds HTTP, a stdio
-serve keeps stdout clean for the protocol, a directory with duplicate policy names
-is refused, and Python policy files load under unique module names.
-"""
-
 from __future__ import annotations
 
 import sys

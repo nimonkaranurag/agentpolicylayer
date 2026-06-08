@@ -1,18 +1,3 @@
-"""
-Import-smoke coverage for the modules behaviour tests never load (WP-11).
-
-About a third of the codebase used to be import-only — ``PolicyLayer``, every
-server/client transport, the whole CLI, the LangGraph adapter, and the SDK provider
-patchers. A syntax error, circular import, or broken signature in any of them shipped
-green because nothing imported them. These tests import the entire package tree and
-exercise a trivial smoke path on the flagship classes, so such regressions surface
-immediately.
-
-None of the optional SDKs (langgraph, openai, anthropic, ...) are required: every module
-below imports without them — provider availability is probed lazily via
-``importlib.util.find_spec``.
-"""
-
 from __future__ import annotations
 
 import importlib

@@ -1,13 +1,3 @@
-"""
-Tests for the LangGraph adapter (WP-10).
-
-The unit tests cover the framework-agnostic pieces — the running-loop bridge, state
-extraction, checkpoint evaluation, and node wrapping — with no LangGraph dependency. The
-integration tests are gated on the optional ``langgraph`` extra and build a real 2-node
-``StateGraph`` to prove a policy fires on a node, both for ``invoke`` and for
-``ainvoke`` from a running loop.
-"""
-
 from __future__ import annotations
 
 import asyncio

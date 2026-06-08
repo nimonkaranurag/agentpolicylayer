@@ -160,8 +160,9 @@ async def handle_server_sent_events(request: web.Request) -> web.StreamResponse:
 
 
 async def handle_root(request: web.Request) -> web.StreamResponse:
-    # Raising the redirect is aiohttp's idiom (HTTPFound is an HTTPException); it also
-    # gives this handler the async signature add_get expects, unlike a bare lambda.
+    # aiohttp 3.x requires a coroutine handler (the previous sync `lambda` failed at
+    # request time when "/" was hit) and wants redirects *raised*, not returned —
+    # returning an HTTPException is deprecated. Raising issues the 302 to /health.
     raise web.HTTPFound("/health")
 
 
