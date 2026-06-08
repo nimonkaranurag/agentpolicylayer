@@ -48,6 +48,12 @@ class FirstApplicableStrategy(BaseCompositionStrategy):
             return verdicts
         rank = {name: index for index, name in enumerate(priority)}
         unranked = len(priority)
+
+        def rank_of(verdict: Verdict) -> int:
+            if verdict.policy_name is None:
+                return unranked
+            return rank.get(verdict.policy_name, unranked)
+
         # sorted() is stable, so unranked verdicts (all keyed to `unranked`)
         # keep their original relative order behind the prioritised ones.
-        return sorted(verdicts, key=lambda v: rank.get(v.policy_name, unranked))
+        return sorted(verdicts, key=rank_of)

@@ -11,9 +11,9 @@ class ChatCompletionsMessageAdapter(BaseMessageAdapter):
             return []
 
         return [
-            self._convert_single_message(msg)
+            apl_message
             for msg in raw_messages
-            if self._convert_single_message(msg) is not None
+            if (apl_message := self._convert_single_message(msg)) is not None
         ]
 
     def _convert_single_message(self, raw_message: Any) -> Message | None:

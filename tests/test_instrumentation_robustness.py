@@ -1,16 +1,3 @@
-"""
-WP-6 — instrumentation robustness.
-
-Covers the fragile mechanics the engineering review flagged (ENGINEERING_REVIEW §3.7,
-§3.8 and the §8 instrumentation items): idempotent/transactional/closure-captured
-monkeypatching, real streaming interception that actually runs (and can block) output
-policies, contextvar reentrancy that survives the loop boundary, and background-loop
-shutdown.
-
-Each behavioural fix has a test that fails against the pre-WP-6 code (demonstrated in
-the WP-6 summary via targeted reverts) and passes now.
-"""
-
 from __future__ import annotations
 
 import asyncio

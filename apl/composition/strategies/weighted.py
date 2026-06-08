@@ -52,8 +52,11 @@ class WeightedStrategy(BaseCompositionStrategy):
 
     def _score_for(self, verdicts: list[Verdict], decision: Decision) -> float:
         weights = self._config.weights
-        return sum(
-            weights.get(verdict.policy_name, 1.0) * verdict.confidence
-            for verdict in verdicts
-            if verdict.decision == decision
-        )
+        total = 0.0
+        for verdict in verdicts:
+            if verdict.decision != decision:
+                continue
+            name = verdict.policy_name
+            weight = weights.get(name, 1.0) if name is not None else 1.0
+            total += weight * verdict.confidence
+        return total

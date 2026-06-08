@@ -1,12 +1,3 @@
-"""
-WP-7 — transport reliability + security (closes §3.10, §3.11).
-
-pytest-asyncio is intentionally absent in the dev env (owned by WP-11), so every async
-case is driven synchronously via ``asyncio.run``. Each test asserts the *fixed*
-behavior; the matching pre-fix behavior is documented inline (these fail against the
-pre-WP-7 transports).
-"""
-
 from __future__ import annotations
 
 import asyncio
@@ -353,6 +344,28 @@ async def _http(app, method, path, *, headers=None, json_body=None, data=None):
         }
     finally:
         await client.close()
+
+
+class TestHttpRootRedirect:
+    def test_root_redirects_to_health(self):
+        # "/" must be served by a coroutine: aiohttp 3.x rejects the old sync lambda at
+        # request time, so the redirect failed when actually hit (and nothing covered
+        # it). Assert the 302 survives the full middleware stack.
+        app = create_http_application(PolicyServer("t"))
+
+        async def go():
+            server = TestServer(app)
+            client = TestClient(server)
+            await client.start_server()
+            try:
+                resp = await client.request("GET", "/", allow_redirects=False)
+                return resp.status, resp.headers.get("Location")
+            finally:
+                await client.close()
+
+        status, location = _run(go())
+        assert status == 302
+        assert location == "/health"
 
 
 class TestHttpInputValidation:
