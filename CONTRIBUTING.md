@@ -1,12 +1,28 @@
 # Contributing to Agent Policy Layer
 
-Thanks for contributing! APL is a security control for AI agents, so the bar is
-high on correctness, types, and tests. This guide covers local setup, the exact
+Thanks for contributing! 😊 
+
+APL is a security control for AI agents, so the bar is
+high on correctness, types, and tests. 
+
+This guide covers local setup, the exact
 checks CI runs, and how releases work.
+
+- [Development setup](#development-setup)
+- [What runs on every commit & PR](#what-runs-on-every-commit--pr)
+- [Coding conventions](#coding-conventions)
+- [Tests](#tests)
+- [Pull requests](#pull-requests)
+- [Versioning & releasing](#versioning--releasing-fyi)
+  - [Commit messages drive releases](#commit-messages-drive-releases-important)
+  - [Cutting a release](#cutting-a-release)
+  - [Installing a dev build](#installing-a-dev-build)
+- [Security](#security)
 
 ## Development setup
 
-You need [uv](https://docs.astral.sh/uv/) — `brew install uv`, or
+You need [uv](https://docs.astral.sh/uv/):
+`brew install uv`, or
 `curl -LsSf https://astral.sh/uv/install.sh | sh`. Then, from a clone:
 
 ```bash
