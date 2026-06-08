@@ -1,13 +1,3 @@
-"""
-Tests that async tests actually execute, and that the suite refuses to run if they
-silently can't (WP-11, ENGINEERING_REVIEW §6).
-
-The original suite declared ``pytest-asyncio`` but never installed it, so eight ``async
-def`` tests covering the entire server/integration path were collected and reported as
-passing without ever being awaited. These tests pin down the collected-async ==
-executed-async invariant so that regression cannot recur unnoticed.
-"""
-
 from __future__ import annotations
 
 import asyncio

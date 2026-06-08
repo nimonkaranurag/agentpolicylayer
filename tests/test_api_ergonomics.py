@@ -1,19 +1,3 @@
-"""
-WP-8 — API & ergonomics.
-
-Each test here pins one behaviour change from WP-8 and was written to FAIL
-against the pre-WP-8 code and PASS after it:
-
-- PolicyLayer.wrap() delegates to the real APLGraphWrapper (was a no-op stub) and
-  raises on unsupported objects (was a silent fail-open pass-through).
-- APLGraphWrapper and the instrument() context manager are exported.
-- auto_instrument()/uninstrument() log instead of printing to stdout.
-- PolicyLayer exposes a public fail_mode property.
-- Verdict factory parameters are Optional[...] (no implicit-optional).
-- The version/protocol constants are single-sourced.
-- APLLogger escapes untrusted markup and shares one decision-style map.
-"""
-
 from __future__ import annotations
 
 import inspect

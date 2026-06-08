@@ -276,31 +276,41 @@ class Decision(str, Enum):
     OBSERVE = "observe"
 
 
+# Every target the enforcement engine can apply: the instrumentation event
+# table (apl/instrumentation/events) wires accessors for all of these, so a
+# narrower set would silently make a built-in capability unconstructable
+# (e.g. a redact on ``plan``). Keep in sync with that table.
+ModificationTarget = Literal[
+    "input",
+    "tool_args",
+    "llm_prompt",
+    "output",
+    "tool_result",
+    "plan",
+    "handoff_payload",
+]
+ModificationOperation = Literal[
+    "replace",
+    "redact",
+    "append",
+    "prepend",
+    "patch",
+]
+EscalationType = Literal[
+    "human_confirm",
+    "human_review",
+    "abort",
+    "fallback",
+]
+
+
 class Modification(BaseModel):
     """
     How to modify the action/content.
     """
 
-    # Every target the enforcement engine can apply: the instrumentation event
-    # table (apl/instrumentation/events) wires accessors for all of these, so a
-    # narrower set would silently make a built-in capability unconstructable
-    # (e.g. a redact on ``plan``). Keep in sync with that table.
-    target: Literal[
-        "input",
-        "tool_args",
-        "llm_prompt",
-        "output",
-        "tool_result",
-        "plan",
-        "handoff_payload",
-    ]
-    operation: Literal[
-        "replace",
-        "redact",
-        "append",
-        "prepend",
-        "patch",
-    ]
+    target: ModificationTarget
+    operation: ModificationOperation
     value: Any
 
     # For patch operations
@@ -312,12 +322,7 @@ class Escalation(BaseModel):
     How to escalate to humans.
     """
 
-    type: Literal[
-        "human_confirm",
-        "human_review",
-        "abort",
-        "fallback",
-    ]
+    type: EscalationType
     prompt: Optional[str] = None  # What to show the human
     fallback_action: Optional[str] = None  # What to do instead
     timeout_ms: Optional[int] = None  # How long to wait
@@ -378,8 +383,8 @@ class Verdict(BaseModel):
     @classmethod
     def modify(
         cls,
-        target: str,
-        operation: str,
+        target: ModificationTarget,
+        operation: ModificationOperation,
         value: Any,
         reasoning: Optional[str] = None,
         confidence: float = 1.0,
@@ -402,7 +407,7 @@ class Verdict(BaseModel):
     @classmethod
     def escalate(
         cls,
-        type: str,
+        type: EscalationType,
         prompt: Optional[str] = None,
         reasoning: Optional[str] = None,
         timeout_ms: Optional[int] = None,

@@ -85,8 +85,8 @@ def _combine(current: Any, value: Any, *, prepend: bool) -> Any:
         return value
 
     if isinstance(current, str):
-        addition = str(value)
-        return addition + current if prepend else current + addition
+        text = str(value)
+        return text + current if prepend else current + text
 
     if isinstance(current, (list, tuple)):
         base = list(current)

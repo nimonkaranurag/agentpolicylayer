@@ -159,13 +159,20 @@ async def handle_server_sent_events(request: web.Request) -> web.StreamResponse:
     return response
 
 
+async def handle_root(request: web.Request) -> web.StreamResponse:
+    # aiohttp 3.x requires a coroutine handler (the previous sync `lambda` failed at
+    # request time when "/" was hit) and wants redirects *raised*, not returned —
+    # returning an HTTPException is deprecated. Raising issues the 302 to /health.
+    raise web.HTTPFound("/health")
+
+
 def register_all_routes(app: web.Application) -> None:
     app.router.add_post("/evaluate", handle_evaluate)
     app.router.add_get("/manifest", handle_manifest)
     app.router.add_get("/health", handle_health)
     app.router.add_get("/metrics", handle_metrics)
     app.router.add_get("/events", handle_server_sent_events)
-    app.router.add_get("/", lambda r: web.HTTPFound("/health"))
+    app.router.add_get("/", handle_root)
 
 
 __all__ = [

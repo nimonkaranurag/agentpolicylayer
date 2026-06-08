@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from functools import wraps
 from typing import TYPE_CHECKING, Callable
 
@@ -81,7 +82,7 @@ def _parse_event_types(
 
 
 def _parse_context_requirements(
-    context: list[str | ContextRequirement] | None,
+    context: Sequence[str | ContextRequirement] | None,
 ) -> list[ContextRequirement]:
     if context is None:
         return []

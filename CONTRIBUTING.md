@@ -1,12 +1,28 @@
 # Contributing to Agent Policy Layer
 
-Thanks for contributing! APL is a security control for AI agents, so the bar is
-high on correctness, types, and tests. This guide covers local setup, the exact
+Thanks for contributing! 😊 
+
+APL is a security control for AI agents, so the bar is
+high on correctness, types, and tests. 
+
+This guide covers local setup, the exact
 checks CI runs, and how releases work.
+
+- [Development setup](#development-setup)
+- [What runs on every commit & PR](#what-runs-on-every-commit--pr)
+- [Coding conventions](#coding-conventions)
+- [Tests](#tests)
+- [Pull requests](#pull-requests)
+- [Versioning & releasing](#versioning--releasing)
+  - [Commit messages drive releases](#commit-messages-drive-releases-important)
+  - [Cutting a release](#cutting-a-release)
+  - [Installing a dev build](#installing-a-dev-build)
+- [Security](#security)
 
 ## Development setup
 
-You need [uv](https://docs.astral.sh/uv/) — `brew install uv`, or
+You need [uv](https://docs.astral.sh/uv/):
+`brew install uv`, or
 `curl -LsSf https://astral.sh/uv/install.sh | sh`. Then, from a clone:
 
 ```bash
@@ -67,7 +83,7 @@ your `.venv` (`language: system`), so they always match the versions CI uses.
 4. Open the PR; [CODEOWNERS](CODEOWNERS) are requested automatically, and CI must
    be green to merge.
 
-## Versioning & releasing (FYI)
+## Versioning & releasing
 
 Two independent versions, and **you bump neither by hand**:
 
@@ -104,8 +120,41 @@ You don't tag or publish anything by hand:
 3. **Merge that release PR** → it tags `vX.Y.Z`, creates the GitHub Release, and
    publishes to **PyPI** via OIDC.
 
-Dev builds need no action: every push to `main` ships a dev wheel
-(`X.Y.Z.devN+gSHA`) to the rolling `dev` pre-release.
+Dev builds need no action either: every push to `main` runs
+[dev-release.yml](.github/workflows/dev-release.yml), which builds a wheel + sdist,
+attests their build provenance, and replaces a single rolling **`dev`** GitHub
+pre-release. The version is the *next* patch as a PEP 440 dev release
+(`X.Y.Z.devN+gSHA`), so it sorts above the last stable tag.
+
+### Installing a dev build
+
+Dev builds let you try an unreleased fix before it reaches PyPI. **They are not for
+production** — the `dev` pre-release is mutable and unsupported.
+
+Pull the latest wheel from the rolling pre-release into a throwaway environment:
+
+```bash
+# isolate it — never install a dev build into your global interpreter
+python -m venv .venv-dev && source .venv-dev/bin/activate   # or: uv venv .venv-dev
+
+gh release download dev --repo nimonkaranurag/agentpolicylayer --pattern '*.whl'
+pip install ./agent_policy_layer-*.whl                      # or: uv pip install ./agent_policy_layer-*.whl
+```
+
+Three practices keep this reproducible and safe:
+
+- **Pin the resolved version, not the `dev` tag.** The pre-release is *rolling* — its
+  artifacts are overwritten on every push to `main` — so "the dev build" is a moving
+  target. Capture the exact `X.Y.Z.devN+gSHA` (`pip show agent-policy-layer`) and the
+  commit it was cut from; that string is what makes a result reproducible later.
+- **Verify provenance before you install.** Each artifact ships a build attestation,
+  so you can confirm CI built it from this repo rather than trusting the download:
+  ```bash
+  gh attestation verify ./agent_policy_layer-*.whl --repo nimonkaranurag/agentpolicylayer
+  ```
+- **Keep it out of shared lockfiles.** Don't commit a dev wheel into a project's
+  pinned requirements; use it only in a scratch env, and switch back to a released
+  build from PyPI (`pip install agent-policy-layer`) for anything you ship.
 
 ## Security
 

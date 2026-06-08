@@ -47,6 +47,9 @@ class InstrumentationState:
 
     @property
     def session_metadata(self) -> SessionMetadata:
+        # __post_init__ fills session_id when the caller leaves it None, so it is
+        # always set by the time this property is read.
+        assert self.session_id is not None
         return SessionMetadata(
             session_id=self.session_id,
             user_id=self.user_id,
@@ -105,7 +108,12 @@ class InstrumentationState:
                 )
                 self._background_thread.start()
                 ready.wait()
-        return self._background_loop
+            # Capture under the lock so a concurrent shutdown can't null the field
+            # between here and the return; by now it is the still-running loop or the
+            # one just created above.
+            background_loop = self._background_loop
+        assert background_loop is not None
+        return background_loop
 
     def shutdown_background_loop(self) -> None:
         """

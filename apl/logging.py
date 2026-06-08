@@ -350,7 +350,7 @@ def setup_logging(
     if rich_output:
         # Rich console handler
         console = Console(theme=APL_THEME, stderr=True)
-        handler = APLRichHandler(
+        handler: logging.Handler = APLRichHandler(
             console=console,
             show_time=True,
             show_path=False,
