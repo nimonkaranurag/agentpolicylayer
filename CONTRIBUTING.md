@@ -13,7 +13,7 @@ checks CI runs, and how releases work.
 - [Coding conventions](#coding-conventions)
 - [Tests](#tests)
 - [Pull requests](#pull-requests)
-- [Versioning & releasing](#versioning--releasing-fyi)
+- [Versioning & releasing](#versioning--releasing)
   - [Commit messages drive releases](#commit-messages-drive-releases-important)
   - [Cutting a release](#cutting-a-release)
   - [Installing a dev build](#installing-a-dev-build)
@@ -83,7 +83,7 @@ your `.venv` (`language: system`), so they always match the versions CI uses.
 4. Open the PR; [CODEOWNERS](CODEOWNERS) are requested automatically, and CI must
    be green to merge.
 
-## Versioning & releasing (FYI)
+## Versioning & releasing
 
 Two independent versions, and **you bump neither by hand**:
 
