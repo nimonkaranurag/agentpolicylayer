@@ -21,7 +21,7 @@ from apl.serialization import event_from_wire, to_wire
 from .middleware import error_response
 
 # Composition here is stateless; one instance is reused across requests. Wiring
-# server-side CompositionConfig is the server composer's concern (see WP-2).
+# server-side CompositionConfig is the server composer's concern.
 _COMPOSER = VerdictComposer()
 
 

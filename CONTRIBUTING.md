@@ -1,9 +1,9 @@
 # Contributing to Agent Policy Layer
 
-Thanks for contributing! 😊 
+Thanks for contributing! 😊
 
 APL is a security control for AI agents, so the bar is
-high on correctness, types, and tests. 
+high on correctness, types, and tests.
 
 This guide covers local setup, the exact
 checks CI runs, and how releases work.

@@ -110,7 +110,7 @@ class PolicyClient:
             # An empty list here means the server responded but no policy
             # produced a verdict (it has no opinion) — distinct from being
             # unavailable, which raises. How a globally-empty verdict set
-            # composes is the composer's concern (WP-2), not the client's.
+            # composes is the composer's concern, not the client's.
             return [verdict_from_wire(raw_verdict) for raw_verdict in raw_verdicts]
         except PolicyUnavailableError as exc:
             # Covers a failed connect (unreachable server, incompatible protocol,

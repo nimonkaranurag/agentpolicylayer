@@ -4,10 +4,10 @@ Lifecycle events as one declarative table instead of one class per event.
 Every event used to be its own ~20-line subclass differing only in (a) which payload
 fields it reads off the lifecycle context and (b) which context slot a modification
 writes to. That was 13 near-identical files and, worse, 13 separate places that each
-forgot ``Modification.operation`` (ENGINEERING_REVIEW §3.4, §4.1/§4.2). Both facts are
-data, so they live in the ``_EVENT_SPECS`` table below; a single
-:class:`RegisteredEvent` interprets a spec and routes every modification through the
-shared operation dispatcher in :mod:`apl.modifications`.
+forgot ``Modification.operation``. Both facts are data, so they live in the
+``_EVENT_SPECS`` table below; a single :class:`RegisteredEvent` interprets a spec and
+routes every modification through the shared operation dispatcher in
+:mod:`apl.modifications`.
 """
 
 from __future__ import annotations

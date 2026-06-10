@@ -28,8 +28,8 @@ logger = logging.getLogger("apl")
 
 # The protocol/wire version this build speaks. Single-sourced here and reused as
 # the manifest default below and by the client's compatibility check on connect.
-# (WP-8 owns folding the remaining "0.3.0" literals — pyproject, the CLI info
-# command, the CLI banner — onto this constant.)
+# Other "0.3.0" literals — pyproject, the CLI info command, the CLI banner —
+# should fold onto this constant so the version is single-sourced.
 PROTOCOL_VERSION = "0.3.0"
 
 
@@ -235,7 +235,7 @@ class PolicyEvent(BaseModel):
 
     The envelope fields carry defaults so a sparse inbound event decodes
     leniently (matching the prior serializer); tightening inbound validation
-    on the server transport is WP-7's concern (§3.11).
+    is the server transport's concern.
     """
 
     id: str = Field(default_factory=_new_uuid)
@@ -565,7 +565,7 @@ class CompositionConfig(BaseModel):
     fail_mode: FailMode = FailMode.CLOSED
 
     # Decision applied when the layer-level timeout fires. Defaults to deny so
-    # the default is fail-closed; the layer timeout itself is wired in WP-2.
+    # the default is fail-closed.
     on_timeout: Decision = Decision.DENY
 
     # Priority ordering (policy names, first = highest priority)

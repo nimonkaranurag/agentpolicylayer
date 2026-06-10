@@ -4,8 +4,8 @@ The single place a :class:`~apl.types.Modification` is turned into a new value.
 Historically three different call sites applied verdict modifications — the server's
 sequential evaluator, the in-process instrumentation events, and the decorator — and
 each one read only ``target``/``value`` and silently ignored ``operation`` and
-``path``. So ``redact``/``append``/``prepend``/``patch`` all degraded to ``replace``
-(ENGINEERING_REVIEW §3.4). This module is the one operation dispatcher all three now
+``path``. So ``redact``/``append``/``prepend``/``patch`` all degraded to ``replace``.
+This module is the one operation dispatcher all three now
 route through, so an operation means the same thing everywhere.
 
 Design notes:

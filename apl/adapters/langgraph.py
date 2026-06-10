@@ -27,7 +27,7 @@ shared :func:`~apl.modifications.apply_operation` dispatcher (so ``redact`` /
 ``append`` actually change what the node sends/receives — the old adapter
 ignored it), and a modification that can't be mapped to the state denies rather
 than proceeding unmodified. The underlying ``PolicyLayer`` already denies on a
-policy-server outage (WP-1).
+policy-server outage.
 
 Loop affinity is handled in the client transports, not papered over here: the
 HTTP client recreates its aiohttp session when evaluation runs on a different
@@ -573,7 +573,7 @@ class APLGraphWrapper(BaseFrameworkAdapter):
     The real implementation of the framework-adapter SPI: it subclasses
     :class:`~apl.adapters.base_adapter.BaseFrameworkAdapter` and implements
     ``framework_name`` / ``is_available`` / ``wrap`` so ``wrap()`` can dispatch
-    through the registry instead of the abstraction sitting unused (§4.3).
+    through the registry instead of the abstraction sitting unused.
     """
 
     def __init__(self, policy_layer: Optional[PolicyLayer] = None) -> None:
@@ -609,7 +609,7 @@ class APLGraphWrapper(BaseFrameworkAdapter):
 
     def wrap(self, agent: Any) -> Any:
         if not self._is_state_graph(agent):
-            # Loud and typed beats a silent no-op (§5.1): the old stub returned
+            # Loud and typed beats a silent no-op: the old stub returned
             # the graph unwrapped, so policies never ran.
             raise TypeError(
                 "APLGraphWrapper.wrap expected a LangGraph StateGraph "

@@ -233,7 +233,7 @@ class TestHandlerInvoker:
         assert result.policy_name == "sync-test"
 
     # The following are sync (asyncio.run) so they execute even without
-    # pytest-asyncio (WP-11), proving the fail-closed behaviour now.
+    # pytest-asyncio, proving the fail-closed behaviour now.
 
     def test_handler_exception_denies_fail_closed(self, make_event):
         async def handler(event):
@@ -264,7 +264,7 @@ class TestHandlerInvoker:
         assert "timed out" in result.reasoning.lower()
 
     def test_sync_handler_timeout_denies_fail_closed(self, make_event):
-        # Review §3.13: a blocking sync handler previously had no timeout and
+        # A blocking sync handler previously had no timeout and
         # could hang the server forever. It must now be time-bounded too.
         def handler(event):
             time.sleep(0.3)

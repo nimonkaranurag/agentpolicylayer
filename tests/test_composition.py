@@ -93,8 +93,8 @@ class TestUnanimousStrategy:
     """
     Real unanimity: every non-observe verdict must ALLOW, else deny.
 
-    These replace ``test_same_logic_as_deny_overrides``, which encoded the bug (review
-    §3.2) by asserting Unanimous == DenyOverrides.
+    These replace ``test_same_logic_as_deny_overrides``, which encoded the bug by
+    asserting Unanimous == DenyOverrides.
     """
 
     def setup_method(self):
@@ -152,7 +152,7 @@ class TestAllowOverridesStrategy:
         self.strategy = AllowOverridesStrategy()
 
     def test_empty_verdicts_returns_allow(self):
-        # LSP fix (review §4.3): every strategy treats "no policy had an
+        # LSP fix: every strategy treats "no policy had an
         # opinion" as allow. This used to deny — an empty-input surprise when
         # swapping strategies. Fails against pre-fix code.
         result = self.strategy.compose([])
@@ -244,7 +244,7 @@ class TestWeightedStrategy:
     The no-config cases below document the default-weight (1.0) fallback, where the
     score reduces to a sum of confidences. The ``test_*_weight_*`` cases exercise
     ``CompositionConfig.weights`` and fail against pre-fix code, which ignored the
-    weights map entirely (review §3.3).
+    weights map entirely.
     """
 
     def setup_method(self):
