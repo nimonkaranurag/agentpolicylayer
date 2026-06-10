@@ -86,7 +86,7 @@ policies:
         then:
           decision: deny
           reasoning: "Token budget exceeded ({{metadata.token_count}} tokens used)"
-          
+
       - when:
           metadata.token_count:
             gte: 80000

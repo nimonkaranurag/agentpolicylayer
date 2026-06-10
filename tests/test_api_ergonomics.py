@@ -116,7 +116,7 @@ class TestFailModeProperty:
 
 
 # =============================================================================
-# Verdict factory Optional[...] annotations  (§5.1)
+# Verdict factory Optional[...] annotations
 # =============================================================================
 
 
