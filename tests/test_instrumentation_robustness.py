@@ -113,7 +113,7 @@ _REQUEST = {"model": "gpt-4o", "messages": [{"role": "user", "content": "hi"}]}
 
 
 # ---------------------------------------------------------------------------------------
-# §3.8 — idempotent / transactional / closure-captured patching
+# idempotent / transactional / closure-captured patching
 # ---------------------------------------------------------------------------------------
 def _wrapping_factory(label: str):
     def factory(original):
@@ -191,7 +191,7 @@ class TestMethodPatcherIdempotency:
 
 
 # ---------------------------------------------------------------------------------------
-# §3.7 — streaming is intercepted (output policies run, and can block)
+# streaming is intercepted (output policies run, and can block)
 # ---------------------------------------------------------------------------------------
 class TestStreamingInterception:
     def test_sync_stream_output_policy_sees_full_text_and_can_block(self):
@@ -293,7 +293,7 @@ class TestStreamingInterception:
 
 
 # ---------------------------------------------------------------------------------------
-# §3.8 — reentrancy guard isolated per async task (contextvars, not threading.local)
+# reentrancy guard isolated per async task (contextvars, not threading.local)
 # ---------------------------------------------------------------------------------------
 class TestReentrancyIsolation:
     def test_flag_is_isolated_per_async_task(self):

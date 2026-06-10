@@ -30,13 +30,13 @@ class _FakeGraph:
 
 
 # =============================================================================
-# PolicyLayer.wrap  (§3.9 wrap half)
+# PolicyLayer.wrap
 # =============================================================================
 
 
 class TestPolicyLayerWrap:
     def test_wrap_actually_wraps_graph_nodes(self):
-        # Pre-WP-8 _wrap_langgraph returned the graph untouched ("not yet
+        # Previously _wrap_langgraph returned the graph untouched ("not yet
         # implemented"), so the node object was unchanged. Now it delegates to
         # APLGraphWrapper, which replaces each node with a policy-enforcing wrapper.
         graph = _FakeGraph()
@@ -54,10 +54,10 @@ class TestPolicyLayerWrap:
             PolicyLayer().wrap(object())
 
     def test_wrap_delegates_to_adapter_with_this_layer(self):
-        # WP-8's contract: wrap() builds APLGraphWrapper(self) and calls .wrap(graph),
+        # The contract: wrap() builds APLGraphWrapper(self) and calls .wrap(graph),
         # so the adapter enforces THIS layer's servers/config — not a fresh empty
         # one. Mock the adapter to assert the delegation precisely (robust to the
-        # adapter's own internals, owned by WP-10).
+        # adapter's own internals).
         from unittest.mock import patch
 
         layer = PolicyLayer()
@@ -71,7 +71,7 @@ class TestPolicyLayerWrap:
 
 
 # =============================================================================
-# Public exports / __all__  (§5.1)
+# Public exports / __all__
 # =============================================================================
 
 
@@ -85,14 +85,14 @@ class TestPublicExports:
         assert "instrument" in apl.__all__
 
     def test_wire_serializers_are_not_public(self):
-        # Wire plumbing must stay internal (WP-5 deleted them; guard against
+        # Wire plumbing must stay internal (they were deleted; guard against
         # them creeping back into the public surface).
         assert "EventSerializer" not in apl.__all__
         assert "VerdictSerializer" not in apl.__all__
 
 
 # =============================================================================
-# PolicyLayer.fail_mode public property  (WP-1b / WP-6a hand-off)
+# PolicyLayer.fail_mode public property
 # =============================================================================
 
 
@@ -122,7 +122,7 @@ class TestFailModeProperty:
 
 class TestVerdictOptionalAnnotations:
     # With `from __future__ import annotations`, annotations are the source
-    # strings; pre-WP-8 these read "str"/"int"/"dict" with a None default
+    # strings; previously these read "str"/"int"/"dict" with a None default
     # (implicit-optional), which mypy's no_implicit_optional rejects.
     @pytest.mark.parametrize(
         "factory, param, expected",
@@ -146,7 +146,7 @@ class TestVerdictOptionalAnnotations:
 
 
 # =============================================================================
-# Version / protocol single-sourcing  (§6, ledger §B)
+# Version / protocol single-sourcing
 # =============================================================================
 
 
@@ -155,7 +155,7 @@ class TestVersionSingleSource:
         assert PolicyServer("svc").version == apl.__version__
 
     def test_policy_server_has_no_hardcoded_version_literal(self):
-        # Pre-WP-8 the default was the literal "0.3.0"; it must now reference
+        # Previously the default was the literal "0.3.0"; it must now reference
         # __version__ so it cannot drift from the package version.
         src = inspect.getsource(__import__("apl.server.policy_server", fromlist=["x"]))
         assert '"0.3.0"' not in src

@@ -133,7 +133,7 @@ class TestExceptions:
         assert str(exc) == "Please confirm"
 
     def test_escalate_without_escalation_is_rejected(self):
-        # WP-5 invariant: an ESCALATE verdict must carry an escalation, so the
+        # Invariant: an ESCALATE verdict must carry an escalation, so the
         # "no escalation" state PolicyEscalation defends against can no longer be
         # constructed.
         with pytest.raises(ValidationError):
@@ -190,7 +190,7 @@ class TestPolicyClientFailClosed:
     def test_empty_response_is_not_a_failure(self):
         # A healthy server with no opinion returns []; the client must not
         # synthesize a verdict and must not deny. Composing an empty verdict
-        # set is the composer's concern (WP-2), not the client's.
+        # set is the composer's concern, not the client's.
         client = _client_with(_EmptyTransport())
         verdicts = asyncio.run(client.evaluate(_output_event()))
         assert verdicts == []
@@ -240,7 +240,7 @@ class TestHttpTransportFailClosed:
 
 
 # ---------------------------------------------------------------------------
-# WP-2: layer-level timeout + fail-mode threading (apl/layer/policy_layer.py).
+# Layer-level timeout + fail-mode threading (apl/layer/policy_layer.py).
 # Lives here with the other layer/client tests rather than in
 # test_composition.py (which is strategy-only).
 # ---------------------------------------------------------------------------

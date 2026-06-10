@@ -84,7 +84,7 @@ class BaseProvider(ABC):
     #
     # Each factory receives the *captured original* and returns the wrapper, so a wrapper
     # reaches its original by closure rather than by index into a shared list — the index
-    # coupling was order-fragile and broke under re-patching (ENGINEERING_REVIEW §3.8).
+    # coupling was order-fragile and broke under re-patching.
 
     def _sync_instance_factory(self) -> WrapperFactory:
         provider = self

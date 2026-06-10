@@ -305,7 +305,7 @@ class TestYAMLSchema:
 
 
 # =============================================================================
-# WP-3 §3.5 — dot-path traversal must return dict VALUES, not dict METHODS
+# dot-path traversal must return dict VALUES, not dict METHODS
 # =============================================================================
 
 
@@ -354,7 +354,7 @@ class TestTraversalDictMethodShadowing:
 
 
 # =============================================================================
-# WP-3 §3.6 — unknown operators error; matches semantics; bad regex is loud
+# unknown operators error; matches semantics; bad regex is loud
 # =============================================================================
 
 
@@ -428,7 +428,7 @@ class TestMatchesSemantics:
 
 
 # =============================================================================
-# WP-3 §3.6 — the validator must catch what previously crashed at eval time
+# the validator must catch what previously crashed at eval time
 # =============================================================================
 
 
@@ -642,7 +642,7 @@ class TestValidatorDeepChecks:
 
 class TestDeclarativeEngineFailsClosedAtRuntime:
     # End-to-end: a typo'd operator that escapes validation must DENY at runtime
-    # (via WP-1 fail-closed), never silently allow.
+    # (via fail-closed), never silently allow.
 
     def test_typoed_operator_policy_denies(self, tmp_path):
         policy_file = _write_policy(tmp_path, UNKNOWN_OPERATOR_POLICY)

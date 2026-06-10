@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 # (and async callers interleave many on one thread), so a thread-local flag set by one
 # evaluation leaks into a sibling, suppressing its instrumentation or corrupting the guard.
 # A ContextVar is per-async-task and propagates across the loop boundary, so each logical
-# call has its own flag (ENGINEERING_REVIEW §3.8, WP-6).
+# call has its own flag.
 _IN_POLICY_EVALUATION: ContextVar[bool] = ContextVar(
     "apl_in_policy_evaluation", default=False
 )

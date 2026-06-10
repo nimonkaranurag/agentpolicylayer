@@ -66,7 +66,7 @@ class LifecycleExecutor:
     # chunk is handed back to the caller. That is deliberate: for a guardrails product a
     # deny has to be able to stop the response, which is impossible once chunks have been
     # yielded. The cost is that instrumented streaming is no longer incremental — the
-    # honest price of enforcing output policies on a stream (ENGINEERING_REVIEW §3.7).
+    # honest price of enforcing output policies on a stream.
 
     def enforce_sync_stream(
         self,

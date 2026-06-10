@@ -75,7 +75,7 @@ _ROUND_TRIP_CORPUS = [
     ),
     Message(role="tool", content="result", tool_call_id="c1"),
     EventPayload(),  # all-None payload
-    EventPayload(llm_prompt=[]),  # the empty-list edge (§3.12)
+    EventPayload(llm_prompt=[]),  # the empty-list edge
     EventPayload(
         tool_name="calc",
         tool_args={"x": 1},
@@ -180,7 +180,7 @@ class TestToWireSemantics:
         )
 
     def test_empty_list_is_preserved_not_collapsed(self):
-        # §3.12: an explicit empty list must NOT round-trip to None/absent.
+        # An explicit empty list must NOT round-trip to None/absent.
         data = to_wire(EventPayload(llm_prompt=[]))
         assert data["llm_prompt"] == []
         assert event_from_wire({"payload": data}).payload.llm_prompt == []
@@ -194,7 +194,7 @@ class TestToWireSemantics:
 
 class TestStartedAtRoundTrip:
     def test_started_at_is_preserved(self):
-        # §3.12: previously started_at was serialized but never read back, so it
+        # Previously started_at was serialized but never read back, so it
         # reset to "now" on every hop. It must survive a round trip now.
         started = datetime(2025, 1, 2, 3, 4, 5, tzinfo=timezone.utc)
         meta = SessionMetadata(session_id="s", started_at=started)
@@ -232,7 +232,7 @@ class TestVerdictCodec:
         assert verdict_from_wire(to_wire(v)).modifications[0].target == target
 
     def test_missing_confidence_is_rejected_fail_closed(self):
-        # §3.12: a verdict that omits confidence used to default to 1.0 (max),
+        # A verdict that omits confidence used to default to 1.0 (max),
         # biasing weighted voting. It must now be rejected, not defaulted.
         with pytest.raises(PolicyUnavailableError):
             verdict_from_wire({"decision": "allow"})
@@ -261,7 +261,7 @@ class TestVerdictCodec:
 
 
 class TestVerdictInvariantsAtConstruction:
-    # The §5.2 invariants hold for Python construction too, not just the wire.
+    # The verdict invariants hold for Python construction too, not just the wire.
     def test_modify_requires_a_modification(self):
         with pytest.raises(ValidationError):
             Verdict(decision=Decision.MODIFY, modifications=[])

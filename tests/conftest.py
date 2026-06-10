@@ -27,7 +27,7 @@ def async_execution_error(
     Return a failure message if collected async tests cannot execute, else None.
 
     This is the pure decision behind :func:`pytest_collection_modifyitems`, factored out
-    so the collected-async == executed-async invariant (WP-11, ENGINEERING_REVIEW §6) is
+    so the collected-async == executed-async invariant is
     unit-testable without spawning a subprocess.
 
     Without an active async plugin, pytest cannot await ``async def`` tests;

@@ -24,7 +24,7 @@ def _valid_event_wire() -> dict:
 
 
 # ===========================================================================
-# §3.10 — stdio server: a malformed frame is skipped, not fatal
+# stdio server: a malformed frame is skipped, not fatal
 # ===========================================================================
 
 
@@ -71,7 +71,7 @@ class TestStdioServerResilience:
 
 
 # ===========================================================================
-# §3.10 — stdio client: timeouts, stderr drain, kill-escalation, fail-closed
+# stdio client: timeouts, stderr drain, kill-escalation, fail-closed
 # ===========================================================================
 
 
@@ -205,7 +205,7 @@ class TestStdioClientReliability:
 
 
 # ===========================================================================
-# §3.10 — HTTP client: timeout wired, connect fails closed
+# HTTP client: timeout wired, connect fails closed
 # ===========================================================================
 
 
@@ -315,7 +315,7 @@ class TestHttpClientReliability:
 
 
 # ===========================================================================
-# §3.11 — HTTP server security & semantics
+# HTTP server security & semantics
 # ===========================================================================
 
 
@@ -501,7 +501,7 @@ class TestHttpAuth:
 
 
 # ===========================================================================
-# §3.10 — port auto-kill removed; safe bind default
+# port auto-kill removed; safe bind default
 # ===========================================================================
 
 

@@ -2,7 +2,7 @@
 Idempotent, transactional monkeypatching of SDK methods.
 
 Patching third-party SDK methods is the most fragile thing instrumentation does, so the
-mechanics are kept honest here (ENGINEERING_REVIEW §3.8):
+mechanics are kept honest here:
 
 - **Idempotent** — a method is patched at most once. A second :meth:`apply_patch` (e.g. a
   second ``auto_instrument``) sees the ``__apl_patched__`` marker and refuses to capture
