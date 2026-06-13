@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 
 import pytest
 from pydantic import ValidationError
@@ -196,10 +197,25 @@ class TestPolicyClientFailClosed:
         assert verdicts == []
 
 
+class _FakeContent:
+    """
+    Minimal aiohttp StreamReader stand-in: read(n) returns up to n bytes.
+    """
+
+    def __init__(self, data: bytes) -> None:
+        self._data = data
+
+    async def read(self, n: int = -1) -> bytes:
+        return self._data if n < 0 else self._data[:n]
+
+
 class _FakeResponse:
     def __init__(self, status, payload):
         self.status = status
         self._payload = payload
+        # The transport now reads the body via response.content.read() to bound it,
+        # so mirror aiohttp's StreamReader rather than only exposing .json().
+        self.content = _FakeContent(json.dumps(payload).encode())
 
     async def __aenter__(self):
         return self
@@ -215,7 +231,7 @@ class _FakeSession:
     def __init__(self, response):
         self._response = response
 
-    def post(self, url, json=None):
+    def post(self, url, json=None, headers=None, allow_redirects=True):
         return self._response
 
 

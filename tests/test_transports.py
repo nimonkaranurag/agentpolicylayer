@@ -209,10 +209,25 @@ class TestStdioClientReliability:
 # ===========================================================================
 
 
+class _FakeContent:
+    """
+    Minimal aiohttp StreamReader stand-in: read(n) returns up to n bytes.
+    """
+
+    def __init__(self, data: bytes) -> None:
+        self._data = data
+
+    async def read(self, n: int = -1) -> bytes:
+        return self._data if n < 0 else self._data[:n]
+
+
 class _FakeAiohttpResponse:
     def __init__(self, status: int, payload: dict) -> None:
         self.status = status
         self._payload = payload
+        # The client bounds the body via response.content.read(), so mirror
+        # aiohttp's StreamReader, not just .json().
+        self.content = _FakeContent(json.dumps(payload).encode())
 
     async def __aenter__(self):
         return self
@@ -230,7 +245,7 @@ class _RecordingSession:
     def __init__(self, *, timeout=None):
         type(self).last_timeout = timeout
 
-    def get(self, url):
+    def get(self, url, headers=None, allow_redirects=True):
         return _FakeAiohttpResponse(200, {"server_name": "x", "policies": []})
 
     async def close(self):
@@ -241,7 +256,7 @@ class _FailingSession:
     def __init__(self, *, timeout=None):
         pass
 
-    def get(self, url):
+    def get(self, url, headers=None, allow_redirects=True):
         return _FakeAiohttpResponse(500, {})
 
     async def close(self):
@@ -290,7 +305,7 @@ class TestHttpClientReliability:
             def __init__(self, *, timeout=None):
                 pass
 
-            def get(self, url):
+            def get(self, url, headers=None, allow_redirects=True):
                 return _FakeAiohttpResponse(200, {"server_name": "x", "policies": []})
 
             async def close(self):

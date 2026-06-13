@@ -20,20 +20,22 @@ TRANSPORT_SCHEME_REGISTRY: dict[str, Callable[[str], BaseClientTransport]] = {
 
 def resolve_client_transport_for_uri(
     uri: str,
+    *,
+    token: str | None = None,
 ) -> BaseClientTransport:
     scheme: str = uri.split("://")[0]
-    transport_factory: Callable[[str], BaseClientTransport] | None = (
-        TRANSPORT_SCHEME_REGISTRY.get(scheme)
-    )
 
-    if transport_factory is None:
+    if scheme not in TRANSPORT_SCHEME_REGISTRY:
         supported_schemes: str = ", ".join(TRANSPORT_SCHEME_REGISTRY.keys())
         raise ValueError(
             f"Unsupported URI scheme '{scheme}' in '{uri}'. "
             f"Supported schemes: {supported_schemes}"
         )
 
-    return transport_factory(uri)
+    if scheme in ("http", "https"):
+        return HttpClientTransport(uri, token=token)
+    # stdio: a bearer token is not part of the stdio protocol, so it's ignored.
+    return StdioClientTransport(uri)
 
 
 __all__: list[str] = [
