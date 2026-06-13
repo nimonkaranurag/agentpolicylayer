@@ -542,3 +542,106 @@ class TestPortAutoKillRemoved:
         assert DEFAULT_HOST == "127.0.0.1"
         transport = HTTPTransport(PolicyServer("t"))
         assert transport._host == "127.0.0.1"
+
+
+# ===========================================================================
+# P1-13 — real client transport <-> real server app over a loopback socket
+# (the one promise that defines the product, exercised across the actual wire
+# rather than each side against a fake of the other).
+# ===========================================================================
+
+
+def _deny_server() -> PolicyServer:
+    from apl.types import Verdict
+
+    server = PolicyServer("contract")
+
+    @server.policy(name="block-output", events=[EventType.OUTPUT_PRE_SEND])
+    async def block_output(event):
+        return Verdict.deny("blocked by contract test")
+
+    return server
+
+
+class TestHttpClientServerContract:
+    def _evaluate_over_socket(self, *, token=None, client_token=None, cap=None):
+        from apl.layer.client_transports import HttpClientTransport
+        from apl.serialization import to_wire
+
+        app = create_http_application(_deny_server(), auth_token=token)
+
+        async def go():
+            ts = TestServer(app)
+            await ts.start_server()
+            base = str(ts.make_url("")).rstrip("/")
+            kwargs = {}
+            if client_token is not None:
+                kwargs["token"] = client_token
+            if cap is not None:
+                kwargs["max_response_bytes"] = cap
+            transport = HttpClientTransport(base, **kwargs)
+            try:
+                await transport.connect()
+                wire = to_wire(PolicyEvent(type=EventType.OUTPUT_PRE_SEND))
+                return await transport.evaluate(wire)
+            finally:
+                await transport.close()
+                await ts.close()
+
+        return _run(go())
+
+    def test_deny_round_trips_across_the_wire(self):
+        # If the request/response envelope keys ever drift, the client would read
+        # [] and compose to ALLOW with the suite green; this catches that.
+        verdicts = self._evaluate_over_socket()
+        assert len(verdicts) == 1
+        assert verdicts[0]["decision"] == "deny"
+
+    def test_bearer_token_is_accepted(self):
+        verdicts = self._evaluate_over_socket(token="s3cret", client_token="s3cret")
+        assert verdicts[0]["decision"] == "deny"
+
+    def test_missing_token_fails_closed(self):
+        from apl.types import PolicyUnavailableError
+
+        with pytest.raises(PolicyUnavailableError):
+            self._evaluate_over_socket(token="s3cret", client_token=None)
+
+    def test_oversize_response_fails_closed(self):
+        from apl.types import PolicyUnavailableError
+
+        # A 10-byte response cap is smaller than any real manifest, so connect()
+        # must reject the body rather than read it unbounded.
+        with pytest.raises(PolicyUnavailableError):
+            self._evaluate_over_socket(cap=10)
+
+
+# ===========================================================================
+# P0-6 — stdio client correlates the reply to the request it sent
+# ===========================================================================
+
+
+_WRONG_ID_SERVER = (
+    "import sys\n"
+    'sys.stdout.write(\'{"type":"manifest","manifest":{}}\\n\'); sys.stdout.flush()\n'
+    "for _line in sys.stdin:\n"
+    "    sys.stdout.write("
+    '\'{"type":"verdicts","event_id":"WRONG","verdicts":[]}\\n\''
+    "); sys.stdout.flush()\n"
+)
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX subprocess semantics")
+class TestStdioCorrelation:
+    def test_mismatched_event_id_fails_closed(self):
+        # The server answers with an event_id that doesn't match the request, the
+        # signature of a desynced pipe. The client must not trust that verdict.
+        client = _ScriptStdioClient.make(_WRONG_ID_SERVER, timeout_seconds=2.0)
+
+        async def run():
+            await client.connect()
+            with pytest.raises(PolicyUnavailableError):
+                await client.evaluate({"id": "real-event-id"})
+            await client.close()
+
+        _run(run())

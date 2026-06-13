@@ -9,6 +9,7 @@ from apl.layer.exceptions import PolicyDenied, PolicyEscalation
 from apl.modifications import (
     DEFAULT_REDACTION,
     UnsupportedModificationTarget,
+    apply_modifications,
     apply_operation,
 )
 from apl.server.policy_registry import PolicyRegistry
@@ -258,3 +259,30 @@ class TestDecoratorApplierRoutesThroughDispatcher:
     def test_decision_enum_unchanged(self):
         # Sanity: dispatcher tests rely on the canonical Decision values.
         assert Decision.MODIFY.value == "modify"
+
+
+class TestSharedApplyModifications:
+    # The single applier the three enforcement points route through: it must fail
+    # closed on a target the point can't apply (not silently skip), and honour
+    # operation order.
+
+    def test_unsupported_target_fails_closed(self):
+        with pytest.raises(UnsupportedModificationTarget):
+            apply_modifications([_mod("replace", "x", target="output")], lambda t: None)
+
+    def test_modifications_apply_in_order(self):
+        box = {"v": "hi"}
+
+        def resolve(target):
+            if target != "output":
+                return None
+            return (lambda: box["v"], lambda value: box.__setitem__("v", value))
+
+        apply_modifications(
+            [
+                _mod("append", " there", target="output"),
+                _mod("append", "!", target="output"),
+            ],
+            resolve,
+        )
+        assert box["v"] == "hi there!"

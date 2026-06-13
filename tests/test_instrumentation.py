@@ -141,6 +141,36 @@ class TestApplyVerdictModifications:
         assert ctx.response_text == "new"
 
 
+class TestRequestSideModify:
+    # A request-side MODIFY (input/llm_prompt) must be converted back to the
+    # provider's native shape and written to the slot the SDK reads — not shipped
+    # as foreign-typed APL Message objects in a kwarg some SDKs ignore.
+
+    def test_context_converts_back_via_adapter(self):
+        ctx = LifecycleContext(
+            apl_messages=[Message(role="user", content="hi")],
+            message_adapter_to_raw=lambda msgs: [
+                {"role": m.role, "content": m.content} for m in msgs
+            ],
+        )
+        ctx.modify_request_messages([Message(role="user", content="redacted")])
+        assert ctx.request_messages_modified is True
+        assert ctx.effective_request_messages() == [
+            {"role": "user", "content": "redacted"}
+        ]
+
+    def test_langchain_writes_request_messages_positionally(self):
+        from apl.instrumentation.providers.langchain_provider import LangChainProvider
+
+        provider = LangChainProvider.__new__(LangChainProvider)
+        args, kwargs = provider.write_request_messages(
+            ("orig-input", {"config": 1}), {}, "new-input"
+        )
+        # invoke(input) is positional; a messages= kwarg would be ignored.
+        assert args[0] == "new-input"
+        assert "messages" not in kwargs
+
+
 def _executor_yielding(verdicts: list[Verdict]) -> LifecycleExecutor:
     """
     A :class:`LifecycleExecutor` whose evaluator returns ``verdicts`` in order.

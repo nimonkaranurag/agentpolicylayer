@@ -330,3 +330,26 @@ class TestPolicyLayerFailModeThreading:
         layer = PolicyLayer()
         layer.add_server("stdio://./x.py")
         assert layer._clients[0]._fail_mode == FailMode.CLOSED
+
+
+class TestEmptyLayerFailsClosed:
+    # A PolicyLayer with no add_server() is a misconfiguration, not "all policies
+    # abstained": composing zero verdicts used to silently ALLOW everything.
+
+    def test_no_servers_denies_by_default(self):
+        layer = PolicyLayer()
+        verdict = asyncio.run(layer.evaluate(event_type=EventType.OUTPUT_PRE_SEND))
+        assert verdict.decision == Decision.DENY
+
+    def test_no_servers_allows_under_fail_open(self):
+        layer = PolicyLayer(CompositionConfig(fail_mode=FailMode.OPEN))
+        verdict = asyncio.run(layer.evaluate(event_type=EventType.OUTPUT_PRE_SEND))
+        assert verdict.decision == Decision.ALLOW
+
+
+class TestAddServerToken:
+    def test_token_is_threaded_to_http_transport(self):
+        layer = PolicyLayer()
+        layer.add_server("http://policies.example", token="s3cret")
+        transport = layer._clients[0]._transport
+        assert transport._headers.get("Authorization") == "Bearer s3cret"
