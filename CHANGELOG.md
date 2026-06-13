@@ -9,6 +9,8 @@ Commits.
 
 ## [Unreleased]
 
+## [0.5.0](https://github.com/nimonkaranurag/agentpolicylayer/compare/agent-policy-layer-v0.4.0...agent-policy-layer-v0.5.0) (2026-06-13)
+
 ### ⚠ BREAKING CHANGES
 
 - **CLI and HTTP dependencies are now optional extras.** The base install carries
@@ -97,20 +99,13 @@ that it had enforced something it had not. All now fail closed.
   shipping, so a release cut from a red commit can no longer publish an
   unrecoverable broken wheel; the rolling `dev` wheel is tested before it's
   published; and the manual `publish.yml` matrix matches CI (3.10–3.13, `[dev,all]`).
-
-### Doc Updates
-
 - README updates.
 
 ## [0.4.0](https://github.com/nimonkaranurag/agentpolicylayer/compare/agent-policy-layer-v0.3.0...agent-policy-layer-v0.4.0) (2026-06-07)
 
-
 ### ⚠ BREAKING CHANGES
 
-- **Fail-closed by default.** Every failure site — policy timeout, exception,
-  non-200 response, missing response, or a non-`Verdict` return — now **denies**
-  instead of allowing. Fail-open must be opted into via `FailMode.OPEN` and warns
-  at startup.
+- **Fail-closed by default.** (See Security below for full details.)
 - The `--stdio` serve flag is removed (stdio is the default, `--http` is the
   switch).
 - `PolicyLayer.wrap()` raises `TypeError` on unsupported objects instead of
@@ -230,6 +225,7 @@ that it had enforced something it had not. All now fail closed.
 
 ## [0.3.0]
 
-[Unreleased]: https://github.com/nimonkaranurag/agentpolicylayer/compare/agent-policy-layer-v0.4.0...HEAD
-[0.4.0]: https://github.com/nimonkaranurag/agentpolicylayer/compare/agent-policy-layer-v0.3.0...agent-policy-layer-v0.4.0
+- Initial public release.
+
+[Unreleased]: https://github.com/nimonkaranurag/agentpolicylayer/compare/agent-policy-layer-v0.5.0...HEAD
 [0.3.0]: https://github.com/nimonkaranurag/agentpolicylayer/releases/tag/v0.3.0
