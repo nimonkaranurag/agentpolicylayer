@@ -322,6 +322,34 @@ class TestManifestCodec:
         assert manifest.protocol_version == PROTOCOL_VERSION
 
 
+class TestUnknownFieldForwardCompat:
+    # SPEC §3 rule 3 / docs/adr/0004: unknown wire fields are accepted and ignored —
+    # never rejected (that would break minor-compatible forward evolution) and never
+    # round-tripped (an unknown field reflected onward is a smuggling channel). The
+    # posture is now explicit (extra="ignore") on the wire-root models; assert it so a
+    # future change to "forbid"/"allow" is caught rather than silently shipped.
+    def test_event_accepts_and_drops_unknown_field(self):
+        event = event_from_wire(
+            {"type": "input.received", "from_a_newer_peer": {"x": 1}}
+        )
+        assert event.type == EventType.INPUT_RECEIVED
+        assert "from_a_newer_peer" not in to_wire(event)
+
+    def test_verdict_accepts_and_drops_unknown_field(self):
+        verdict = verdict_from_wire(
+            {"decision": "allow", "confidence": 1.0, "from_a_newer_peer": 7}
+        )
+        assert verdict.decision == Decision.ALLOW
+        assert "from_a_newer_peer" not in to_wire(verdict)
+
+    def test_manifest_accepts_and_drops_unknown_field(self):
+        manifest = manifest_from_wire(
+            {"server_name": "s", "server_version": "1.0", "future_capability": True}
+        )
+        assert manifest.server_name == "s"
+        assert "future_capability" not in to_wire(manifest)
+
+
 class _ManifestTransport(BaseClientTransport):
     """
     Fake client transport that yields a manifest with a chosen protocol version.

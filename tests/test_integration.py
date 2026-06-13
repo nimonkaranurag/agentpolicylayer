@@ -199,11 +199,18 @@ class TestEndToEndDeclarativeRules:
             metadata=SessionMetadata(session_id="s1", user_region="EU"),
         )
 
-        for rule in rules:
-            result = evaluator.evaluate_rule_against_event(rule, event)
-            if result is not None:
-                assert result.decision == Decision.DENY
-                break
+        # Evaluate every rule, then assert on the matches. The previous version
+        # broke out of the loop on the first non-None result, so if the evaluator
+        # regressed to returning None for everything the test passed vacuously
+        # (no rule matched, no assertion ran). Materialize the results and require
+        # that a match actually happened and that the first one is the DENY rule.
+        results = [evaluator.evaluate_rule_against_event(rule, event) for rule in rules]
+        matched = [r for r in results if r is not None]
+        assert matched, "expected at least one rule to match the event"
+        assert matched[0].decision == Decision.DENY
+        # The catch-all `when: {}` rule must also match (proving non-None is real,
+        # not an artifact of every rule mis-returning None).
+        assert results[-1] is not None and results[-1].decision == Decision.ALLOW
 
     def test_condition_evaluator_composability(self):
         evaluator = ConditionEvaluator()

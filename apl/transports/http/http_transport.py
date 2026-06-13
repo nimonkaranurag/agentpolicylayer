@@ -60,6 +60,16 @@ def create_http_application(
     app["auth_token"] = auth_token
     app["cors_origins"] = list(cors_origins) if cors_origins else []
 
+    # A literal "*" in the allow-list reflects *any* Origin (see _allowed_origin in
+    # middleware.py). That is a deliberate-but-dangerous configuration for a security
+    # server, so it must never happen silently — warn loudly at startup.
+    if "*" in app["cors_origins"]:
+        logger.warning(
+            "CORS allow-list contains '*': the policy server will reflect ANY "
+            "Origin. This disables CORS as an isolation boundary; prefer an "
+            "explicit list of trusted origins."
+        )
+
     if apl_logger:
         app["logger"] = apl_logger
 

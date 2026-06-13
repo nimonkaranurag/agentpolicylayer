@@ -3,9 +3,9 @@
 #
 #     source scripts/dev.sh
 #
-# Creates a uv-managed virtualenv (.venv), installs APL with all dev + optional
-# dependencies (editable), installs the pre-commit hooks, and activates the env
-# in your current shell. Idempotent — re-run it any time; uv caches everything.
+# Syncs a uv-managed virtualenv (.venv) from the committed uv.lock with all dev +
+# optional dependencies (editable), installs the pre-commit hooks, and activates the
+# env in your current shell. Idempotent — re-run it any time; uv caches everything.
 
 # Repo root, resolved from git so this works from anywhere inside the tree
 # (bash or zsh), without fragile $0 / BASH_SOURCE handling.
@@ -22,17 +22,17 @@ if ! command -v uv >/dev/null 2>&1; then
   return 1 2>/dev/null || exit 1
 fi
 
-echo "==> creating uv virtualenv (.venv, python 3.12)"
-uv venv "$_apl_root/.venv" --python 3.12 \
-  || { echo "error: failed to create venv"; return 1 2>/dev/null || exit 1; }
+echo "==> syncing env from uv.lock (.venv, python 3.12, all extras, editable)"
+# `uv sync` installs the *locked* versions from uv.lock (creating/managing .venv
+# itself) and installs this project editable — so local dev matches the committed
+# lock instead of re-resolving floors every time. --all-extras pulls dev + cli +
+# http + langgraph. CI verifies the lock stays in sync (uv lock --check).
+( cd "$_apl_root" && uv sync --all-extras --python 3.12 ) \
+  || { echo "error: uv sync failed"; return 1 2>/dev/null || exit 1; }
 
 # shellcheck disable=SC1091
 source "$_apl_root/.venv/bin/activate" \
   || { echo "error: failed to activate venv"; return 1 2>/dev/null || exit 1; }
-
-echo "==> installing agent-policy-layer[dev,all] (editable)"
-( cd "$_apl_root" && uv pip install -e ".[dev,all]" ) \
-  || { echo "error: install failed"; return 1 2>/dev/null || exit 1; }
 
 echo "==> installing pre-commit hooks"
 pre-commit install \

@@ -182,7 +182,22 @@ A policy subscribes to one or more events and only receives those.
 pip install agent-policy-layer
 ```
 
-Pure Python, no external services. Requires Python 3.10+. For the LangGraph adapter: `pip install "agent-policy-layer[langgraph]"`.
+The base install is the **core runtime** — everything an embedder needs to evaluate
+policies in-process or over stdio (`pydantic`, `pyyaml`, and `rich`). The CLI and the
+HTTP transport are genuine subsystems with heavier dependencies, so they live behind
+**optional extras** rather than being forced on every consumer:
+
+| Install | Adds | When you need it |
+|---|---|---|
+| `pip install agent-policy-layer` | core runtime (in-process + stdio) | embedding APL, stdio policy servers |
+| `pip install "agent-policy-layer[cli]"` | `click` | the `apl` command-line tool |
+| `pip install "agent-policy-layer[http]"` | `aiohttp` | the HTTP policy-server transport (server **and** client) |
+| `pip install "agent-policy-layer[langgraph]"` | `langgraph` | the LangGraph adapter |
+| `pip install "agent-policy-layer[all]"` | CLI + HTTP + LangGraph | everything |
+
+Requesting a subsystem whose extra isn't installed fails with an actionable install hint,
+not a raw `ImportError`. Pure Python, no external services, Python 3.10+. (Why extras?
+See [ADR 0005](docs/adr/0005-cli-and-http-are-optional-extras.md).)
 
 ---
 
@@ -436,13 +451,17 @@ APL is a guardrails layer, so its defaults assume that **a guard you can't consu
 Safe-by-default also extends to the HTTP transport:
 
 - binds **`127.0.0.1`** (not `0.0.0.0`),
-- optional **bearer-token auth** (`--auth-token`), constant-time compared,
+- optional **bearer-token auth** (`--auth-token`, or `APL_AUTH_TOKEN` to keep the secret out of `ps`/`/proc`), constant-time compared,
 - **CORS allow-list** instead of `*` — no CORS headers unless an origin is allow-listed,
 - **request-size and content-type guards**; malformed input returns a `4xx` with a stable error envelope, never an echoed traceback.
 
 ---
 
 ## Reference
+
+The wire protocol — frames, schemas, version negotiation, fail modes, and conformance
+rules for an independent client or server — is specified in **[SPEC.md](SPEC.md)**. The
+design decisions behind it are recorded as [ADRs](docs/adr/).
 
 ### CLI
 

@@ -30,6 +30,7 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
     "Topic :: Security",
     "Typing :: Typed",
@@ -101,6 +102,32 @@ asyncio_mode = "auto"
 # and will change the default); function scope matches how the suite is written.
 asyncio_default_fixture_loop_scope = "function"
 testpaths = ["tests"]
+
+[tool.coverage.run]
+# Measure the package, not the suite. A bare `--cov` includes `tests/` in the
+# denominator, which inflates the reported number (the tests are ~100% "covered"
+# by definition). Pin the source to `apl` so coverage reflects how much of the
+# shipped library is exercised — nothing else.
+source = ["apl"]
+# Branch coverage: an `if/else` where only one arm is taken is a real gap, and a
+# guardrails library lives or dies on its untaken branches (fail-closed paths,
+# error envelopes). Statement coverage alone hides them.
+branch = true
+
+[tool.coverage.report]
+# Honest, documented floor. Measured apl-only with branch coverage on; this is a
+# ratchet — raise it as coverage improves, never lower it to turn a red build
+# green. (The pre-0.5 threshold was 80% measured against the inflated, tests-
+# included number; this floor is stricter despite the smaller-looking value.)
+fail_under = 84
+show_missing = true
+# Lines that are unreachable-by-design shouldn't count against the floor.
+exclude_also = [
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+    "@(abc\\.)?abstractmethod",
+    "if __name__ == .__main__.:",
+]
 
 [tool.docformatter]
 recursive = true

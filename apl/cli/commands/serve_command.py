@@ -31,7 +31,12 @@ from ..renderers import render_policy_tree, render_server_panel
 @click.option(
     "--auth-token",
     default=None,
-    help="Require this bearer token on HTTP requests",
+    envvar="APL_AUTH_TOKEN",
+    help=(
+        "Require this bearer token on HTTP requests. Prefer the APL_AUTH_TOKEN "
+        "environment variable over the flag: an argv value is visible to any "
+        "local process via `ps`/`/proc`."
+    ),
 )
 @click.option(
     "--cors-origin",

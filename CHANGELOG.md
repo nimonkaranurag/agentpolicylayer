@@ -101,7 +101,7 @@ that it had enforced something it had not. All now fail closed.
   published; and the manual `publish.yml` matrix matches CI (3.10–3.13, `[dev,all]`).
 - README updates.
 
-## [0.4.0](https://github.com/nimonkaranurag/agentpolicylayer/compare/agent-policy-layer-v0.3.0...agent-policy-layer-v0.4.0) (2026-06-07)
+## [0.4.0](https://github.com/nimonkaranurag/agentpolicylayer/compare/v0.3.0...agent-policy-layer-v0.4.0) (2026-06-07)
 
 ### ⚠ BREAKING CHANGES
 

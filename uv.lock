@@ -10,8 +10,6 @@ resolution-markers = [
 name = "agent-policy-layer"
 source = { editable = "." }
 dependencies = [
-    { name = "aiohttp" },
-    { name = "click" },
     { name = "pydantic" },
     { name = "pyyaml" },
     { name = "rich" },
@@ -19,15 +17,12 @@ dependencies = [
 
 [package.optional-dependencies]
 all = [
-    { name = "docformatter" },
+    { name = "aiohttp" },
+    { name = "click" },
     { name = "langgraph" },
-    { name = "mypy" },
-    { name = "pre-commit" },
-    { name = "pytest" },
-    { name = "pytest-asyncio" },
-    { name = "pytest-cov" },
-    { name = "ruff" },
-    { name = "types-pyyaml" },
+]
+cli = [
+    { name = "click" },
 ]
 dev = [
     { name = "docformatter" },
@@ -39,37 +34,34 @@ dev = [
     { name = "ruff" },
     { name = "types-pyyaml" },
 ]
+http = [
+    { name = "aiohttp" },
+]
 langgraph = [
     { name = "langgraph" },
 ]
 
 [package.metadata]
 requires-dist = [
-    { name = "aiohttp", specifier = ">=3.8" },
-    { name = "click", specifier = ">=8.0" },
-    { name = "docformatter", marker = "extra == 'all'", specifier = ">=1.7" },
+    { name = "aiohttp", marker = "extra == 'all'", specifier = ">=3.8" },
+    { name = "aiohttp", marker = "extra == 'http'", specifier = ">=3.8" },
+    { name = "click", marker = "extra == 'all'", specifier = ">=8.0" },
+    { name = "click", marker = "extra == 'cli'", specifier = ">=8.0" },
     { name = "docformatter", marker = "extra == 'dev'", specifier = ">=1.7" },
     { name = "langgraph", marker = "extra == 'all'", specifier = ">=0.2" },
     { name = "langgraph", marker = "extra == 'langgraph'", specifier = ">=0.2" },
-    { name = "mypy", marker = "extra == 'all'", specifier = ">=1.10" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.10" },
-    { name = "pre-commit", marker = "extra == 'all'", specifier = ">=3.5" },
     { name = "pre-commit", marker = "extra == 'dev'", specifier = ">=3.5" },
     { name = "pydantic", specifier = ">=2.0" },
-    { name = "pytest", marker = "extra == 'all'", specifier = ">=7.0" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=7.0" },
-    { name = "pytest-asyncio", marker = "extra == 'all'", specifier = ">=1.0" },
     { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = ">=1.0" },
-    { name = "pytest-cov", marker = "extra == 'all'", specifier = ">=4.0" },
     { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=4.0" },
     { name = "pyyaml", specifier = ">=6.0" },
     { name = "rich", specifier = ">=13.0" },
-    { name = "ruff", marker = "extra == 'all'", specifier = ">=0.6" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.6" },
-    { name = "types-pyyaml", marker = "extra == 'all'" },
     { name = "types-pyyaml", marker = "extra == 'dev'" },
 ]
-provides-extras = ["all", "dev", "langgraph"]
+provides-extras = ["all", "cli", "dev", "http", "langgraph"]
 
 [[package]]
 name = "aiohappyeyeballs"

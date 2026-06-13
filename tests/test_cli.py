@@ -462,3 +462,14 @@ class TestWithinFileDuplicateCli:
         result = runner.invoke(cli, ["validate", str(dup)])
         assert result.exit_code == 1
         assert "Duplicate policy name" in result.output
+
+
+class TestServeAuthTokenEnv:
+    def test_auth_token_falls_back_to_apl_auth_token_env(self):
+        # A bearer token passed as --auth-token is visible to any local process via
+        # `ps`/`/proc`. The option must also read APL_AUTH_TOKEN so the secret can be
+        # supplied out of argv; assert that env fallback is wired on the option.
+        from apl.cli.commands.serve_command import serve
+
+        param = next(p for p in serve.params if p.name == "auth_token")
+        assert param.envvar == "APL_AUTH_TOKEN"
