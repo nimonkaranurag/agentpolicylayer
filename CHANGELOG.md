@@ -7,6 +7,22 @@ release onward versions are cut automatically by
 [release-please](https://github.com/googleapis/release-please) from Conventional
 Commits.
 
+## [0.5.0](https://github.com/nimonkaranurag/agentpolicylayer/compare/agent-policy-layer-v0.4.0...agent-policy-layer-v0.5.0) (2026-06-13)
+
+
+### ⚠ BREAKING CHANGES
+
+* the `apl` CLI now requires `pip install 'agent-policy-layer[cli]'` and the HTTP transport requires `agent-policy-layer[http]`. Installs that relied on these being pulled in by the base package must add the relevant extra (or `[all]`).
+
+### Features
+
+* close fail-open enforcement gaps + make CLI/HTTP deps optional (BREAKING) ([#26](https://github.com/nimonkaranurag/agentpolicylayer/issues/26)) ([cf0fe58](https://github.com/nimonkaranurag/agentpolicylayer/commit/cf0fe586bfe5a54dca2acb59d4fe7d4a2014cba2))
+
+
+### Bug Fixes
+
+* now redirects to  correctly ([2cd57d1](https://github.com/nimonkaranurag/agentpolicylayer/commit/2cd57d13c0a0d6d2b044e986cc0aff6aa376a845))
+
 ## [Unreleased]
 
 ### ⚠ BREAKING CHANGES
