@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-import inspect
 import logging
+import typing
 
 import pytest
 
@@ -121,23 +121,28 @@ class TestFailModeProperty:
 
 
 class TestVerdictOptionalAnnotations:
-    # With `from __future__ import annotations`, annotations are the source
-    # strings; previously these read "str"/"int"/"dict" with a None default
-    # (implicit-optional), which mypy's no_implicit_optional rejects.
+    # The guarantee under test: each of these params is *explicitly* Optional, which
+    # mypy's no_implicit_optional requires (a None default under a non-Optional
+    # annotation is rejected). Previously this asserted the annotation *source
+    # string* ("Optional[str]"), which breaks on a no-op refactor to `str | None`.
+    # Resolve the real type instead, so the test tracks the semantics, not the syntax.
     @pytest.mark.parametrize(
-        "factory, param, expected",
+        "factory, param",
         [
-            (Verdict.allow, "reasoning", "Optional[str]"),
-            (Verdict.modify, "reasoning", "Optional[str]"),
-            (Verdict.modify, "path", "Optional[str]"),
-            (Verdict.escalate, "prompt", "Optional[str]"),
-            (Verdict.escalate, "timeout_ms", "Optional[int]"),
-            (Verdict.escalate, "options", "Optional[list[str]]"),
-            (Verdict.observe, "trace", "Optional[dict]"),
+            (Verdict.allow, "reasoning"),
+            (Verdict.modify, "reasoning"),
+            (Verdict.modify, "path"),
+            (Verdict.escalate, "prompt"),
+            (Verdict.escalate, "timeout_ms"),
+            (Verdict.escalate, "options"),
+            (Verdict.observe, "trace"),
         ],
     )
-    def test_factory_param_is_optional(self, factory, param, expected):
-        assert factory.__annotations__[param] == expected
+    def test_factory_param_is_explicitly_optional(self, factory, param):
+        hints = typing.get_type_hints(factory)
+        # NoneType is a member of the resolved type => the param is Optional, however
+        # it was spelled (Optional[X] or X | None both resolve to a Union with None).
+        assert type(None) in typing.get_args(hints[param])
 
     def test_factories_accept_omitted_optionals(self):
         # Behavioural sanity: the factories still work with the optionals omitted.
@@ -154,11 +159,14 @@ class TestVersionSingleSource:
     def test_policy_server_default_version_tracks_package_version(self):
         assert PolicyServer("svc").version == apl.__version__
 
-    def test_policy_server_has_no_hardcoded_version_literal(self):
-        # Previously the default was the literal "0.3.0"; it must now reference
-        # __version__ so it cannot drift from the package version.
-        src = inspect.getsource(__import__("apl.server.policy_server", fromlist=["x"]))
-        assert '"0.3.0"' not in src
+    def test_manifest_reports_single_sourced_versions(self):
+        # Behavioural single-source check, replacing a brittle scan of the
+        # policy_server source for a "0.3.0" literal. A server's manifest must report
+        # the package __version__ as server_version and PROTOCOL_VERSION as
+        # protocol_version, so neither can silently drift back to a hardcoded literal.
+        manifest = PolicyServer("svc").get_manifest()
+        assert manifest.server_version == apl.__version__
+        assert manifest.protocol_version == PROTOCOL_VERSION
 
     def test_info_command_uses_protocol_constant(self):
         # The CLI "Protocol" row must read PROTOCOL_VERSION, not a literal.

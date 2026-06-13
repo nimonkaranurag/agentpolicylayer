@@ -482,6 +482,25 @@ class TestHttpCors:
         )
         assert "Access-Control-Allow-Origin" not in r["headers"]
 
+    def test_wildcard_origin_warns_at_startup(self, caplog):
+        # A literal "*" reflects ANY origin (a deliberate-but-dangerous config). It
+        # must never be configured silently — the app factory warns at build time.
+        import logging
+
+        with caplog.at_level(logging.WARNING, logger="apl.transport.http"):
+            create_http_application(PolicyServer("t"), cors_origins=["*"])
+        assert any("CORS" in r.message and "*" in r.message for r in caplog.records), [
+            r.message for r in caplog.records
+        ]
+
+    def test_wildcard_origin_actually_reflects_any_origin(self):
+        # The warning is honest: "*" really does reflect an arbitrary origin.
+        app = create_http_application(PolicyServer("t"), cors_origins=["*"])
+        r = _run(
+            _http(app, "GET", "/health", headers={"Origin": "https://whoever.example"})
+        )
+        assert r["headers"]["Access-Control-Allow-Origin"] == "https://whoever.example"
+
 
 class TestHttpAuth:
     def test_protected_route_401_without_token(self):
@@ -513,6 +532,82 @@ class TestHttpAuth:
         app = create_http_application(PolicyServer("t"))
         r = _run(_http(app, "POST", "/evaluate", json_body=_valid_event_wire()))
         assert r["status"] == 200
+
+
+class TestHttpMetricsEndpoint:
+    def test_metrics_exposes_prometheus_text(self):
+        app = create_http_application(PolicyServer("t"))
+        r = _run(_http(app, "GET", "/metrics"))
+        assert r["status"] == 200
+        assert r["headers"]["Content-Type"].startswith("text/plain")
+        assert "apl_requests_total" in r["text"]
+        assert "apl_errors_total" in r["text"]
+
+    def test_metrics_reflect_a_recorded_request(self):
+        # Drive a real evaluation through the route, then read it back on /metrics:
+        # proves the endpoint reports the live ServerMetrics, not a static stub.
+        app = create_http_application(PolicyServer("t"))
+
+        async def go():
+            server = TestServer(app)
+            client = TestClient(server)
+            await client.start_server()
+            try:
+                await client.request("POST", "/evaluate", json=_valid_event_wire())
+                resp = await client.request("GET", "/metrics")
+                return await resp.text()
+            finally:
+                await client.close()
+
+        body = _run(go())
+        assert "apl_requests_total 1" in body
+
+
+class TestHttpManifestEndpoint:
+    def test_manifest_returns_server_identity_and_policies(self):
+        from apl.types import PROTOCOL_VERSION, Verdict
+
+        server = PolicyServer("manifest-srv", description="desc")
+
+        @server.policy(name="p1", events=[EventType.OUTPUT_PRE_SEND])
+        async def p1(event):
+            return Verdict.allow()
+
+        app = create_http_application(server)
+        r = _run(_http(app, "GET", "/manifest"))
+        assert r["status"] == 200
+        assert r["json"]["server_name"] == "manifest-srv"
+        assert r["json"]["protocol_version"] == PROTOCOL_VERSION
+        names = [p["name"] for p in r["json"]["policies"]]
+        assert names == ["p1"]
+        # `blocking` is part of the published manifest contract (SPEC §5).
+        assert r["json"]["policies"][0]["blocking"] is True
+
+
+class TestHttpEventsEndpoint:
+    def test_events_streams_sse_keepalive(self):
+        # The SSE handler is an infinite keepalive loop, so read only the first
+        # frame (it is written before the 15s sleep) and abort — never block on a
+        # full-body read.
+        app = create_http_application(PolicyServer("t"))
+
+        async def go():
+            server = TestServer(app)
+            client = TestClient(server)
+            await client.start_server()
+            try:
+                resp = await client.request("GET", "/events")
+                content_type = resp.headers["Content-Type"]
+                first = await asyncio.wait_for(resp.content.read(32), timeout=5)
+                resp.close()  # abort the stream; handler's sleep is cancelled cleanly
+                return resp.status, content_type, first
+            finally:
+                await client.close()
+
+        status, content_type, first = _run(go())
+        assert status == 200
+        assert content_type == "text/event-stream"
+        assert b"keepalive" in first
 
 
 # ===========================================================================

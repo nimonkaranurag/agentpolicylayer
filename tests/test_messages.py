@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+import importlib.util
+
+import pytest
+
 from apl.instrumentation.messages import (
     get_message_adapter,
 )
@@ -10,6 +14,8 @@ from apl.instrumentation.messages.langchain_adapter import (
     LangChainMessageAdapter,
 )
 from apl.types import Message
+
+_HAS_LANGCHAIN = importlib.util.find_spec("langchain_core") is not None
 
 
 class TestChatCompletionsAdapter:
@@ -100,6 +106,27 @@ class TestLangChainAdapter:
         result = self.adapter.to_apl_messages([FakeLCMessage()])
         assert result[0].role == "user"
         assert result[0].content == "hello from langchain"
+
+    @pytest.mark.skipif(not _HAS_LANGCHAIN, reason="langchain_core not installed")
+    def test_real_langchain_message_types(self):
+        # The rest of this file's LangChain coverage uses a hand-rolled FakeLCMessage;
+        # exercise the adapter against the *real* SDK classes so a drift in
+        # langchain_core's BaseMessage.type/.content contract is actually caught (the
+        # `.type` -> role mapping is the load-bearing line).
+        from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+
+        result = self.adapter.to_apl_messages(
+            [
+                SystemMessage(content="be brief"),
+                HumanMessage(content="hi"),
+                AIMessage(content="hello"),
+            ]
+        )
+        assert [(m.role, m.content) for m in result] == [
+            ("system", "be brief"),
+            ("user", "hi"),
+            ("assistant", "hello"),
+        ]
 
 
 class TestGetMessageAdapter:

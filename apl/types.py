@@ -257,6 +257,11 @@ class PolicyEvent(BaseModel):
     is the server transport's concern.
     """
 
+    # Forward-compat wire posture, made explicit at the decode boundary: unknown fields
+    # are accepted and ignored (never trusted, never round-tripped). SPEC §3 rule 3 /
+    # docs/adr/0004-unknown-wire-fields-are-ignored.md.
+    model_config = ConfigDict(extra="ignore")
+
     id: str = Field(default_factory=_new_uuid)
     type: EventType = EventType.INPUT_RECEIVED
     timestamp: datetime = Field(default_factory=_now_utc)
@@ -371,7 +376,12 @@ class Verdict(BaseModel):
     would have rejected.
     """
 
-    model_config = ConfigDict(validate_assignment=True)
+    # validate_assignment: re-check the invariants above on every field set.
+    # extra="ignore": the wire forward-compat posture, stated explicitly rather than
+    # inherited from pydantic's default — an unknown field is accepted and dropped,
+    # never trusted or round-tripped. See SPEC §3/§10 and
+    # docs/adr/0004-unknown-wire-fields-are-ignored.md.
+    model_config = ConfigDict(validate_assignment=True, extra="ignore")
 
     decision: Decision
     confidence: float = Field(default=1.0, ge=0.0, le=1.0)
@@ -530,9 +540,17 @@ class PolicyDefinition(BaseModel):
     # What context it needs (the contract)
     context_requirements: list[ContextRequirement] = Field(default_factory=list)
 
-    # Execution characteristics
-    blocking: bool = True  # Must await vs fire-and-forget
-    timeout_ms: int = 1000  # Max evaluation time
+    # Execution characteristics.
+    #
+    # `blocking` is *advertised* in the manifest as an execution hint — `False` signals
+    # a policy whose verdict an agent need not await (fire-and-forget). It is part of the
+    # published wire contract (SPEC §5) so third-party clients can implement
+    # fire-and-forget evaluation, but the reference enforcement path treats every policy
+    # as blocking (it awaits all verdicts before composing). It is therefore advisory:
+    # informational for clients, not yet acted on by the reference layer — do not read
+    # it as "the reference server will not await this policy".
+    blocking: bool = True
+    timeout_ms: int = 1000  # Advisory per-policy evaluation bound.
 
     # Metadata
     description: Optional[str] = None
@@ -546,6 +564,10 @@ class PolicyManifest(BaseModel):
 
     Sent during initialization handshake.
     """
+
+    # Same forward-compat wire posture as PolicyEvent/Verdict: unknown fields are
+    # accepted and ignored. SPEC §3 / docs/adr/0004-unknown-wire-fields-are-ignored.md.
+    model_config = ConfigDict(extra="ignore")
 
     server_name: str
     server_version: str

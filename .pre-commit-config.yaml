@@ -2,8 +2,11 @@
 # To check the whole tree in one go:  pre-commit run --all-files
 #
 # The Python tools (ruff/docformatter/mypy) run from your installed dev env
-# (language: system) so they always match what CI runs — there's no separate
-# pinned tool version to drift. Bump the generic hooks with `pre-commit autoupdate`.
+# (language: system), so the hook uses whatever version your .venv currently has.
+# That avoids maintaining a second, separately-pinned copy of each tool — but it is
+# NOT drift-proof: a stale .venv can lag the dependency floors CI fresh-installs, so
+# CI, not your local hooks, is the source of truth. Re-run `source scripts/dev.sh` to
+# refresh the env, and bump the generic hooks below with `pre-commit autoupdate`.
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0
