@@ -39,6 +39,14 @@ jobs:
       - name: Install build tooling
         run: python -m pip install --upgrade pip build hatch twine
 
+      - name: Test before publishing an installable wheel
+        # CONTRIBUTING points users at the rolling dev wheel, so it must not be
+        # built from a red commit. Gate the build on the suite (single interpreter
+        # — the full matrix is CI's job; this just stops shipping a broken wheel).
+        run: |
+          python -m pip install -e ".[dev,all]"
+          pytest tests/ --tb=short -q
+
       - name: Compute dev version
         id: version
         run: |
