@@ -8,10 +8,13 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, List, Optional
 
 from apl.layer import PolicyLayer
+from apl.logging import get_logger
 from apl.types import SessionMetadata
 
 if TYPE_CHECKING:
     from .providers.base_provider import BaseProvider
+
+logger = get_logger("instrumentation")
 
 # Reentrancy guard: "are we currently *inside* a policy evaluation". It must be a
 # ``ContextVar``, not ``threading.local`` — evaluations hop onto the shared background loop
@@ -114,6 +117,33 @@ class InstrumentationState:
             background_loop = self._background_loop
         assert background_loop is not None
         return background_loop
+
+    def close_policy_layer(self) -> None:
+        """
+        Close the policy layer's transports on the loop they live on.
+
+        Sync instrumentation connects stdio subprocesses / aiohttp sessions on the
+        background loop, so they must be closed *there* — and *before*
+        :meth:`shutdown_background_loop` tears that loop down, since ``close()`` is
+        async and needs a running loop to execute. If no background loop is running (the
+        layer was only driven from a caller's own async loop, or never connected), there
+        is nothing for this sync teardown to close. Best-effort: teardown must never
+        raise out of ``uninstrument``.
+        """
+        with self._background_loop_lock:
+            loop = self._background_loop
+
+        if loop is None or not loop.is_running():
+            return
+
+        try:
+            future = asyncio.run_coroutine_threadsafe(self.policy_layer.close(), loop)
+            future.result(timeout=10)
+        except Exception:
+            logger.warning(
+                "APL: failed to cleanly close the policy layer during uninstrument; "
+                "policy-server resources may not have been released.",
+            )
 
     def shutdown_background_loop(self) -> None:
         """

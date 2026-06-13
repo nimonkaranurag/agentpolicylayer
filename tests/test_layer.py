@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 
 import pytest
 from pydantic import ValidationError
@@ -196,10 +197,25 @@ class TestPolicyClientFailClosed:
         assert verdicts == []
 
 
+class _FakeContent:
+    """
+    Minimal aiohttp StreamReader stand-in: read(n) returns up to n bytes.
+    """
+
+    def __init__(self, data: bytes) -> None:
+        self._data = data
+
+    async def read(self, n: int = -1) -> bytes:
+        return self._data if n < 0 else self._data[:n]
+
+
 class _FakeResponse:
     def __init__(self, status, payload):
         self.status = status
         self._payload = payload
+        # The transport now reads the body via response.content.read() to bound it,
+        # so mirror aiohttp's StreamReader rather than only exposing .json().
+        self.content = _FakeContent(json.dumps(payload).encode())
 
     async def __aenter__(self):
         return self
@@ -215,7 +231,7 @@ class _FakeSession:
     def __init__(self, response):
         self._response = response
 
-    def post(self, url, json=None):
+    def post(self, url, json=None, headers=None, allow_redirects=True):
         return self._response
 
 
@@ -314,3 +330,48 @@ class TestPolicyLayerFailModeThreading:
         layer = PolicyLayer()
         layer.add_server("stdio://./x.py")
         assert layer._clients[0]._fail_mode == FailMode.CLOSED
+
+
+class TestEmptyLayerFailsClosed:
+    # A PolicyLayer with no add_server() is a misconfiguration, not "all policies
+    # abstained": composing zero verdicts used to silently ALLOW everything.
+
+    def test_no_servers_denies_by_default(self):
+        layer = PolicyLayer()
+        verdict = asyncio.run(layer.evaluate(event_type=EventType.OUTPUT_PRE_SEND))
+        assert verdict.decision == Decision.DENY
+
+    def test_no_servers_allows_under_fail_open(self):
+        layer = PolicyLayer(CompositionConfig(fail_mode=FailMode.OPEN))
+        verdict = asyncio.run(layer.evaluate(event_type=EventType.OUTPUT_PRE_SEND))
+        assert verdict.decision == Decision.ALLOW
+
+
+class TestAddServerToken:
+    def test_token_is_threaded_to_http_transport(self):
+        layer = PolicyLayer()
+        layer.add_server("http://policies.example", token="s3cret")
+        transport = layer._clients[0]._transport
+        assert transport._headers.get("Authorization") == "Bearer s3cret"
+
+
+class TestConnectDegradesPerServer:
+    def test_one_unreachable_server_does_not_wedge_the_layer(self):
+        # A server that can't be reached at connect time must not abort the layer
+        # (which would disable the healthy servers). It fails closed in its own
+        # evaluate(); the layer stays up.
+        layer = PolicyLayer()
+        healthy = _client_with(_EmptyTransport())  # connected, abstains with []
+
+        async def _boom():
+            raise PolicyUnavailableError("connection refused")
+
+        unreachable = PolicyClient("stdio://./down.py")
+        unreachable.connect = _boom  # type: ignore[method-assign]
+        layer._clients = [unreachable, healthy]
+
+        verdict = asyncio.run(layer.evaluate(event_type=EventType.OUTPUT_PRE_SEND))
+
+        assert layer._is_connected  # connect() tolerated the failure
+        # unreachable -> fail-closed deny; healthy -> []; deny_overrides -> DENY.
+        assert verdict.decision == Decision.DENY

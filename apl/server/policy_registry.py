@@ -1,9 +1,12 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Any, Optional
 
 from apl.logging import get_logger
-from apl.modifications import apply_operation
+from apl.modifications import (
+    UnsupportedModificationTarget,
+    apply_modifications,
+)
 from apl.types import (
     Decision,
     EventPayload,
@@ -68,8 +71,13 @@ class PolicyRegistry:
     async def evaluate_event(self, event: PolicyEvent) -> list[Verdict]:
         handlers = self.get_handlers_for_event_type(event.type)
 
+        # No handler for this event type means this server has *no opinion* — it
+        # must abstain (empty verdict list), not vote. A full-confidence ALLOW here
+        # crosses the wire as a real verdict and, under allow_overrides / weighted /
+        # first_applicable, out-votes a genuine deny from another server. Every
+        # composition strategy already treats an empty list as neutral.
         if not handlers:
-            return [Verdict.allow(reasoning="No policies registered for this event")]
+            return []
 
         verdicts: list[Verdict] = []
         current_event = event
@@ -94,19 +102,47 @@ class PolicyRegistry:
         """
         Apply one modification to the event's payload during sequential evaluation.
 
-        The modification's ``operation`` (replace/redact/append/prepend/patch) is
-        honoured via the shared dispatcher; the payload is rebuilt with
+        Routed through the shared :func:`apply_modifications`, so ``operation``
+        (replace/redact/append/prepend/patch) means the same here as at every other
+        enforcement point; the payload is rebuilt with
         :meth:`~pydantic.BaseModel.model_copy`, so untouched fields are preserved and
         the original event is never mutated.
-        """
-        field_name = self._payload_field_for_target(event.payload, modification.target)
-        if field_name is None:
-            return event
 
-        current = getattr(event.payload, field_name)
-        new_value = apply_operation(current, modification)
-        new_payload = event.payload.model_copy(update={field_name: new_value})
-        return event.model_copy(update={"payload": new_payload})
+        A target the server-side payload can't represent (e.g. ``input``/``plan``)
+        raises :class:`UnsupportedModificationTarget`, which we catch and skip *for the
+        sequential pre-application only* — the modification is still returned in the
+        policy's verdict and enforced fail-closed at the instrumentation layer, so
+        chaining it here is best-effort, not a missed enforcement.
+        """
+        holder: dict[str, PolicyEvent] = {"event": event}
+
+        def resolve(target: str):
+            field_name = self._payload_field_for_target(holder["event"].payload, target)
+            if field_name is None:
+                return None
+
+            def read_current() -> Any:
+                return getattr(holder["event"].payload, field_name)
+
+            def write_new(value: Any) -> None:
+                new_payload = holder["event"].payload.model_copy(
+                    update={field_name: value}
+                )
+                holder["event"] = holder["event"].model_copy(
+                    update={"payload": new_payload}
+                )
+
+            return read_current, write_new
+
+        try:
+            apply_modifications([modification], resolve)
+        except UnsupportedModificationTarget:
+            logger.debug(
+                f"Modification target {modification.target!r} is not chainable "
+                f"during sequential evaluation; it is still returned in the verdict "
+                f"and enforced at the instrumentation layer."
+            )
+        return holder["event"]
 
     @staticmethod
     def _payload_field_for_target(payload: EventPayload, target: str) -> Optional[str]:
@@ -123,9 +159,4 @@ class PolicyRegistry:
             return "tool_args"
         if target == "llm_prompt":
             return "llm_prompt"
-
-        logger.warning(
-            f"Modification target {target!r} is not supported during sequential "
-            f"evaluation; use instrumentation-level events instead"
-        )
         return None

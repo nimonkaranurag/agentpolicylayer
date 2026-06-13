@@ -49,12 +49,15 @@ async def invoke_policy_handler(
 
     except Exception as exc:
         elapsed_ms = _calculate_elapsed_ms(start_time)
+        # Log the exception detail server-side, but keep it OUT of the verdict
+        # reasoning: the verdict crosses the wire to the client and the raw
+        # exception text can carry internal paths, prompts, or secrets.
         logger.error(f"Policy {policy.name} raised exception: {exc}")
         return _create_unavailable_verdict(
             policy,
             elapsed_ms,
             fail_mode,
-            reason=f"Policy error: {exc}",
+            reason=f"Policy {policy.name!r} raised an error during evaluation",
         )
 
 

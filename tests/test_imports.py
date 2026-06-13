@@ -73,15 +73,19 @@ class TestFlagshipSmoke:
         assert callable(server.policy)
         assert callable(server.run)
 
-    def test_transport_registry_is_populated(self) -> None:
+    def test_create_transport_resolves_both_schemes(self) -> None:
+        # The http transport is lazy-loaded (its aiohttp dependency is an extra),
+        # but both schemes still resolve through create_transport, and
+        # HTTPTransport remains importable from the package via PEP 562.
         from apl.transports import (
-            TRANSPORT_REGISTRY,
             HTTPTransport,
             StdioTransport,
+            create_transport,
         )
 
-        assert TRANSPORT_REGISTRY["http"] is HTTPTransport
-        assert TRANSPORT_REGISTRY["stdio"] is StdioTransport
+        server = apl.PolicyServer("import-smoke")
+        assert isinstance(create_transport("stdio", server), StdioTransport)
+        assert isinstance(create_transport("http", server), HTTPTransport)
 
     def test_provider_classes_import(self) -> None:
         from apl.instrumentation.providers import (

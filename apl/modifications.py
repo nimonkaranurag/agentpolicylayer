@@ -25,7 +25,7 @@ Design notes:
 from __future__ import annotations
 
 import copy
-from typing import Any, Union
+from typing import Any, Callable, Iterable, Optional, Union
 
 from apl.types import Modification
 
@@ -33,6 +33,54 @@ from apl.types import Modification
 DEFAULT_REDACTION = "[REDACTED]"
 
 PathToken = Union[str, int]
+
+#: A ``(read_current, write_new)`` pair for the slot a modification target writes.
+Accessor = tuple[Callable[[], Any], Callable[[Any], None]]
+#: Resolve a modification ``target`` to its accessor, or ``None`` if unsupported here.
+AccessorResolver = Callable[[str], Optional[Accessor]]
+
+
+class UnsupportedModificationTarget(ValueError):
+    """
+    A MODIFY verdict named a target this enforcement point cannot apply.
+
+    Raised by :func:`apply_modifications` when the resolver has no slot for a
+    modification's ``target``. It is an *error*, not a skip — letting the action
+    proceed without the modification a policy demanded is exactly the fail-open
+    behaviour this product must not have. The server-side *sequential* applier is
+    the one deliberate exception: it catches this and chains best-effort, because
+    the modification is still returned in the verdict and enforced fail-closed at
+    the instrumentation layer.
+    """
+
+
+def apply_modifications(
+    modifications: Iterable[Modification],
+    resolve: AccessorResolver,
+) -> None:
+    """
+    Apply each modification through :func:`apply_operation`, failing closed.
+
+    ``resolve(target)`` returns a ``(read_current, write_new)`` accessor for the slot
+    the target writes, or ``None`` when this enforcement point has no such slot — in
+    which case :class:`UnsupportedModificationTarget` is raised rather than the
+    modification silently dropped.
+
+    This is the single applier every enforcement point routes through — the server's
+    sequential evaluator, the in-process instrumentation events, and the decorator — so
+    that an unsupported target means the same thing, and ``operation`` is honoured, in
+    all three. They used to be three divergent copies, which is precisely why one
+    raised, one warned-and-skipped (fail open), and one silently replaced.
+    """
+    for modification in modifications:
+        accessor = resolve(modification.target)
+        if accessor is None:
+            raise UnsupportedModificationTarget(
+                f"modification target {modification.target!r} is not supported at "
+                f"this enforcement point"
+            )
+        read_current, write_new = accessor
+        write_new(apply_operation(read_current(), modification))
 
 
 def apply_operation(current: Any, modification: Modification) -> Any:

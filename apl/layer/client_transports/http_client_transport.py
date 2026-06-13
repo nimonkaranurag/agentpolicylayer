@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 from typing import Any
 
 from apl.types import PolicyUnavailableError
@@ -18,6 +19,10 @@ except ImportError:
 # default. Every availability failure (timeout, non-200, network error) raises
 # PolicyUnavailableError so the client can fail closed.
 DEFAULT_TIMEOUT_SECONDS: float = 10.0
+# Cap on a policy-server *response* body. aiohttp imposes no response limit, so a
+# compromised or buggy server — the precise thing the layer exists to gate — could
+# return multi-GB and OOM the agent. Anything larger fails closed.
+DEFAULT_MAX_RESPONSE_BYTES: int = 16 * 1024 * 1024  # 16 MiB
 
 
 class HttpClientTransport(BaseClientTransport):
@@ -26,9 +31,17 @@ class HttpClientTransport(BaseClientTransport):
         base_url: str,
         *,
         timeout_seconds: float = DEFAULT_TIMEOUT_SECONDS,
+        token: str | None = None,
+        max_response_bytes: int = DEFAULT_MAX_RESPONSE_BYTES,
     ) -> None:
         self._base_url: str = base_url.rstrip("/")
         self._timeout_seconds: float = timeout_seconds
+        self._max_response_bytes: int = max_response_bytes
+        # Optional bearer token so a PolicyLayer can talk to a server started with
+        # --auth-token (the documented "shared org policies" deployment).
+        self._headers: dict[str, str] = (
+            {"Authorization": f"Bearer {token}"} if token else {}
+        )
         self._session: aiohttp.ClientSession | None = None
         # aiohttp pins a ClientSession to the loop it was created on. We track
         # that loop so evaluate() can recreate the session if it ends up running
@@ -69,13 +82,15 @@ class HttpClientTransport(BaseClientTransport):
 
         manifest_url: str = f"{self._base_url}/manifest"
         try:
-            async with session.get(manifest_url) as response:
+            async with session.get(
+                manifest_url, headers=self._headers, allow_redirects=False
+            ) as response:
                 if response.status != 200:
                     raise PolicyUnavailableError(
                         f"policy server {self._base_url} returned HTTP "
                         f"{response.status} on connect"
                     )
-                manifest_data: dict[str, Any] = await response.json()
+                manifest_data: dict[str, Any] = await self._read_json_capped(response)
                 return manifest_data
         except PolicyUnavailableError:
             await self._close_session()
@@ -94,14 +109,19 @@ class HttpClientTransport(BaseClientTransport):
         evaluate_url: str = f"{self._base_url}/evaluate"
 
         try:
-            async with session.post(evaluate_url, json=serialized_event) as response:
+            async with session.post(
+                evaluate_url,
+                json=serialized_event,
+                headers=self._headers,
+                allow_redirects=False,
+            ) as response:
                 if response.status != 200:
                     raise PolicyUnavailableError(
                         f"policy server {self._base_url} returned HTTP "
                         f"{response.status}"
                     )
 
-                data: dict[str, Any] = await response.json()
+                data: dict[str, Any] = await self._read_json_capped(response)
                 return data.get("verdicts", [])
         except PolicyUnavailableError:
             raise
@@ -111,6 +131,27 @@ class HttpClientTransport(BaseClientTransport):
             # fail closed instead of silently allowing the action.
             raise PolicyUnavailableError(
                 f"HTTP transport error talking to {self._base_url}: {exc}"
+            ) from exc
+
+    async def _read_json_capped(self, response: Any) -> dict[str, Any]:
+        """
+        Read and JSON-decode a response body, capped at ``max_response_bytes``.
+
+        Reads at most cap+1 bytes and fails closed if it overflows, trusting neither the
+        presence nor the absence of a Content-Length header — so a compromised or buggy
+        policy server can't OOM the agent with an unbounded body.
+        """
+        body = await response.content.read(self._max_response_bytes + 1)
+        if len(body) > self._max_response_bytes:
+            raise PolicyUnavailableError(
+                f"policy server {self._base_url} response exceeded "
+                f"{self._max_response_bytes} bytes"
+            )
+        try:
+            return json.loads(body)
+        except (json.JSONDecodeError, ValueError) as exc:
+            raise PolicyUnavailableError(
+                f"policy server {self._base_url} returned a non-JSON body: {exc}"
             ) from exc
 
     async def close(self) -> None:

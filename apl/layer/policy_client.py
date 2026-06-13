@@ -69,11 +69,19 @@ def _assert_protocol_compatible(server_version: str, uri: str) -> None:
 
 
 class PolicyClient:
-    def __init__(self, uri: str, fail_mode: FailMode = FailMode.CLOSED) -> None:
+    def __init__(
+        self,
+        uri: str,
+        fail_mode: FailMode = FailMode.CLOSED,
+        *,
+        token: Optional[str] = None,
+    ) -> None:
         self.uri: str = uri
         self._fail_mode: FailMode = fail_mode
         self.manifest: Optional[PolicyManifest] = None
-        self._transport: BaseClientTransport = resolve_client_transport_for_uri(uri)
+        self._transport: BaseClientTransport = resolve_client_transport_for_uri(
+            uri, token=token
+        )
         self._is_connected: bool = False
 
     async def connect(self) -> None:

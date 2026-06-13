@@ -32,6 +32,9 @@ class PolicyLayer:
         self._composition: CompositionConfig = composition or CompositionConfig()
         self._clients: list[PolicyClient] = []
         self._is_connected: bool = False
+        # Serialises connect() so two concurrent first-evaluate() calls can't both
+        # spawn subprocesses / open aiohttp sessions (the first set leaked).
+        self._connect_lock: asyncio.Lock = asyncio.Lock()
         self._composer: VerdictComposer = VerdictComposer(self._composition)
         self._event_builder: PolicyEventBuilder = PolicyEventBuilder()
         self._decorator_factory: PolicyDecoratorFactory = PolicyDecoratorFactory(self)
@@ -47,8 +50,10 @@ class PolicyLayer:
         """
         return self._composition.fail_mode
 
-    def add_server(self, uri: str) -> PolicyLayer:
-        client: PolicyClient = PolicyClient(uri, fail_mode=self._composition.fail_mode)
+    def add_server(self, uri: str, *, token: str | None = None) -> PolicyLayer:
+        client: PolicyClient = PolicyClient(
+            uri, fail_mode=self._composition.fail_mode, token=token
+        )
         self._clients.append(client)
         return self
 
@@ -56,8 +61,29 @@ class PolicyLayer:
         if self._is_connected:
             return
 
-        await asyncio.gather(*[client.connect() for client in self._clients])
-        self._is_connected = True
+        async with self._connect_lock:
+            # Re-check under the lock: a concurrent caller may have connected while
+            # we waited, and connecting twice would spawn duplicate subprocesses /
+            # sessions.
+            if self._is_connected:
+                return
+
+            results = await asyncio.gather(
+                *[client.connect() for client in self._clients],
+                return_exceptions=True,
+            )
+            # A server that can't be reached at connect time must NOT abort the whole
+            # layer and disable the healthy servers. Its own evaluate() retries the
+            # connection and fails closed to a deny verdict per fail_mode, so here we
+            # only log and carry on.
+            for client, result in zip(self._clients, results):
+                if isinstance(result, BaseException):
+                    logger.warning(
+                        f"Policy server {client.uri} failed to connect: {result}; "
+                        f"it will fail closed on evaluation until it recovers."
+                    )
+
+            self._is_connected = True
 
         total_policies: int = sum(
             (len(client.manifest.policies) if client.manifest else 0)
@@ -79,6 +105,20 @@ class PolicyLayer:
         payload: EventPayload | None = None,
         metadata: SessionMetadata | None = None,
     ) -> Verdict:
+        # No servers configured at all is a misconfiguration (typo'd/empty config),
+        # not "all policies abstained". Composing zero verdicts would silently ALLOW
+        # everything, so fail closed per fail_mode and say why — distinct from a
+        # server being unreachable, which already denies.
+        if not self._clients:
+            logger.warning(
+                "PolicyLayer.evaluate() called with no policy servers configured; "
+                "failing closed. Did you forget add_server()?"
+            )
+            return Verdict.unavailable(
+                self._composition.fail_mode,
+                reasoning="No policy servers are configured on this PolicyLayer",
+            )
+
         if not self._is_connected:
             await self.connect()
 

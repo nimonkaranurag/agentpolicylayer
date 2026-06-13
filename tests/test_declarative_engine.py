@@ -658,3 +658,123 @@ class TestDeclarativeEngineFailsClosedAtRuntime:
         verdicts = asyncio.run(server.evaluate(event))
         assert verdicts
         assert verdicts[0].decision == Decision.DENY
+
+
+TYPO_WHEN_PATH_POLICY = """
+name: s
+policies:
+  - name: p
+    events: [output.pre_send]
+    rules:
+      - when: {payload.output_txt: {contains: SECRET}}
+        then: {decision: deny}
+"""
+
+VALID_WHEN_PATH_POLICY = """
+name: s
+policies:
+  - name: p
+    events: [output.pre_send]
+    rules:
+      - when: {payload.output_text: {contains: SECRET}}
+        then: {decision: deny}
+"""
+
+MISSING_DECISION_POLICY = """
+name: s
+policies:
+  - name: p
+    events: [output.pre_send]
+    rules:
+      - when: {payload.output_text: {contains: SECRET}}
+        then: {reasoning: hmm}
+"""
+
+IN_STRING_POLICY = """
+name: s
+policies:
+  - name: p
+    events: [input.received]
+    rules:
+      - when: {metadata.user_id: {in: 'alice,bob'}}
+        then: {decision: deny}
+"""
+
+INVALID_DEFAULT_DECISION_POLICY = """
+name: s
+policies:
+  - name: p
+    events: [input.received]
+    default_decision: maybe
+    rules: []
+"""
+
+NO_MATCH_POLICY = """
+name: s
+policies:
+  - name: p
+    events: [output.pre_send]
+    rules:
+      - when: {payload.output_text: {contains: NEVERFOUND}}
+        then: {decision: deny}
+"""
+
+DEFAULT_DENY_NO_MATCH_POLICY = """
+name: s
+policies:
+  - name: p
+    events: [output.pre_send]
+    default_decision: deny
+    rules:
+      - when: {payload.output_text: {contains: NEVERFOUND}}
+        then: {decision: allow}
+"""
+
+
+class TestWhenPathValidation:
+    # A `when` path is validated against the PolicyEvent model, so a typo can't
+    # produce a rule that silently never fires while `apl validate` calls it fine.
+
+    def test_typoed_path_is_reported(self, tmp_path):
+        errors = validate_yaml_policy(_write_policy(tmp_path, TYPO_WHEN_PATH_POLICY))
+        assert any("output_txt" in e for e in errors), errors
+
+    def test_valid_path_has_no_errors(self, tmp_path):
+        errors = validate_yaml_policy(_write_policy(tmp_path, VALID_WHEN_PATH_POLICY))
+        assert errors == []
+
+
+class TestThenDecisionRequired:
+    def test_missing_decision_is_reported(self, tmp_path):
+        errors = validate_yaml_policy(_write_policy(tmp_path, MISSING_DECISION_POLICY))
+        assert any("decision" in e for e in errors), errors
+
+
+class TestInOperatorRequiresList:
+    def test_string_argument_is_reported(self, tmp_path):
+        # `in: "a,b"` is substring matching (allowlist bypass); the validator
+        # requires a list.
+        errors = validate_yaml_policy(_write_policy(tmp_path, IN_STRING_POLICY))
+        assert any(".in" in e for e in errors), errors
+
+    def test_string_argument_raises_at_eval(self):
+        with pytest.raises(ValueError):
+            ConditionEvaluator()._handle_membership("alice", "alice,bob")
+
+
+class TestDefaultDecision:
+    def test_invalid_default_decision_is_reported(self, tmp_path):
+        errors = validate_yaml_policy(
+            _write_policy(tmp_path, INVALID_DEFAULT_DECISION_POLICY)
+        )
+        assert any("default_decision" in e for e in errors), errors
+
+    def test_no_match_returns_observe_not_allow(self, tmp_path):
+        server = load_yaml_policy(_write_policy(tmp_path, NO_MATCH_POLICY))
+        verdicts = asyncio.run(server.evaluate(PolicyEvent(type="output.pre_send")))
+        assert [v.decision for v in verdicts] == [Decision.OBSERVE]
+
+    def test_default_decision_deny_denies_on_no_match(self, tmp_path):
+        server = load_yaml_policy(_write_policy(tmp_path, DEFAULT_DENY_NO_MATCH_POLICY))
+        verdicts = asyncio.run(server.evaluate(PolicyEvent(type="output.pre_send")))
+        assert [v.decision for v in verdicts] == [Decision.DENY]

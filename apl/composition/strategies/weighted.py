@@ -31,13 +31,15 @@ class WeightedStrategy(BaseCompositionStrategy):
         allow_score = self._score_for(verdicts, Decision.ALLOW)
         deny_score = self._score_for(verdicts, Decision.DENY)
 
-        if deny_score > allow_score:
-            deny = self._find_first_verdict_with_decision(verdicts, Decision.DENY)
-            if deny is not None:
-                return deny
-            return Verdict.deny(
-                reasoning=f"Weighted deny ({deny_score:.2f} vs {allow_score:.2f})"
-            )
+        # Deny wins on a tie (>=), so the bias is toward enforcement: allow must
+        # score *strictly* higher to overturn a deny. This also catches the
+        # degenerate lone deny(confidence=0.0) case — 0 >= 0 with a deny present
+        # denies rather than falling through to allow. The `any deny voted` guard
+        # keeps an all-allow / all-modify set (deny_score 0, allow_score 0) from
+        # being read as a deny.
+        deny = self._find_first_verdict_with_decision(verdicts, Decision.DENY)
+        if deny is not None and deny_score >= allow_score:
+            return deny
 
         if all_mods:
             return Verdict(

@@ -4,14 +4,11 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Callable
 
-from apl.logging import get_logger
-from apl.modifications import apply_operation
+from apl.modifications import Accessor, apply_modifications
 from apl.types import Decision, EventPayload, EventType, Verdict
 
 if TYPE_CHECKING:
     from ..lifecycle.context import LifecycleContext
-
-logger = get_logger("instrumentation")
 
 
 @dataclass(frozen=True)
@@ -58,17 +55,28 @@ class BaseEvent(ABC):
         verdict: Verdict,
         context: LifecycleContext,
     ) -> None:
+        """
+        Apply a MODIFY verdict's modifications to the lifecycle context.
+
+        Routed through the shared :func:`apply_modifications`, so a modification
+        targeting a slot this event doesn't have (e.g. ``output`` at
+        ``tool.pre_invoke``) raises :class:`UnsupportedModificationTarget` and the
+        action is blocked — it is *not* silently skipped while the action proceeds
+        unmodified, which was a fail-open (the policy demanded a change that never
+        happened).
+        """
         if verdict.decision != Decision.MODIFY:
             return
 
         accessors = self.target_accessors()
-        for modification in verdict.modifications:
-            accessor = accessors.get(modification.target)
+
+        def resolve(target: str) -> Accessor | None:
+            accessor = accessors.get(target)
             if accessor is None:
-                logger.warning(
-                    f"Ignoring modification: target {modification.target!r} is "
-                    f"not supported by event {self.event_type.value}"
-                )
-                continue
-            current = accessor.get(context)
-            accessor.set(context, apply_operation(current, modification))
+                return None
+            return (
+                lambda: accessor.get(context),
+                lambda value: accessor.set(context, value),
+            )
+
+        apply_modifications(verdict.modifications, resolve)

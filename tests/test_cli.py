@@ -315,7 +315,7 @@ class TestValidate:
                     events: [output.pre_send]
                     rules:
                       - when:
-                          output_text: {contains: secret}
+                          payload.output_text: {contains: secret}
                         then:
                           decision: deny
                 """

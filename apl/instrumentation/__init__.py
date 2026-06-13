@@ -10,6 +10,12 @@ from .state import InstrumentationState
 
 logger = get_logger("instrumentation")
 
+# The currently-active instrumentation, if any. SDK methods are patched on the
+# *class*, so instrumentation is process-global: a second auto_instrument() with a
+# different layer would find every method already patched, install nothing, and
+# silently keep the first layer — while logging success. We refuse that instead.
+_ACTIVE_STATE: Optional[InstrumentationState] = None
+
 
 def auto_instrument(
     policy_servers: List[str],
@@ -28,7 +34,20 @@ def auto_instrument(
 
     Returns the :class:`InstrumentationState`; pass it to :func:`uninstrument` to
     restore the original methods, or use the :func:`instrument` context manager.
+
+    Raises:
+        RuntimeError: if APL is already instrumented. The SDK methods are patched on
+            the class (process-global), so a second call would no-op silently; call
+            :func:`uninstrument` first to re-point at a different layer.
     """
+    global _ACTIVE_STATE
+    if _ACTIVE_STATE is not None:
+        raise RuntimeError(
+            "APL is already instrumented. Call uninstrument() before instrumenting "
+            "again — a second auto_instrument() would silently no-op (the SDK "
+            "methods are already patched) and keep the first policy layer."
+        )
+
     # fail_mode flows onto the layer's composition config; CompositionConfig
     # emits a startup warning if fail-open is chosen. The evaluator reads it back
     # so policy errors fail closed (deny) by default.
@@ -70,6 +89,8 @@ def auto_instrument(
             "Auto-instrumentation enabled but no supported provider SDKs were "
             "found to patch."
         )
+
+    _ACTIVE_STATE = state
     return state
 
 
@@ -77,12 +98,21 @@ def uninstrument(state: InstrumentationState) -> None:
     """
     Restore everything :func:`auto_instrument` patched and free its resources.
     """
+    global _ACTIVE_STATE
+
     for provider in state.active_providers:
         provider.unpatch_all_methods()
     state.clear_providers()
-    # Restoring the patches isn't enough — the sync bridge may have spun up a daemon
-    # event loop; tear it down so uninstrument leaves no live thread behind.
+    # Close the policy layer (stdio subprocesses, aiohttp sessions) *before* the
+    # background loop is gone — close() is async and runs on that loop. Restoring
+    # the patches alone left those subprocesses/sessions orphaned.
+    state.close_policy_layer()
+    # The sync bridge may have spun up a daemon event loop; tear it down so
+    # uninstrument leaves no live thread behind.
     state.shutdown_background_loop()
+
+    if _ACTIVE_STATE is state:
+        _ACTIVE_STATE = None
     logger.info("APL instrumentation removed")
 
 

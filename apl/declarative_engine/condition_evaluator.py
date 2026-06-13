@@ -128,7 +128,18 @@ class ConditionEvaluator:
         return value is not None and value <= threshold
 
     @staticmethod
-    def _handle_membership(value: Any, allowed_values: list[Any]) -> bool:
+    def _handle_membership(value: Any, allowed_values: Any) -> bool:
+        # `in` is membership against a *collection*. A bare string argument
+        # (``in: "admin,user"``) would silently become substring matching, so
+        # "min,us" reads as allowlisted — a fail-open in the natural
+        # `not: {in: [...]}` allowlist pattern. Require a real list/tuple/set and
+        # fail closed otherwise.
+        if not isinstance(allowed_values, (list, tuple, set)):
+            raise ValueError(
+                "'in' expects a list of allowed values, got "
+                f"{type(allowed_values).__name__}; a string argument would match "
+                "substrings (allowlist bypass)"
+            )
         return value in allowed_values
 
     def _handle_negation(self, value: Any, inner_condition: Any) -> bool:

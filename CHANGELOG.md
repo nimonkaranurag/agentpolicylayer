@@ -9,12 +9,94 @@ Commits.
 
 ## [Unreleased]
 
-### Fixes
+### ⚠ BREAKING CHANGES
 
+- **CLI and HTTP dependencies are now optional extras.** The base install carries
+  only the core runtime (`pydantic`, `pyyaml`, and `rich` — the last used by the
+  injection-safe log renderer). The `apl` command-line tool now requires
+  `pip install 'agent-policy-layer[cli]'` (adds `click`) and the HTTP transport
+  (server *and* client) requires `agent-policy-layer[http]` (adds `aiohttp`);
+  `agent-policy-layer[all]` installs every runtime feature. An embedder doing
+  in-process or stdio evaluation no longer drags CLI/HTTP dependencies in.
+  Requesting an unavailable subsystem fails with an actionable install hint.
+
+### Security
+
+A sweep of *quiet* non-enforcement paths — cases where APL reported (or implied)
+that it had enforced something it had not. All now fail closed.
+
+- **Composition no longer fails open.** Two policies modifying the same target
+  (e.g. redact PII **and** append a disclaimer on `output`) both apply instead of
+  the last silently dropping the first; weighted ties resolve to **deny** (not
+  allow); a server with no policy for an event **abstains** (empty verdict list)
+  instead of emitting a full-confidence ALLOW that out-voted a real deny;
+  `first_applicable` lets the first verdict actually win; `allow_overrides` no
+  longer flips ALLOW→DENY when a monitoring-only OBSERVE verdict is present.
+- **Streaming and modern entry points are enforced.** Anthropic streaming is read
+  via its `content_block_delta` shape (previously every chunk extracted `""`, so
+  the output policy never ran). The OpenAI Responses API, `beta.chat.completions.
+  parse`, and LangChain `.stream()`/`.astream()` are now instrumented; Anthropic's
+  bespoke `messages.stream()` helper is a documented exclusion.
+- **Modifications fail closed.** The three modification appliers were unified into
+  one shared, fail-closed function: a MODIFY targeting a slot the enforcement point
+  can't apply now raises instead of being silently skipped while the action
+  proceeds unmodified.
+- **The declarative engine no longer silently never-fires.** `apl validate` checks
+  each `when` dot-path against the event model (a typo like `payload.output_txt` is
+  rejected), requires `then.decision`, and validates `in` arguments are lists (a
+  string argument was substring matching — an allowlist bypass). Unmatched policies
+  return OBSERVE-with-trace, not a bare ALLOW.
+- **stdio transport integrity.** The client now correlates each reply to the
+  request it sent (`event_id`) under a per-transport lock, tearing the subprocess
+  down and failing closed on a mismatch or a cancelled read — fixing wrong-verdict
+  delivery and post-timeout desync under concurrent `evaluate`. Oversize frames
+  (>16 MiB) fail closed instead of crashing with an uncaught `LimitOverrunError`,
+  and a spawned policy server no longer inherits the agent's secret env vars.
+- **A misconfigured layer fails closed.** A `PolicyLayer` with no `add_server()`
+  now denies (per `fail_mode`) with a warning instead of silently allowing
+  everything; one unreachable server degrades to a deny in its own evaluation
+  instead of wedging the whole layer.
+- **HTTP client hardening.** Response bodies are read with a 16 MiB cap (a
+  compromised server could otherwise OOM the agent), redirects are not followed
+  (SSRF / https→http downgrade), and a bearer token can be supplied via
+  `add_server(uri, token=...)`.
+- **Verdict/type invariants & info disclosure.** `Verdict` is `validate_assignment`
+  (mutating it re-checks invariants), `on_timeout` is constrained to allow/deny,
+  naive datetimes are coerced to UTC, policy exception text is no longer echoed
+  into `verdict.reasoning`, `GET /health` no longer discloses server
+  name/version/policy-count to an unauthenticated caller, and the default aiohttp
+  `Server` version header is suppressed.
+
+### Added
+
+- `PolicyLayer.add_server(uri, *, token=...)` — bearer-token auth for the HTTP
+  client, so auth-protected "shared org policies" servers are reachable.
+- Declarative policies accept a per-policy `default_decision` (`deny`/`allow`/
+  `observe`) controlling what an unmatched policy returns — a default-deny
+  allowlist is now expressible.
+- Request-side MODIFY (`input`/`llm_prompt`) is converted back to each provider's
+  native message shape and written to the slot the SDK actually reads.
+
+### Fixed
+
+- The decorator's MODIFY now writes `tool_args` back to the positional slot it came
+  from, so the README's own `call_tool("name", {...})` call style no longer raises
+  `TypeError: multiple values for argument 'tool_args'`.
+- `auto_instrument` is refused (clear error) if APL is already instrumented, and
+  `uninstrument` closes the policy layer's subprocesses/sessions before tearing
+  down the background loop instead of leaking them.
 - Fixed `examples/usage_demo.py` to be compatible with `v0.4.0` of APL.
 - HTTP server: `GET /` now redirects to `/health` instead of erroring — the route
   handler was synchronous, which aiohttp 3.x rejects at request time.
 - CI (was failing): Type-checking (`mypy`) reported errors have been fixed.
+
+### Changed
+
+- **Releases are gated on green CI.** The automated PyPI publish
+  (`release-please.yml`) now runs lint + type-check + the full test matrix before
+  shipping, so a release cut from a red commit can no longer publish an
+  unrecoverable broken wheel; the rolling `dev` wheel is tested before it's
+  published; and the manual `publish.yml` matrix matches CI (3.10–3.13, `[dev,all]`).
 
 ### Doc Updates
 

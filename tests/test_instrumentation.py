@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import asyncio
 
+import pytest
+
 from apl.instrumentation.evaluation.policy_evaluator import (
     PolicyEvaluator,
 )
@@ -20,6 +22,7 @@ from apl.instrumentation.state import (
     InstrumentationState,
 )
 from apl.layer import PolicyDenied, PolicyLayer
+from apl.modifications import UnsupportedModificationTarget
 from apl.types import (
     CompositionConfig,
     Decision,
@@ -116,15 +119,17 @@ class TestApplyVerdictModifications:
         get_event("output.pre_send").apply_verdict_modifications(Verdict.allow(), ctx)
         assert ctx.response_text == "unchanged"
 
-    def test_modify_with_unsupported_target_is_noop(self):
-        # A MODIFY whose target this event doesn't support is a no-op. (A MODIFY
-        # with *no* modifications is no longer representable; that invariant is
-        # covered in test_serialization.)
+    def test_modify_with_unsupported_target_fails_closed(self):
+        # A MODIFY whose target this event doesn't support must fail closed (raise),
+        # not silently no-op: a dropped modification means the action proceeds
+        # without the change the policy demanded. (A MODIFY with *no* modifications
+        # is not representable; that invariant is covered in test_serialization.)
         ctx = LifecycleContext(response_text="unchanged")
-        get_event("output.pre_send").apply_verdict_modifications(
-            Verdict.modify(target="tool_args", operation="replace", value="x"),
-            ctx,
-        )
+        with pytest.raises(UnsupportedModificationTarget):
+            get_event("output.pre_send").apply_verdict_modifications(
+                Verdict.modify(target="tool_args", operation="replace", value="x"),
+                ctx,
+            )
         assert ctx.response_text == "unchanged"
 
     def test_replace_modification_is_applied(self):
@@ -134,6 +139,36 @@ class TestApplyVerdictModifications:
             ctx,
         )
         assert ctx.response_text == "new"
+
+
+class TestRequestSideModify:
+    # A request-side MODIFY (input/llm_prompt) must be converted back to the
+    # provider's native shape and written to the slot the SDK reads — not shipped
+    # as foreign-typed APL Message objects in a kwarg some SDKs ignore.
+
+    def test_context_converts_back_via_adapter(self):
+        ctx = LifecycleContext(
+            apl_messages=[Message(role="user", content="hi")],
+            message_adapter_to_raw=lambda msgs: [
+                {"role": m.role, "content": m.content} for m in msgs
+            ],
+        )
+        ctx.modify_request_messages([Message(role="user", content="redacted")])
+        assert ctx.request_messages_modified is True
+        assert ctx.effective_request_messages() == [
+            {"role": "user", "content": "redacted"}
+        ]
+
+    def test_langchain_writes_request_messages_positionally(self):
+        from apl.instrumentation.providers.langchain_provider import LangChainProvider
+
+        provider = LangChainProvider.__new__(LangChainProvider)
+        args, kwargs = provider.write_request_messages(
+            ("orig-input", {"config": 1}), {}, "new-input"
+        )
+        # invoke(input) is positional; a messages= kwarg would be ignored.
+        assert args[0] == "new-input"
+        assert "messages" not in kwargs
 
 
 def _executor_yielding(verdicts: list[Verdict]) -> LifecycleExecutor:

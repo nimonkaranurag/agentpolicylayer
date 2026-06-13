@@ -15,6 +15,7 @@ from apl.types import (
     CompositionConfig,
     CompositionMode,
     Decision,
+    Modification,
     Verdict,
 )
 
@@ -269,13 +270,21 @@ class TestWeightedStrategy:
         result = self.strategy.compose(verdicts)
         assert result.decision == Decision.ALLOW
 
-    def test_equal_scores_allow_wins(self):
+    def test_equal_scores_deny_wins(self):
+        # Deny wins on a tie — allow must score *strictly* higher to overturn a
+        # deny — so the bias is toward enforcement (matches the docstring/README).
         verdicts = [
             Verdict.allow(confidence=0.5),
             Verdict.deny("tie", confidence=0.5),
         ]
         result = self.strategy.compose(verdicts)
-        assert result.decision == Decision.ALLOW
+        assert result.decision == Decision.DENY
+
+    def test_lone_zero_confidence_deny_still_denies(self):
+        # A lone deny(confidence=0.0) with no allow votes: 0 >= 0 with a deny
+        # present denies, rather than falling through to allow.
+        result = self.strategy.compose([Verdict.deny("block", confidence=0.0)])
+        assert result.decision == Decision.DENY
 
     def test_configured_weight_overrides_confidence(self):
         # A heavily-weighted, modest-confidence deny beats a default-weight,
@@ -315,7 +324,7 @@ class TestGetStrategy:
             CompositionMode.ALLOW_OVERRIDES: Decision.ALLOW,
             CompositionMode.UNANIMOUS: Decision.DENY,
             CompositionMode.FIRST_APPLICABLE: Decision.ALLOW,
-            CompositionMode.WEIGHTED: Decision.ALLOW,  # 1.0 vs 1.0 tie -> allow
+            CompositionMode.WEIGHTED: Decision.DENY,  # 1.0 vs 1.0 tie -> deny wins
         }
         assert set(expected) == set(CompositionMode)
         for mode, decision in expected.items():
@@ -361,3 +370,42 @@ class TestVerdictComposer:
             _named(Verdict.deny("risky", confidence=0.5), "strict"),
         ]
         assert composer.compose(verdicts).decision == Decision.DENY
+
+
+class TestModificationCollection:
+    # A composed MODIFY must keep *every* modification, in order, and only from
+    # MODIFY verdicts — collapsing same-target mods to last-writer-wins silently
+    # dropped a redaction, and harvesting a DENY-attached mod applied a transform
+    # the composing decision never authorised.
+
+    def test_same_target_modifications_both_survive(self):
+        # redact PII + append a disclaimer on `output`: both must apply.
+        verdicts = [
+            Verdict.modify(target="output", operation="redact", value="[PII]"),
+            Verdict.modify(target="output", operation="append", value=" (AI)"),
+        ]
+        composed = DenyOverridesStrategy().compose(verdicts)
+        assert composed.decision == Decision.MODIFY
+        ops = {(m.target, m.operation) for m in composed.modifications}
+        assert ops == {("output", "redact"), ("output", "append")}
+
+    def test_deny_attached_modification_is_not_harvested(self):
+        deny_with_mod = Verdict(
+            decision=Decision.DENY,
+            reasoning="blocked",
+            modifications=[
+                Modification(target="output", operation="replace", value="x")
+            ],
+        )
+        composed = AllowOverridesStrategy().compose([Verdict.allow(), deny_with_mod])
+        # allow wins; the denied policy's modification is not applied.
+        assert composed.decision == Decision.ALLOW
+
+
+class TestNoOpinionIsNeutral:
+    # A server with no policy for an event abstains (empty verdict list); it must
+    # not cast an ALLOW vote that out-votes a real deny under allow_overrides.
+    def test_abstain_does_not_outvote_a_deny(self):
+        pooled = [] + [Verdict.deny("blocked")]  # server A: [], server B: deny
+        composed = AllowOverridesStrategy().compose(pooled)
+        assert composed.decision == Decision.DENY

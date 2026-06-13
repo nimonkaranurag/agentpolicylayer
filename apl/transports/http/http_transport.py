@@ -135,6 +135,7 @@ class HTTPTransport(BaseTransport):
             while True:
                 await asyncio.sleep(3600)
         except asyncio.CancelledError:
+            # Expected on shutdown; fall through to stop() in the finally block.
             pass
         finally:
             await self.stop()
