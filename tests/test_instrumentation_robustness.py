@@ -15,7 +15,7 @@ from apl.instrumentation.providers.method_patcher import (
 )
 from apl.instrumentation.state import InstrumentationState
 from apl.layer import PolicyDenied, PolicyLayer
-from apl.types import EventType, Verdict
+from apl.types import EventType, Message, Verdict
 
 _HAS_LANGCHAIN = importlib.util.find_spec("langchain_core") is not None
 
@@ -295,6 +295,116 @@ class TestStreamingInterception:
             state.shutdown_background_loop()
 
 
+class TestAlwaysStreamingEntryPoints:
+    # `.stream()`/`.astream()` are *always* streaming (no `stream=` kwarg to
+    # detect), so they get dedicated wrappers. Without them a streamed response
+    # fell through the non-streaming branch and the output policy never ran.
+
+    def _provider_patching(self, model_cls, method, factory_name):
+        state = _state_with_evaluate(_verdict_for(lambda p: None))
+        provider = _FakeProvider(state, model_cls)
+        provider.method_patcher.register_patch(
+            model_cls, method, getattr(provider, factory_name)()
+        )
+        provider.method_patcher.apply_all_patches()
+        return state, provider
+
+    def test_sync_stream_method_is_enforced_and_reemits(self):
+        class _Model:
+            def stream(self, *a, **kw):
+                return iter([_chunk("Hel"), _chunk("lo")])
+
+        state, provider = self._provider_patching(
+            _Model, "stream", "_sync_stream_instance_factory"
+        )
+        try:
+            text = "".join(
+                c.choices[0].delta.content for c in _Model().stream(**_REQUEST)
+            )
+            assert text == "Hello"
+        finally:
+            provider.method_patcher.remove_all_patches()
+            state.shutdown_background_loop()
+
+    def test_sync_stream_method_can_block(self):
+        def decider(payload):
+            return (
+                Verdict.deny("x") if "secret" in (payload.output_text or "") else None
+            )
+
+        class _Model:
+            def stream(self, *a, **kw):
+                return iter([_chunk("se"), _chunk("cret")])
+
+        state = _state_with_evaluate(_verdict_for(decider))
+        provider = _FakeProvider(state, _Model)
+        provider.method_patcher.register_patch(
+            _Model, "stream", provider._sync_stream_instance_factory()
+        )
+        provider.method_patcher.apply_all_patches()
+        try:
+            with pytest.raises(PolicyDenied):
+                list(_Model().stream(**_REQUEST))
+        finally:
+            provider.method_patcher.remove_all_patches()
+            state.shutdown_background_loop()
+
+    def test_async_stream_method_is_enforced(self):
+        class _Model:
+            def astream(self, *a, **kw):
+                async def gen():
+                    for token in ["Hel", "lo"]:
+                        yield _chunk(token)
+
+                return gen()
+
+        state, provider = self._provider_patching(
+            _Model, "astream", "_async_stream_instance_factory"
+        )
+
+        async def run():
+            return "".join(
+                [c.choices[0].delta.content async for c in _Model().astream(**_REQUEST)]
+            )
+
+        try:
+            assert asyncio.run(run()) == "Hello"
+        finally:
+            provider.method_patcher.remove_all_patches()
+
+
+class TestRequestModifyThroughExecutor:
+    # End-to-end: a pre-request MODIFY of llm_prompt must reach the SDK call as
+    # native chat-completions dicts in the slot it reads — not foreign-typed APL
+    # Message objects, and not a kwarg the SDK ignores.
+    def test_llm_prompt_modify_rewrites_native_messages(self):
+        captured: dict = {}
+
+        class _Client:
+            def create(self, **kwargs):
+                captured.update(kwargs)
+                return _completion("ok")
+
+        async def evaluate(*, event_type, messages, payload, metadata):
+            if event_type == EventType.LLM_PRE_REQUEST:
+                return Verdict.modify(
+                    target="llm_prompt",
+                    operation="replace",
+                    value=[Message(role="user", content="REDACTED")],
+                )
+            return Verdict.allow()
+
+        state = _state_with_evaluate(evaluate)
+        provider = _FakeProvider(state, _Client)
+        provider.patch_all_methods()
+        try:
+            _Client().create(**_REQUEST)
+            assert captured["messages"] == [{"role": "user", "content": "REDACTED"}]
+        finally:
+            provider.method_patcher.remove_all_patches()
+            state.shutdown_background_loop()
+
+
 # ---------------------------------------------------------------------------------------
 # reentrancy guard isolated per async task (contextvars, not threading.local)
 # ---------------------------------------------------------------------------------------
@@ -398,6 +508,17 @@ class TestProviderDrift:
         provider = WatsonXProvider(state)
         inference = types.SimpleNamespace(model_id="ibm/granite-13b")
         assert provider.extract_model_from_request(inference) == "ibm/granite-13b"
+
+    def test_watsonx_writes_request_messages_to_its_slot(self):
+        from apl.instrumentation.providers.watsonx_provider import WatsonXProvider
+
+        provider = WatsonXProvider.__new__(WatsonXProvider)
+        # messages kwarg when present...
+        _, kwargs = provider.write_request_messages((), {"messages": []}, [{"r": 1}])
+        assert kwargs["messages"] == [{"r": 1}]
+        # ...else the first positional argument.
+        args, _ = provider.write_request_messages(("orig",), {}, [{"r": 2}])
+        assert args[0] == [{"r": 2}]
 
     def test_watsonx_registers_async_patch_when_sdk_exposes_achat(self):
         from apl.instrumentation.providers.watsonx_provider import WatsonXProvider

@@ -353,3 +353,25 @@ class TestAddServerToken:
         layer.add_server("http://policies.example", token="s3cret")
         transport = layer._clients[0]._transport
         assert transport._headers.get("Authorization") == "Bearer s3cret"
+
+
+class TestConnectDegradesPerServer:
+    def test_one_unreachable_server_does_not_wedge_the_layer(self):
+        # A server that can't be reached at connect time must not abort the layer
+        # (which would disable the healthy servers). It fails closed in its own
+        # evaluate(); the layer stays up.
+        layer = PolicyLayer()
+        healthy = _client_with(_EmptyTransport())  # connected, abstains with []
+
+        async def _boom():
+            raise PolicyUnavailableError("connection refused")
+
+        unreachable = PolicyClient("stdio://./down.py")
+        unreachable.connect = _boom  # type: ignore[method-assign]
+        layer._clients = [unreachable, healthy]
+
+        verdict = asyncio.run(layer.evaluate(event_type=EventType.OUTPUT_PRE_SEND))
+
+        assert layer._is_connected  # connect() tolerated the failure
+        # unreachable -> fail-closed deny; healthy -> []; deny_overrides -> DENY.
+        assert verdict.decision == Decision.DENY

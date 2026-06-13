@@ -631,6 +631,25 @@ _WRONG_ID_SERVER = (
 )
 
 
+class TestStdioChildEnv:
+    def test_secret_env_vars_are_stripped_from_the_child(self, monkeypatch):
+        # A spawned policy server is a separate trust domain; it must not inherit
+        # the agent's secrets.
+        from apl.layer.client_transports.stdio_client_transport import _child_env
+
+        monkeypatch.setenv("OPENAI_API_KEY", "sk-secret")
+        monkeypatch.setenv("AWS_SECRET_ACCESS_KEY", "aws-secret")
+        monkeypatch.setenv("GITHUB_TOKEN", "ghp_secret")
+        monkeypatch.setenv("APL_PLAIN_SETTING", "keep-me")
+
+        env = _child_env()
+
+        assert "OPENAI_API_KEY" not in env
+        assert "AWS_SECRET_ACCESS_KEY" not in env
+        assert "GITHUB_TOKEN" not in env
+        assert env.get("APL_PLAIN_SETTING") == "keep-me"
+
+
 @pytest.mark.skipif(sys.platform == "win32", reason="POSIX subprocess semantics")
 class TestStdioCorrelation:
     def test_mismatched_event_id_fails_closed(self):
