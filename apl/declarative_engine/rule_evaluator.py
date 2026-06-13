@@ -49,7 +49,13 @@ class RuleEvaluator:
         then_clause: dict[str, Any],
         event: PolicyEvent,
     ) -> Verdict:
-        decision = Decision(then_clause.get("decision", "allow"))
+        # A rule that fired must say what to do. Defaulting a missing decision to
+        # "allow" (the old behaviour) meant a `then:` that forgot `decision:` —
+        # which `apl validate` now also rejects — silently passed the action. With
+        # no decision we fail closed (raise → the handler turns it into a deny).
+        if "decision" not in then_clause:
+            raise ValueError("rule 'then' clause must specify a 'decision'")
+        decision = Decision(then_clause["decision"])
         raw_reasoning = then_clause.get("reasoning", "")
         rendered_reasoning = self._template_renderer.render(raw_reasoning, event)
 

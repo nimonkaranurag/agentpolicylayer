@@ -19,6 +19,10 @@ class YAMLPolicyDefinition:
     version: str = "1.0.0"
     blocking: bool = True
     timeout_ms: int = 1000
+    # What this policy returns when no rule matched. ``None`` means abstain
+    # (OBSERVE) — neutral under composition. Set to ``"deny"`` to opt a policy into
+    # deny-on-no-match (a default-deny allowlist), or ``"allow"``/``"observe"``.
+    default_decision: str | None = None
 
 
 @dataclass

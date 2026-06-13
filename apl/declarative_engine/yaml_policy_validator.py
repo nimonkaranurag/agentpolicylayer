@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 import re
+import types as _types
+from enum import Enum
 from pathlib import Path
-from typing import Any, get_args, get_type_hints
+from typing import Any, Union, get_args, get_origin, get_type_hints
 
 import yaml
+from pydantic import BaseModel
 
-from apl.types import Decision, Escalation, EventType, Modification
+from apl.types import Decision, Escalation, EventType, Modification, PolicyEvent
 
 from .condition_evaluator import ConditionEvaluator
 
@@ -18,6 +21,48 @@ def _literal_values(dataclass_type: type, field_name: str) -> frozenset[str]:
     """
     field_type = get_type_hints(dataclass_type)[field_name]
     return frozenset(get_args(field_type))
+
+
+def _unwrap_optional(annotation: Any) -> Any:
+    """
+    ``Optional[X]`` / ``X | None`` -> ``X`` (leaves other annotations untouched).
+    """
+    origin = get_origin(annotation)
+    if origin is Union or isinstance(annotation, getattr(_types, "UnionType", ())):
+        non_none = [a for a in get_args(annotation) if a is not type(None)]
+        if len(non_none) == 1:
+            return non_none[0]
+    return annotation
+
+
+def _event_path_error(path: str) -> str | None:
+    """
+    Validate a ``when`` dot-path against the :class:`PolicyEvent` model.
+
+    Walks nested pydantic models field by field; the moment the path reaches a dynamic
+    container (``dict``/``Any``), a list, an enum, or a primitive it stops and accepts
+    the rest (those can't be checked statically). Returns an error string only for the
+    unambiguous case — a segment that is *not* a field of the structured model it's
+    indexing — so a typo like ``payload.output_txt`` is caught by ``apl validate``
+    instead of silently never matching at runtime.
+    """
+    if not path:
+        return "empty condition path"
+
+    current: Any = PolicyEvent
+    for segment in path.split("."):
+        current = _unwrap_optional(current)
+        if isinstance(current, type) and issubclass(current, BaseModel):
+            field = current.model_fields.get(segment)
+            if field is None:
+                return f"'{path}': '{segment}' is not a field of {current.__name__}"
+            current = field.annotation
+            continue
+        if isinstance(current, type) and issubclass(current, Enum):
+            return None
+        # dict / list / Any / primitive: traversal beyond here is dynamic.
+        return None
+    return None
 
 
 # Single source of truth: derived from the domain types, never hand-listed.
@@ -115,6 +160,16 @@ class YamlPolicyValidator:
         if "name" not in policy:
             errors.append(f"{error_prefix}: Missing required field 'name'")
 
+        default_decision = policy.get("default_decision")
+        if (
+            default_decision is not None
+            and default_decision not in self._valid_decision_values
+        ):
+            errors.append(
+                f"{error_prefix}.default_decision: invalid decision "
+                f"'{default_decision}'"
+            )
+
         self._validate_events_field(policy, error_prefix, errors)
         self._validate_rules_field(policy, error_prefix, errors)
 
@@ -186,6 +241,9 @@ class YamlPolicyValidator:
         errors: list[str],
     ) -> None:
         for dot_path, condition in when_clause.items():
+            path_error = _event_path_error(dot_path)
+            if path_error is not None:
+                errors.append(f"{prefix}: {path_error}")
             self._validate_condition(condition, f"{prefix}.{dot_path}", errors)
 
     def _validate_condition(
@@ -209,6 +267,16 @@ class YamlPolicyValidator:
 
             if operator_name == "matches":
                 self._validate_regex(operator_argument, f"{prefix}.matches", errors)
+            elif operator_name == "in":
+                # `in` is membership against a collection; a string argument would
+                # silently become substring matching (allowlist bypass), so require
+                # a list/tuple/set — matching the evaluator, which now refuses one.
+                if not isinstance(operator_argument, (list, tuple, set)):
+                    errors.append(
+                        f"{prefix}.in: argument must be a list of values, not "
+                        f"{type(operator_argument).__name__} (a string would match "
+                        "substrings)"
+                    )
             elif operator_name in _LIST_OF_CONDITIONS_OPERATORS:
                 self._validate_condition_list(
                     operator_argument, f"{prefix}.{operator_name}", errors
@@ -246,6 +314,10 @@ class YamlPolicyValidator:
         prefix: str,
         errors: list[str],
     ) -> None:
+        # A rule that fires must state a decision; a missing one used to default to
+        # "allow" at eval time, so a `then:` that forgot it silently passed.
+        if "decision" not in then_clause:
+            errors.append(f"{prefix}: missing required field 'decision'")
         decision_value: str | None = then_clause.get("decision")
         if decision_value and decision_value not in self._valid_decision_values:
             errors.append(f"{prefix}.decision: Invalid decision '{decision_value}'")

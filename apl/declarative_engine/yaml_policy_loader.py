@@ -6,7 +6,7 @@ from typing import Any
 import yaml
 
 from apl.server import PolicyServer
-from apl.types import PolicyEvent, Verdict
+from apl.types import Decision, PolicyEvent, Verdict
 
 from .rule_evaluator import RuleEvaluator
 from .schema import (
@@ -68,6 +68,7 @@ class YamlPolicyLoader:
                     version=raw_policy.get("version", "1.0.0"),
                     blocking=raw_policy.get("blocking", True),
                     timeout_ms=raw_policy.get("timeout_ms", 1000),
+                    default_decision=raw_policy.get("default_decision"),
                 )
             )
 
@@ -85,6 +86,7 @@ class YamlPolicyLoader:
     ) -> None:
         rule_evaluator: RuleEvaluator = self._rule_evaluator
         captured_rules: list[YAMLRule] = policy_definition.rules
+        no_match_verdict = self._no_match_verdict(policy_definition)
 
         async def yaml_policy_handler(
             event: PolicyEvent,
@@ -95,7 +97,7 @@ class YamlPolicyLoader:
                 )
                 if verdict is not None:
                     return verdict
-            return Verdict.allow()
+            return no_match_verdict
 
         decorator = server.policy(
             name=policy_definition.name,
@@ -106,3 +108,37 @@ class YamlPolicyLoader:
             description=policy_definition.description,
         )
         decorator(yaml_policy_handler)
+
+    @staticmethod
+    def _no_match_verdict(policy_definition: YAMLPolicyDefinition) -> Verdict:
+        """
+        The verdict a declarative policy returns when no rule matched.
+
+        Default is an OBSERVE with a trace (abstain — neutral under composition),
+        not a bare ALLOW: a positive ALLOW would out-vote a deny under
+        allow_overrides/weighted, so a detection policy that simply didn't fire
+        shouldn't cast an approve vote. A policy can opt into ``default_decision:
+        deny`` (a default-deny allowlist) or ``allow``.
+        """
+        name = policy_definition.name
+        default = policy_definition.default_decision
+        trace = {"policy": name, "matched": False}
+
+        if default is None or default == Decision.OBSERVE.value:
+            return Verdict.observe(
+                reasoning=f"No rule matched in policy {name!r}", trace=trace
+            )
+        decision = Decision(default)
+        if decision is Decision.DENY:
+            return Verdict.deny(
+                reasoning=f"No rule matched in policy {name!r} (default_decision=deny)"
+            )
+        if decision is Decision.ALLOW:
+            return Verdict.allow(
+                reasoning=f"No rule matched in policy {name!r} (default_decision=allow)"
+            )
+        # MODIFY/ESCALATE can't be synthesised without a payload, so treat any
+        # other configured default as an abstaining OBSERVE rather than guessing.
+        return Verdict.observe(
+            reasoning=f"No rule matched in policy {name!r}", trace=trace
+        )
