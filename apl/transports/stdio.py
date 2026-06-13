@@ -24,6 +24,11 @@ if TYPE_CHECKING:
 
 logger = get_logger("transport.stdio")
 
+# Match the client transport: asyncio's StreamReader defaults to a 64 KiB line
+# limit and raises an uncaught LimitOverrunError past it, so a legitimately large
+# event frame crashed the read loop. Lift the ceiling to a generous bound.
+_MAX_FRAME_BYTES: int = 16 * 1024 * 1024  # 16 MiB
+
 
 def write_json_line(message: dict[str, Any]) -> None:
     """
@@ -37,7 +42,7 @@ async def create_stdin_reader() -> asyncio.StreamReader:
     """
     Wrap the process stdin in an :class:`asyncio.StreamReader`.
     """
-    reader = asyncio.StreamReader()
+    reader = asyncio.StreamReader(limit=_MAX_FRAME_BYTES)
     protocol = asyncio.StreamReaderProtocol(reader)
     await asyncio.get_event_loop().connect_read_pipe(lambda: protocol, sys.stdin)
     return reader
@@ -52,7 +57,15 @@ async def read_raw_lines(reader: asyncio.StreamReader) -> AsyncIterator[str]:
     loop permanently). Undecodable bytes are replaced rather than raising.
     """
     while True:
-        line = await reader.readline()
+        try:
+            line = await reader.readline()
+        except (asyncio.LimitOverrunError, ValueError) as exc:
+            # A frame exceeded _MAX_FRAME_BYTES. We can't reliably resync the byte
+            # stream past an unterminated oversize line, so stop the loop cleanly
+            # with a clear log instead of letting an uncaught LimitOverrunError
+            # tear the server down — the client's evaluate() then fails closed.
+            logger.error(f"Oversize stdio frame (> {_MAX_FRAME_BYTES} bytes): {exc}")
+            break
         if not line:
             break
         yield line.decode(errors="replace")

@@ -3,6 +3,8 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import json
+import os
+import re
 import subprocess
 import sys
 from typing import Any
@@ -20,6 +22,36 @@ logger: APLLogger = get_logger("transport.stdio_client")
 DEFAULT_TIMEOUT_SECONDS: float = 10.0
 # Grace period after SIGTERM before escalating to SIGKILL on our own child.
 _TERMINATE_GRACE_SECONDS: float = 5.0
+# Newline-delimited frames can legitimately be large (a big tool result). asyncio's
+# StreamReader defaults to a 64 KiB line limit and raises an *uncaught*
+# LimitOverrunError past it, which crashed the transport on a valid payload. Lift
+# the subprocess pipe limit to a generous bound; anything still over it fails closed.
+_MAX_FRAME_BYTES: int = 16 * 1024 * 1024  # 16 MiB
+
+# Environment variable names whose values are secrets the *agent* holds (LLM API
+# keys, cloud credentials, bearer tokens). A spawned stdio policy server is a
+# separate — possibly third-party (`npx some-server`) — trust domain, so we strip
+# these before handing it the environment rather than leaking the agent's keys.
+_SENSITIVE_ENV_PATTERN = re.compile(
+    r"(API_KEY|ACCESS_KEY|SECRET|PASSWORD|PASSWD|CREDENTIAL|_TOKEN|^TOKEN$)",
+    re.IGNORECASE,
+)
+
+
+def _child_env() -> dict[str, str]:
+    """
+    The environment to hand a spawned stdio policy server.
+
+    A copy of the parent environment with secret-looking variables removed, so an
+    agent's LLM/cloud keys aren't exposed to policy code in a different trust domain.
+    Non-secret config (PATH, HOME, locale, …) is preserved so the server still starts
+    normally.
+    """
+    return {
+        key: value
+        for key, value in os.environ.items()
+        if not _SENSITIVE_ENV_PATTERN.search(key)
+    }
 
 
 class StdioClientTransport(BaseClientTransport):
@@ -33,6 +65,11 @@ class StdioClientTransport(BaseClientTransport):
         self._timeout_seconds: float = timeout_seconds
         self._process: asyncio.subprocess.Process | None = None
         self._stderr_drain: asyncio.Task | None = None
+        # One subprocess and one stdin/stdout pipe are shared by every concurrent
+        # evaluate() on this transport, so the whole write→read round-trip must be
+        # serialised: without this two requests interleave on the pipe and a call
+        # can read a *sibling* event's verdict.
+        self._io_lock: asyncio.Lock = asyncio.Lock()
         # The subprocess and its stream transports are bound to the loop they were
         # created on. We record it so evaluate() can fail closed with a clear
         # message if it runs on a different loop, rather than crash deep in asyncio.
@@ -48,6 +85,8 @@ class StdioClientTransport(BaseClientTransport):
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
+                limit=_MAX_FRAME_BYTES,
+                env=_child_env(),
             )
         except (OSError, ValueError) as exc:
             raise PolicyUnavailableError(
@@ -90,35 +129,64 @@ class StdioClientTransport(BaseClientTransport):
                 "transport."
             )
 
+        event_id = serialized_event.get("id")
         wire_message: dict[str, Any] = {
             "type": "evaluate",
             "event": serialized_event,
         }
         line: str = json.dumps(wire_message) + "\n"
 
-        try:
-            self._process.stdin.write(line.encode())
-            await self._process.stdin.drain()
-        except (BrokenPipeError, ConnectionResetError) as exc:
-            raise PolicyUnavailableError(
-                f"connection to policy server {self._raw_command!r} was lost: {exc}"
-            ) from exc
+        # Serialise the entire write→read round-trip: concurrent evaluate() calls
+        # over the single pipe would otherwise interleave and cross verdicts.
+        async with self._io_lock:
+            try:
+                try:
+                    self._process.stdin.write(line.encode())
+                    await self._process.stdin.drain()
+                except (BrokenPipeError, ConnectionResetError) as exc:
+                    raise PolicyUnavailableError(
+                        f"connection to policy server {self._raw_command!r} was "
+                        f"lost: {exc}"
+                    ) from exc
 
-        response_line = await self._read_line_or_unavailable("did not respond")
-        if not response_line:
-            raise PolicyUnavailableError(
-                "policy server subprocess returned no response"
-            )
+                response_line = await self._read_line_or_unavailable("did not respond")
+            except asyncio.CancelledError:
+                # A layer-level timeout cancelled us mid-round-trip. The request was
+                # already written, so its reply is still in flight; reusing this
+                # subprocess would hand that reply to the *next* event (a permanent
+                # off-by-one). Tear it down so the next evaluate reconnects clean.
+                await self._terminate_process()
+                raise
 
-        try:
-            response: dict[str, Any] = json.loads(response_line.decode())
-        except json.JSONDecodeError as exc:
-            raise PolicyUnavailableError(
-                f"policy server {self._raw_command!r} sent a malformed response"
-            ) from exc
+            if not response_line:
+                raise PolicyUnavailableError(
+                    "policy server subprocess returned no response"
+                )
 
-        if response.get("type") == "verdicts":
-            return response.get("verdicts", [])
+            try:
+                response: dict[str, Any] = json.loads(response_line.decode())
+            except json.JSONDecodeError as exc:
+                await self._terminate_process()
+                raise PolicyUnavailableError(
+                    f"policy server {self._raw_command!r} sent a malformed response"
+                ) from exc
+
+            # Correlate the reply with the request. The server stamps the event_id
+            # it answered; a mismatch means the pipe desynced (e.g. a stale reply
+            # left over from a cancelled call), so the verdict can't be trusted —
+            # tear the subprocess down and fail closed rather than enforce the
+            # wrong event's decision.
+            response_event_id = response.get("event_id")
+            if event_id is not None and response_event_id != event_id:
+                await self._terminate_process()
+                raise PolicyUnavailableError(
+                    f"policy server {self._raw_command!r} answered event "
+                    f"{response_event_id!r} for request {event_id!r}; the stdio "
+                    f"pipe is desynchronised"
+                )
+
+            if response.get("type") == "verdicts":
+                return response.get("verdicts", [])
 
         logger.warning(f"Unexpected response type: {response.get('type')}")
         return []
@@ -144,6 +212,15 @@ class StdioClientTransport(BaseClientTransport):
             raise PolicyUnavailableError(
                 f"policy server {self._raw_command!r} {what} within "
                 f"{self._timeout_seconds}s"
+            ) from exc
+        except (asyncio.LimitOverrunError, ValueError) as exc:
+            # A single frame exceeded _MAX_FRAME_BYTES. Don't let the uncaught
+            # error escape and crash the agent's hot path — tear the subprocess
+            # down and fail closed.
+            await self._terminate_process()
+            raise PolicyUnavailableError(
+                f"policy server {self._raw_command!r} sent a frame larger than "
+                f"{_MAX_FRAME_BYTES} bytes"
             ) from exc
 
     async def _drain_stderr(self) -> None:
