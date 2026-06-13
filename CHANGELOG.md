@@ -7,6 +7,13 @@ release onward versions are cut automatically by
 [release-please](https://github.com/googleapis/release-please) from Conventional
 Commits.
 
+## [0.5.1](https://github.com/nimonkaranurag/agentpolicylayer/compare/agent-policy-layer-v0.5.0...agent-policy-layer-v0.5.1) (2026-06-13)
+
+
+### Bug Fixes
+
+* **docs, housekeeping[tests, dev flows]:** accurate coverage report calc., add ADRs and `SPEC.md`, harden tests ([#27](https://github.com/nimonkaranurag/agentpolicylayer/issues/27)) ([b5d91c8](https://github.com/nimonkaranurag/agentpolicylayer/commit/b5d91c8c2534454e3ebc2c64dbee69cf0293aaa8))
+
 ## [Unreleased]
 
 ## [0.5.0](https://github.com/nimonkaranurag/agentpolicylayer/compare/agent-policy-layer-v0.4.0...agent-policy-layer-v0.5.0) (2026-06-13)
