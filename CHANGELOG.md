@@ -9,6 +9,17 @@ Commits.
 
 ## [Unreleased]
 
+### ⚠ BREAKING CHANGES
+
+- **CLI and HTTP dependencies are now optional extras.** The base install carries
+  only the core runtime (`pydantic`, `pyyaml`, and `rich` — the last used by the
+  injection-safe log renderer). The `apl` command-line tool now requires
+  `pip install 'agent-policy-layer[cli]'` (adds `click`) and the HTTP transport
+  (server *and* client) requires `agent-policy-layer[http]` (adds `aiohttp`);
+  `agent-policy-layer[all]` installs every runtime feature. An embedder doing
+  in-process or stdio evaluation no longer drags CLI/HTTP dependencies in.
+  Requesting an unavailable subsystem fails with an actionable install hint.
+
 ### Security
 
 A sweep of *quiet* non-enforcement paths — cases where APL reported (or implied)
@@ -78,6 +89,14 @@ that it had enforced something it had not. All now fail closed.
 - HTTP server: `GET /` now redirects to `/health` instead of erroring — the route
   handler was synchronous, which aiohttp 3.x rejects at request time.
 - CI (was failing): Type-checking (`mypy`) reported errors have been fixed.
+
+### Changed
+
+- **Releases are gated on green CI.** The automated PyPI publish
+  (`release-please.yml`) now runs lint + type-check + the full test matrix before
+  shipping, so a release cut from a red commit can no longer publish an
+  unrecoverable broken wheel; the rolling `dev` wheel is tested before it's
+  published; and the manual `publish.yml` matrix matches CI (3.10–3.13, `[dev,all]`).
 
 ### Doc Updates
 
