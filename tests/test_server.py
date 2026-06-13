@@ -122,12 +122,14 @@ class TestPolicyServer:
         assert verdicts[0].decision == Decision.DENY
 
     @pytest.mark.asyncio
-    async def test_evaluate_no_handlers_returns_allow(self, make_event):
+    async def test_evaluate_no_handlers_returns_empty(self, make_event):
+        # No handler for this event = no opinion: the server abstains with an empty
+        # verdict list, NOT a full-confidence ALLOW (which would out-vote a real
+        # deny from another server under allow_overrides/weighted/first_applicable).
         server = PolicyServer("empty")
         event = make_event(event_type=EventType.INPUT_RECEIVED)
         verdicts = await server.evaluate(event)
-        assert len(verdicts) == 1
-        assert verdicts[0].decision == Decision.ALLOW
+        assert verdicts == []
 
     def test_manifest_generation(self):
         server = PolicyServer(

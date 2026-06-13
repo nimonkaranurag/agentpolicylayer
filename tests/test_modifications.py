@@ -6,7 +6,11 @@ from apl.instrumentation.events import get_event
 from apl.instrumentation.lifecycle.context import LifecycleContext
 from apl.layer.decorator_evaluator import PolicyDecoratorFactory
 from apl.layer.exceptions import PolicyDenied, PolicyEscalation
-from apl.modifications import DEFAULT_REDACTION, apply_operation
+from apl.modifications import (
+    DEFAULT_REDACTION,
+    UnsupportedModificationTarget,
+    apply_operation,
+)
 from apl.server.policy_registry import PolicyRegistry
 from apl.types import (
     Decision,
@@ -151,15 +155,16 @@ class TestEventsApplierRoutesThroughDispatcher:
         )
         assert ctx.tool_args == {"password": DEFAULT_REDACTION, "user": "bob"}
 
-    def test_modification_target_unknown_to_event_is_skipped(self):
-        # A tool event has no "output" slot: the modification is skipped, not applied.
+    def test_modification_target_unknown_to_event_fails_closed(self):
+        # A tool event has no "output" slot. A demanded modification that can't be
+        # applied must fail closed (raise) — silently skipping it lets the action
+        # proceed unmodified, the exact fail-open this product must not have.
         ctx = LifecycleContext(tool_args={"q": "x"}, response_text="")
-        get_event("tool.pre_invoke").apply_verdict_modifications(
-            Verdict.modify(target="output", operation="replace", value="zzz"),
-            ctx,
-        )
-        assert ctx.tool_args == {"q": "x"}
-        assert ctx.response_text == ""
+        with pytest.raises(UnsupportedModificationTarget):
+            get_event("tool.pre_invoke").apply_verdict_modifications(
+                Verdict.modify(target="output", operation="replace", value="zzz"),
+                ctx,
+            )
 
 
 class TestServerRegistryApplierRoutesThroughDispatcher:
@@ -198,43 +203,57 @@ class TestServerRegistryApplierRoutesThroughDispatcher:
 
 class TestDecoratorApplierRoutesThroughDispatcher:
     def test_tool_args_append_is_now_supported(self):
-        keyword_args = {"tool_args": {"q": "x"}}
-        PolicyDecoratorFactory._enforce_verdict(
+        _, kwargs = PolicyDecoratorFactory._enforce_verdict(
             Verdict.modify(target="tool_args", operation="append", value={"extra": 1}),
-            keyword_args,
+            (),
+            {"tool_args": {"q": "x"}},
         )
-        assert keyword_args["tool_args"] == {"q": "x", "extra": 1}
+        assert kwargs["tool_args"] == {"q": "x", "extra": 1}
 
     def test_tool_args_replace_still_works(self):
-        keyword_args = {"tool_args": {"q": "x"}}
-        PolicyDecoratorFactory._enforce_verdict(
+        _, kwargs = PolicyDecoratorFactory._enforce_verdict(
             Verdict.modify(target="tool_args", operation="replace", value={"q": "y"}),
-            keyword_args,
+            (),
+            {"tool_args": {"q": "x"}},
         )
-        assert keyword_args["tool_args"] == {"q": "y"}
+        assert kwargs["tool_args"] == {"q": "y"}
+
+    def test_tool_args_modify_written_back_to_positional_slot(self):
+        # The README's own call style passes tool_args positionally:
+        #   await call_tool("delete_record", {"id": 42})
+        # The modified value must go back to args[1], not a tool_args= kwarg, or the
+        # wrapped call raises "multiple values for argument 'tool_args'".
+        args, kwargs = PolicyDecoratorFactory._enforce_verdict(
+            Verdict.modify(target="tool_args", operation="append", value={"safe": 1}),
+            ("delete_record", {"id": 42}),
+            {},
+        )
+        assert args == ("delete_record", {"id": 42, "safe": 1})
+        assert "tool_args" not in kwargs
 
     def test_non_tool_args_target_raises(self):
         # The decorator runs before the call: only inputs (tool_args) can be modified.
-        with pytest.raises(NotImplementedError):
+        with pytest.raises(UnsupportedModificationTarget):
             PolicyDecoratorFactory._enforce_verdict(
                 Verdict.modify(target="output", operation="replace", value="z"),
+                (),
                 {},
             )
 
     def test_deny_raises_policy_denied(self):
         with pytest.raises(PolicyDenied):
-            PolicyDecoratorFactory._enforce_verdict(Verdict.deny("nope"), {})
+            PolicyDecoratorFactory._enforce_verdict(Verdict.deny("nope"), (), {})
 
     def test_escalate_raises_policy_escalation(self):
         with pytest.raises(PolicyEscalation):
             PolicyDecoratorFactory._enforce_verdict(
-                Verdict.escalate(type="human_review"), {}
+                Verdict.escalate(type="human_review"), (), {}
             )
 
     def test_allow_is_a_noop(self):
-        keyword_args: dict = {}
-        PolicyDecoratorFactory._enforce_verdict(Verdict.allow(), keyword_args)
-        assert keyword_args == {}
+        args, kwargs = PolicyDecoratorFactory._enforce_verdict(Verdict.allow(), (), {})
+        assert args == ()
+        assert kwargs == {}
 
     def test_decision_enum_unchanged(self):
         # Sanity: dispatcher tests rely on the canonical Decision values.
