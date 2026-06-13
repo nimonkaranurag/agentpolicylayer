@@ -54,6 +54,11 @@ def error_response(
     )
 
 
+# Generic Server header: aiohttp's default leaks the aiohttp/Python versions,
+# which is needless reconnaissance. Overwrite it with a fixed token.
+_SERVER_HEADER = "apl"
+
+
 @middleware
 async def request_id_middleware(request: web.Request, handler):
     request_id = request.headers.get("X-Request-ID") or str(uuid.uuid4())
@@ -63,9 +68,11 @@ async def request_id_middleware(request: web.Request, handler):
         response = await handler(request)
     except web.HTTPException as exc:
         exc.headers["X-Request-ID"] = request_id
+        exc.headers["Server"] = _SERVER_HEADER
         raise
 
     response.headers["X-Request-ID"] = request_id
+    response.headers["Server"] = _SERVER_HEADER
     return response
 
 

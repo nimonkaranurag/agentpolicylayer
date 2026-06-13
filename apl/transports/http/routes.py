@@ -109,16 +109,13 @@ async def handle_manifest(request: web.Request) -> web.StreamResponse:
 
 
 async def handle_health(request: web.Request) -> web.StreamResponse:
-    server = request.app["server"]
+    # /health is unauthenticated (liveness probes), so it must not disclose
+    # server name, version, or policy count — that's reconnaissance for an
+    # unauthenticated caller. Detailed server identity lives on /manifest, which
+    # auth can protect. Keep this to liveness + non-sensitive operational metrics.
     metrics = request.app.get("metrics")
 
-    response = {
-        "status": "healthy",
-        "server": server.name,
-        "version": server.version,
-        "policies_loaded": len(server.registry.all_policies()),
-    }
-
+    response: dict[str, object] = {"status": "healthy"}
     if metrics:
         response["uptime_seconds"] = metrics.uptime_seconds
         response["requests_total"] = metrics.requests_total

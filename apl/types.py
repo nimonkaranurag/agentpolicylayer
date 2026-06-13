@@ -22,9 +22,23 @@ from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Literal, Optional
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 logger = logging.getLogger("apl")
+
+
+def _coerce_aware_utc(value: datetime) -> datetime:
+    """
+    Treat a naive datetime as UTC.
+
+    Wire timestamps must be unambiguous: a naive datetime compared against a
+    timezone-aware one raises, and "now" means different instants in different
+    zones. Naive values are stamped UTC; aware values pass through untouched.
+    """
+    if isinstance(value, datetime) and value.tzinfo is None:
+        return value.replace(tzinfo=timezone.utc)
+    return value
+
 
 # The protocol/wire version this build speaks. Single-sourced here and reused as
 # the manifest default below and by the client's compatibility check on connect.
@@ -190,6 +204,11 @@ class SessionMetadata(BaseModel):
     # Extensible
     custom: dict[str, Any] = Field(default_factory=dict)
 
+    @field_validator("started_at")
+    @classmethod
+    def _started_at_is_aware(cls, value: datetime) -> datetime:
+        return _coerce_aware_utc(value)
+
 
 class EventPayload(BaseModel):
     """
@@ -250,6 +269,11 @@ class PolicyEvent(BaseModel):
 
     # Session metadata
     metadata: SessionMetadata = Field(default_factory=SessionMetadata)
+
+    @field_validator("timestamp")
+    @classmethod
+    def _timestamp_is_aware(cls, value: datetime) -> datetime:
+        return _coerce_aware_utc(value)
 
 
 # =============================================================================
@@ -335,12 +359,19 @@ class Verdict(BaseModel):
     """
     Policy response.
 
-    Invariants (enforced on construction *and* deserialize):
+    Invariants (enforced on construction, deserialize, *and* assignment):
     - ``confidence`` is in ``[0, 1]`` — weighted composition sums it, so an
       out-of-range value can't be allowed to skew the vote.
     - a ``MODIFY`` verdict carries at least one modification.
     - an ``ESCALATE`` verdict carries an escalation.
+
+    ``validate_assignment`` re-runs these on every field set, so mutating a
+    verdict in place (``v.decision = Decision.MODIFY`` with no modifications)
+    raises instead of producing an invariant-violating verdict the constructor
+    would have rejected.
     """
+
+    model_config = ConfigDict(validate_assignment=True)
 
     decision: Decision
     confidence: float = Field(default=1.0, ge=0.0, le=1.0)
@@ -581,5 +612,18 @@ class CompositionConfig(BaseModel):
                 "APL is configured FAIL-OPEN: policy errors, timeouts, and "
                 "unreachable servers will ALLOW the action instead of denying "
                 "it. Enforcement is disabled whenever a policy is unavailable."
+            )
+        return self
+
+    @model_validator(mode="after")
+    def _on_timeout_is_allow_or_deny(self) -> CompositionConfig:
+        # A timeout resolves to a single verdict, so only ALLOW (downgrade) or
+        # DENY (fail closed) are meaningful. MODIFY/ESCALATE/OBSERVE used to be
+        # accepted by the type and then silently collapsed to DENY; reject them at
+        # construction so the field can't lie about what it does.
+        if self.on_timeout not in (Decision.ALLOW, Decision.DENY):
+            raise ValueError(
+                "on_timeout must be Decision.ALLOW or Decision.DENY, got "
+                f"{self.on_timeout.value!r}"
             )
         return self
