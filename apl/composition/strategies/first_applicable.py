@@ -22,22 +22,15 @@ class FirstApplicableStrategy(BaseCompositionStrategy):
             return guard
 
         ordered = self._order_by_priority(verdicts)
-        all_mods = self._collect_all_modifications(ordered)
 
+        # The *first* policy that takes a position wins, verbatim — including its
+        # own modifications and nothing else. Aggregating every verdict's mods here
+        # (the previous behaviour) meant a lower-priority policy, and even a
+        # DENY-attached mod, leaked into a "first wins" MODIFY, so the first policy
+        # did not actually win.
         for verdict in ordered:
             if verdict.decision == Decision.OBSERVE:
                 continue
-
-            if all_mods and verdict.decision in (
-                Decision.ALLOW,
-                Decision.MODIFY,
-            ):
-                return Verdict(
-                    decision=Decision.MODIFY,
-                    reasoning=verdict.reasoning,
-                    modifications=all_mods,
-                    escalation=verdict.escalation,
-                )
             return verdict
 
         return Verdict.allow(reasoning="No applicable policy")

@@ -15,9 +15,19 @@ class AllowOverridesStrategy(BaseCompositionStrategy):
         if guard is not None:
             return guard
 
-        all_mods = self._collect_all_modifications(verdicts)
+        # All-OBSERVE means no policy took a position — the same situation as empty
+        # input, so allow (nothing objected). Previously this fell through to the
+        # final deny, so adding a monitoring-only OBSERVE policy flipped an allow
+        # into a deny.
+        positions = [v for v in verdicts if v.decision != Decision.OBSERVE]
+        if not positions:
+            return Verdict.allow(reasoning="No policy objected")
 
-        allow = self._find_first_verdict_with_decision(verdicts, Decision.ALLOW)
+        # Only MODIFY verdicts contribute mods (see _collect_all_modifications), so
+        # a DENY-attached modification is no longer applied to an allowed action.
+        all_mods = self._collect_all_modifications(positions)
+
+        allow = self._find_first_verdict_with_decision(positions, Decision.ALLOW)
         if allow is not None:
             if all_mods:
                 return Verdict(
@@ -27,15 +37,15 @@ class AllowOverridesStrategy(BaseCompositionStrategy):
                 )
             return allow
 
-        modified = self._build_modified_verdict(verdicts)
+        modified = self._build_modified_verdict(positions)
         if modified is not None:
             return modified
 
-        escalate = self._find_first_verdict_with_decision(verdicts, Decision.ESCALATE)
+        escalate = self._find_first_verdict_with_decision(positions, Decision.ESCALATE)
         if escalate is not None:
             return escalate
 
-        deny = self._find_first_verdict_with_decision(verdicts, Decision.DENY)
+        deny = self._find_first_verdict_with_decision(positions, Decision.DENY)
         if deny is not None:
             return deny
 

@@ -45,13 +45,34 @@ class BaseCompositionStrategy:
     def _collect_all_modifications(
         verdicts: list[Verdict],
     ) -> list[Modification]:
-        by_target: dict[str, Modification] = {}
+        """
+        Collect, in order, every modification a ``MODIFY`` verdict demands.
+
+        Two rules, both load-bearing for enforcement:
+
+        - **Only ``MODIFY`` verdicts contribute.** A modification riding on a
+          ``DENY``/``ESCALATE``/``ALLOW`` verdict is not a request to apply it, so
+          harvesting it into the composed ``MODIFY`` would apply a transform the
+          composing decision never authorised.
+        - **Modifications are an ordered list, not collapsed per target.** When two
+          policies both touch ``output`` — the canonical *redact PII* + *append a
+          disclaimer* case — both must survive and apply in sequence; a per-target
+          ``dict`` kept only the last writer and silently dropped the redaction.
+          Only an exact duplicate (same target/operation/path/value) is dropped, so
+          two servers emitting the identical mod don't double-apply it.
+        """
+        collected: list[Modification] = []
+        seen: set[tuple[str, str, str | None, str]] = set()
         for verdict in verdicts:
-            if verdict.decision == Decision.OBSERVE:
+            if verdict.decision is not Decision.MODIFY:
                 continue
             for mod in verdict.modifications:
-                by_target[mod.target] = mod
-        return list(by_target.values())
+                identity = (mod.target, mod.operation, mod.path, repr(mod.value))
+                if identity in seen:
+                    continue
+                seen.add(identity)
+                collected.append(mod)
+        return collected
 
     @staticmethod
     def _build_modified_verdict(

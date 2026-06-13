@@ -269,13 +269,21 @@ class TestWeightedStrategy:
         result = self.strategy.compose(verdicts)
         assert result.decision == Decision.ALLOW
 
-    def test_equal_scores_allow_wins(self):
+    def test_equal_scores_deny_wins(self):
+        # Deny wins on a tie — allow must score *strictly* higher to overturn a
+        # deny — so the bias is toward enforcement (matches the docstring/README).
         verdicts = [
             Verdict.allow(confidence=0.5),
             Verdict.deny("tie", confidence=0.5),
         ]
         result = self.strategy.compose(verdicts)
-        assert result.decision == Decision.ALLOW
+        assert result.decision == Decision.DENY
+
+    def test_lone_zero_confidence_deny_still_denies(self):
+        # A lone deny(confidence=0.0) with no allow votes: 0 >= 0 with a deny
+        # present denies, rather than falling through to allow.
+        result = self.strategy.compose([Verdict.deny("block", confidence=0.0)])
+        assert result.decision == Decision.DENY
 
     def test_configured_weight_overrides_confidence(self):
         # A heavily-weighted, modest-confidence deny beats a default-weight,
@@ -315,7 +323,7 @@ class TestGetStrategy:
             CompositionMode.ALLOW_OVERRIDES: Decision.ALLOW,
             CompositionMode.UNANIMOUS: Decision.DENY,
             CompositionMode.FIRST_APPLICABLE: Decision.ALLOW,
-            CompositionMode.WEIGHTED: Decision.ALLOW,  # 1.0 vs 1.0 tie -> allow
+            CompositionMode.WEIGHTED: Decision.DENY,  # 1.0 vs 1.0 tie -> deny wins
         }
         assert set(expected) == set(CompositionMode)
         for mode, decision in expected.items():
