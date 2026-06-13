@@ -7,14 +7,63 @@ release onward versions are cut automatically by
 [release-please](https://github.com/googleapis/release-please) from Conventional
 Commits.
 
+## [Unreleased]
+
 ## [0.5.1](https://github.com/nimonkaranurag/agentpolicylayer/compare/agent-policy-layer-v0.5.0...agent-policy-layer-v0.5.1) (2026-06-13)
 
+### Added
 
-### Bug Fixes
+- **Protocol specification.** A normative, versioned [`SPEC.md`](SPEC.md) — frame
+  grammar, manifest/event/verdict schemas, version negotiation, fail modes, and a
+  conformance section — plus a [`docs/`](docs/) tree and five
+  [ADRs](docs/adr/). The previously code-only wire contract is now explicit enough for
+  an independent implementation.
+- **`APL_AUTH_TOKEN` environment variable** for the HTTP bearer token: `apl serve
+  --auth-token` falls back to it, so the secret needn't sit in argv (visible to any
+  local process via `ps`/`/proc`).
+- **Python 3.14** is supported and tested — added to the classifiers and the CI test
+  matrix, alongside a new macOS lane.
+- Documented the optional-extras install (`[cli]` / `[http]` / `[langgraph]` /
+  `[all]`) in the README, and linked the protocol spec.
 
-* **docs, housekeeping[tests, dev flows]:** accurate coverage report calc., add ADRs and `SPEC.md`, harden tests ([#27](https://github.com/nimonkaranurag/agentpolicylayer/issues/27)) ([b5d91c8](https://github.com/nimonkaranurag/agentpolicylayer/commit/b5d91c8c2534454e3ebc2c64dbee69cf0293aaa8))
+### Security
 
-## [Unreleased]
+- **A wildcard CORS allow-list is no longer silent.** Configuring a literal `*`
+  (which reflects *any* `Origin`) now logs a warning when the HTTP app is built.
+- **Unknown wire fields have an explicit forward-compat posture.** `PolicyEvent`,
+  `Verdict`, and `PolicyManifest` now declare `extra="ignore"` deliberately — unknown
+  fields are accepted and dropped, never trusted or round-tripped (SPEC §3/§10,
+  ADR 0004) — instead of inheriting the behavior as an undocumented pydantic default.
+
+### Fixed
+
+- **Honest coverage measurement.** Coverage is measured against `apl` only with branch
+  coverage on (`[tool.coverage]`; CI runs `--cov=apl`); the previous bare `--cov`
+  counted `tests/` in the denominator and reported an inflated number with no branch
+  coverage. The floor is now an apl-only branch-coverage ratchet (84%; currently
+  85.82%).
+- **Broken CHANGELOG compare link.** The 0.4.0 entry compared against a nonexistent
+  `agent-policy-layer-v0.3.0` tag; corrected to the real `v0.3.0` tag.
+- The pre-commit config no longer claims its hooks "can't drift" from CI — they run
+  from a once-installed `.venv`, which can lag the dependency floors CI fresh-installs.
+
+### Changed
+
+- **Instrumentation patch targets are actually exercised.** Each provider's
+  `patch_all_methods()` now runs against a module-shaped SDK stub
+  (`openai`/`anthropic`/`litellm`/`watsonx`) installed into `sys.modules`, so the
+  import paths and request/response shapes that break on an SDK release are executed in
+  CI — not just the suite's own fake provider.
+- **`uv.lock` is consumed instead of dead.** Local dev provisions from it via
+  `uv sync` (`scripts/dev.sh`), CI verifies it stays current (`uv lock --check`), and
+  the lock was refreshed (it had drifted to pre-0.5 dependencies).
+- **`blocking` is documented as advisory.** The per-policy `blocking` manifest field
+  is an advertised execution hint, not enforced by the reference layer (which awaits
+  every policy before composing); see SPEC §5.
+- **Endpoint and weak-test coverage.** The README-documented `/metrics`, `/manifest`,
+  and `/events` HTTP endpoints are now tested, and four weak tests were hardened (an
+  assertion-free logging test, a rule loop that passed vacuously on a `None`
+  regression, annotation-source-string assertions, and fake-only message coverage).
 
 ## [0.5.0](https://github.com/nimonkaranurag/agentpolicylayer/compare/agent-policy-layer-v0.4.0...agent-policy-layer-v0.5.0) (2026-06-13)
 
@@ -234,5 +283,5 @@ that it had enforced something it had not. All now fail closed.
 
 - Initial public release.
 
-[Unreleased]: https://github.com/nimonkaranurag/agentpolicylayer/compare/agent-policy-layer-v0.5.0...HEAD
+[Unreleased]: https://github.com/nimonkaranurag/agentpolicylayer/compare/agent-policy-layer-v0.5.1...HEAD
 [0.3.0]: https://github.com/nimonkaranurag/agentpolicylayer/releases/tag/v0.3.0
