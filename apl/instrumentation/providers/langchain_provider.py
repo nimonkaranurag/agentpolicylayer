@@ -27,6 +27,16 @@ class LangChainProvider(BaseProvider):
         self.method_patcher.register_patch(
             BaseChatModel, "ainvoke", self._async_instance_factory()
         )
+        # `.stream()` / `.astream()` are always-streaming entry points (no `stream`
+        # kwarg to detect); a streaming-capable model routes through these, never the
+        # patched invoke(), so without patching them policies never ran on a streamed
+        # LangChain response.
+        self.method_patcher.register_patch(
+            BaseChatModel, "stream", self._sync_stream_instance_factory()
+        )
+        self.method_patcher.register_patch(
+            BaseChatModel, "astream", self._async_stream_instance_factory()
+        )
         self.method_patcher.apply_all_patches()
 
     def extract_messages_from_request(
@@ -35,6 +45,27 @@ class LangChainProvider(BaseProvider):
         if len(args) >= 1:
             return args[0]
         return kwargs.get("input", [])
+
+    def write_request_messages(self, args: Any, kwargs: Any, raw_messages: Any) -> Any:
+        # invoke()/stream() take the prompt *positionally* (input is args[0]); writing
+        # a messages= kwarg (the base default) is silently ignored, so an input
+        # redaction was a no-op. Write back to the slot the call actually reads.
+        if len(args) >= 1:
+            return (raw_messages, *args[1:]), kwargs
+        new_kwargs = dict(kwargs)
+        new_kwargs["input"] = raw_messages
+        return args, new_kwargs
+
+    def extract_chunk_text(self, chunk: Any) -> str:
+        # LangChain streams BaseMessageChunk objects carrying text on `.content`.
+        content = getattr(chunk, "content", None)
+        return content if isinstance(content, str) else ""
+
+    def apply_chunk_text(self, chunk: Any, new_text: str) -> None:
+        try:
+            chunk.content = new_text
+        except (AttributeError, TypeError):
+            pass
 
     def extract_model_from_request(
         self, instance: Any, *args: Any, **kwargs: Any

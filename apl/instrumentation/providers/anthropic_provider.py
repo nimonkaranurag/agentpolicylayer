@@ -6,6 +6,21 @@ from .base_provider import BaseProvider
 
 
 class AnthropicProvider(BaseProvider):
+    """
+    Instrumentation for the Anthropic SDK.
+
+    Patches ``Messages.create`` / ``AsyncMessages.create`` — including
+    ``create(stream=True)``, whose streamed ``content_block_delta`` events are enforced
+    via :meth:`extract_chunk_text` / :meth:`apply_chunk_text` below.
+
+    **Not patched (documented exclusion):** the ``client.messages.stream()`` *helper*.
+    It returns a bespoke ``MessageStreamManager`` context manager (``with ... as
+    stream``) with its own ``.text_stream`` / ``.get_final_message()`` surface rather
+    than a plain iterable of chunks, so it can't be routed through the buffering
+    enforcement path without re-implementing that API. Prefer ``create(stream=True)``
+    when output policies must be enforced on a stream.
+    """
+
     @property
     def provider_name(self) -> str:
         return "anthropic"
@@ -45,3 +60,23 @@ class AnthropicProvider(BaseProvider):
         except (AttributeError, IndexError):
             pass
         return response
+
+    def extract_chunk_text(self, chunk: Any) -> str:
+        # Anthropic streams typed events; text rides on a ``content_block_delta``
+        # event's ``.delta.text``. The base default reads the OpenAI
+        # ``.choices[0].delta.content`` shape, which is always absent here — so
+        # every chunk extracted "", the buffered output was empty, and the
+        # output policy never saw (or could redact/deny) the streamed text.
+        try:
+            if getattr(chunk, "type", None) == "content_block_delta":
+                return chunk.delta.text or ""
+        except (AttributeError, IndexError, TypeError):
+            pass
+        return ""
+
+    def apply_chunk_text(self, chunk: Any, new_text: str) -> None:
+        try:
+            if getattr(chunk, "type", None) == "content_block_delta":
+                chunk.delta.text = new_text
+        except (AttributeError, IndexError, TypeError):
+            pass

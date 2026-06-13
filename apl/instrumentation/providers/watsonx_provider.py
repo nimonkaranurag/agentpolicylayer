@@ -45,6 +45,15 @@ class WatsonXProvider(BaseProvider):
             return args[0]
         return []
 
+    def write_request_messages(self, args: Any, kwargs: Any, raw_messages: Any) -> Any:
+        # Mirror extract_messages_from_request: the messages= kwarg if present, else
+        # the first positional argument.
+        if "messages" in kwargs or len(args) < 1:
+            new_kwargs = dict(kwargs)
+            new_kwargs["messages"] = raw_messages
+            return args, new_kwargs
+        return (raw_messages, *args[1:]), kwargs
+
     def extract_model_from_request(
         self, instance: Any, *args: Any, **kwargs: Any
     ) -> str:
