@@ -51,6 +51,8 @@ class AnthropicProvider(BaseProvider):
                 if hasattr(block, "text"):
                     return block.text
         except (AttributeError, IndexError):
+            # A response with no readable text block: nothing to extract, so the
+            # output policy evaluates the empty string (it still runs).
             pass
         return ""
 
@@ -58,6 +60,9 @@ class AnthropicProvider(BaseProvider):
         try:
             response.content[0].text = new_text
         except (AttributeError, IndexError):
+            # Best-effort write-back: the SDK response may expose no writable text
+            # block. The non-streaming text is also enforced upstream via the
+            # buffered response_text, so this is the last, optional hop.
             pass
         return response
 
@@ -71,6 +76,8 @@ class AnthropicProvider(BaseProvider):
             if getattr(chunk, "type", None) == "content_block_delta":
                 return chunk.delta.text or ""
         except (AttributeError, IndexError, TypeError):
+            # A non-text or unexpectedly-shaped event contributes no text to the
+            # buffered output.
             pass
         return ""
 
@@ -79,4 +86,6 @@ class AnthropicProvider(BaseProvider):
             if getattr(chunk, "type", None) == "content_block_delta":
                 chunk.delta.text = new_text
         except (AttributeError, IndexError, TypeError):
+            # Best-effort: only content_block_delta events carry writable text;
+            # other event types have nothing to rewrite.
             pass

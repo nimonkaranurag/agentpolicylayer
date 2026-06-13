@@ -61,6 +61,8 @@ class OpenAIProvider(BaseProvider):
                 AsyncBetaCompletions, "parse", self._async_instance_factory()
             )
         except ImportError:
+            # Older openai SDK without the beta structured-output helper — nothing
+            # to patch.
             pass
 
         self.method_patcher.apply_all_patches()
@@ -122,6 +124,8 @@ class OpenAIProvider(BaseProvider):
             try:
                 chunk.delta = new_text
             except (AttributeError, TypeError):
+                # Best-effort: a Responses delta event whose `delta` can't be
+                # written (immutable/reshaped by the SDK) is left as-is.
                 pass
             return
         super().apply_chunk_text(chunk, new_text)

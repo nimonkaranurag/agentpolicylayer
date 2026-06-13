@@ -78,6 +78,8 @@ class BaseProvider(ABC):
         try:
             chunk.choices[0].delta.content = new_text
         except (AttributeError, IndexError, TypeError):
+            # Best-effort: a chunk that doesn't carry a writable
+            # choices[0].delta.content (e.g. a role-only/finish chunk) is left as-is.
             pass
 
     # -- Wrapper factories ---------------------------------------------------------

@@ -236,6 +236,7 @@ class StdioClientTransport(BaseClientTransport):
                     f"[policy server stderr] {line.decode(errors='replace').rstrip()}"
                 )
         except asyncio.CancelledError:
+            # Expected: the drain task is cancelled when the subprocess is torn down.
             pass
         except Exception:
             # Draining is best-effort diagnostics; never let it surface.

@@ -65,6 +65,8 @@ class LangChainProvider(BaseProvider):
         try:
             chunk.content = new_text
         except (AttributeError, TypeError):
+            # Best-effort: a chunk whose `content` isn't writable (immutable or a
+            # non-text message chunk) is left unchanged.
             pass
 
     def extract_model_from_request(

@@ -151,6 +151,7 @@ async def handle_server_sent_events(request: web.Request) -> web.StreamResponse:
             await response.write(b": keepalive\n\n")
             await asyncio.sleep(15)
     except asyncio.CancelledError:
+        # Expected when the client disconnects; end the keepalive loop cleanly.
         pass
 
     return response
