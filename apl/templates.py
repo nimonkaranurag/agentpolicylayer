@@ -453,9 +453,9 @@ def create_policy_project(name: str, template: str = "basic") -> Path:
         file_path = project_path / filename
         file_path.write_text(content.format(name=name))
 
-    # Make policy.py executable
+    # Make policy.py executable (owner only)
     policy_py = project_path / "policy.py"
     if policy_py.exists():
-        os.chmod(policy_py, 0o755)
+        os.chmod(policy_py, 0o700)
 
     return project_path.absolute()
