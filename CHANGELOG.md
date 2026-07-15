@@ -7,6 +7,13 @@ release onward versions are cut automatically by
 [release-please](https://github.com/googleapis/release-please) from Conventional
 Commits.
 
+## [0.5.2](https://github.com/nimonkaranurag/agentpolicylayer/compare/agent-policy-layer-v0.5.1...agent-policy-layer-v0.5.2) (2026-07-15)
+
+
+### Bug Fixes
+
+* **templates.py:** overly permissive file creation ([#36](https://github.com/nimonkaranurag/agentpolicylayer/issues/36)) ([76963b6](https://github.com/nimonkaranurag/agentpolicylayer/commit/76963b6989fbc05a7034a6033d2af88d346910f6))
+
 ## [Unreleased]
 
 ## [0.5.1](https://github.com/nimonkaranurag/agentpolicylayer/compare/agent-policy-layer-v0.5.0...agent-policy-layer-v0.5.1) (2026-06-13)
